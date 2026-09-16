@@ -74,6 +74,8 @@ const navigation = [
   { icon: "building" as const, label: "Proyectos & Obras", href: "/projects" },
   { icon: "boxes" as const, label: "Inventarios", href: "/inventory" },
   { icon: "arrows" as const, label: "Movimientos", href: "/movements" },
+  { icon: "grid" as const, label: "Conteos físicos", href: "/counts" },
+  { icon: "grid" as const, label: "Informes", href: "/reports" },
 ];
 
 export function DashboardShell({ children }: { children: ReactNode }) {

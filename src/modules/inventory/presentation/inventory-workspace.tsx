@@ -27,7 +27,7 @@ const movementLabels: Record<MovementType, string> = {
   return: "DevoluciÃ³n a Bodega",
 };
 
-type TabKey = "catalog" | "movements" | "projects" | "low-stock";
+type TabKey = "catalog" | "movements" | "projects" | "low-stock" | "settings";
 
 function formatDateTime() {
   const date = new Date();
@@ -114,11 +114,17 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const [query, setQuery] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
+  const [locationFilter, setLocationFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [movementTypeFilter, setMovementTypeFilter] = useState("all");
   const [movementProjectFilter, setMovementProjectFilter] = useState("all");
   const [pageSize, setPageSize] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [customLocations, setCustomLocations] = useState<string[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newLocationName, setNewLocationName] = useState("");
 
   // Estados del modal de movimientos
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
@@ -134,7 +140,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const [notesInput, setNotesInput] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isNewItemModalOpen, setIsNewItemModalOpen] = useState(false);
-  const [newItem, setNewItem] = useState({ name: "", sku: "", category: "Insumo", brand: "", unit: "unidad", location: "Bodega principal", group: "bodega" as StockProduct["inventoryGroup"], quantity: "", cost: "", minimum: "" });
+  const [newItem, setNewItem] = useState({ name: "", sku: "", category: "Insumo", brand: "", unit: "unidad", location: "Bodega principal", warehouse: "Bodega principal", aisle: "", shelf: "", level: "", bin: "", group: "bodega" as StockProduct["inventoryGroup"], quantity: "", cost: "", minimum: "" });
 
   // Estado del modal de nueva obra / proyecto
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -174,6 +180,8 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     const q = query.trim().toLowerCase();
     return products.filter((p) => {
       if (groupFilter !== "all" && p.inventoryGroup !== groupFilter) return false;
+      if (locationFilter !== "all" && p.location !== locationFilter) return false;
+      if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
       if (stockFilter === "low" && (p.minimum === null || p.available > p.minimum)) return false;
       if (stockFilter === "out" && p.available > 0) return false;
       if (stockFilter === "available" && p.available <= 0) return false;
@@ -181,7 +189,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       const haystack = `${p.name} ${p.sku} ${p.category} ${p.brand} ${p.location}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [products, query, groupFilter, stockFilter]);
+  }, [products, query, groupFilter, stockFilter, locationFilter, categoryFilter]);
 
   // Paginación
   const totalPages = Math.ceil(filteredProducts.length / pageSize) || 1;
@@ -390,9 +398,21 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       showToast("Indica nombre, cantidad inicial y costo unitario válidos.", "error"); return;
     }
     const id = `new-${Date.now()}`;
-    const product: StockProduct = { id, sku: newItem.sku.trim() || `SKU-${Date.now()}`, name: newItem.name.trim(), category: newItem.category, brand: newItem.brand.trim() || "Sin marca", unit: newItem.unit.trim() || "unidad", location: newItem.location.trim() || "Bodega principal", inventoryGroup: newItem.group, inventoryGroupName: newItem.group === "bodega" ? "Bodega" : newItem.group === "dotacion" ? "Dotación" : "Herramientas de trabajadores", available: quantity, minimum: newItem.minimum === "" ? null : Number(newItem.minimum), notes: null, active: true, unitCost, sourceRow: 0 };
+    const location = [newItem.warehouse, newItem.aisle && `Pasillo ${newItem.aisle}`, newItem.shelf && `Estante ${newItem.shelf}`, newItem.level && `Nivel ${newItem.level}`, newItem.bin && `Contenedor ${newItem.bin}`].filter(Boolean).join(" · ");
+    const product: StockProduct = { id, sku: newItem.sku.trim() || `SKU-${Date.now()}`, name: newItem.name.trim(), category: newItem.category, brand: newItem.brand.trim() || "Sin marca", unit: newItem.unit.trim() || "unidad", location, inventoryGroup: newItem.group, inventoryGroupName: newItem.group === "bodega" ? "Bodega" : newItem.group === "dotacion" ? "Dotación" : "Herramientas de trabajadores", available: quantity, minimum: newItem.minimum === "" ? null : Number(newItem.minimum), notes: null, active: true, unitCost, sourceRow: 0 };
     const movement: InventoryMovement = { id: `mov-${Date.now()}`, productId: id, productName: product.name, type: "entry", quantity, unit: product.unit, unitCost, totalCost: quantity * unitCost, occurredAt: formatDateTime(), reference: `ING-${new Date().getFullYear()}-${String(movements.length + 1).padStart(3, "0")}`, notes: "Entrada inicial al crear artículo" };
-    setProducts(current => [product, ...current]); setMovements(current => [movement, ...current]); setIsNewItemModalOpen(false); setNewItem({ name: "", sku: "", category: "Insumo", brand: "", unit: "unidad", location: "Bodega principal", group: "bodega", quantity: "", cost: "", minimum: "" }); showToast(`Artículo "${product.name}" creado con su entrada inicial.`);
+    setProducts(current => [product, ...current]); setMovements(current => [movement, ...current]); setIsNewItemModalOpen(false); setNewItem({ name: "", sku: "", category: "Insumo", brand: "", unit: "unidad", location: "Bodega principal", warehouse: "Bodega principal", aisle: "", shelf: "", level: "", bin: "", group: "bodega", quantity: "", cost: "", minimum: "" }); showToast(`Artículo "${product.name}" creado con su entrada inicial.`);
+  }
+
+  function relocateProduct(product: StockProduct) {
+    const destination = window.prompt("Nueva ubicación (Almacén · Pasillo · Estante · Nivel):", product.location);
+    if (!destination || destination.trim() === product.location) return;
+    const reason = window.prompt("Motivo del traslado:", "Reubicación interna")?.trim();
+    if (!reason) return;
+    const responsible = window.prompt("Responsable del traslado:", "")?.trim();
+    setProducts(current => current.map(p => p.id === product.id ? { ...p, location: destination.trim() } : p));
+    setMovements(current => [{ id: `mov-${Date.now()}`, productId: product.id, productName: product.name, type: "adjustment", quantity: 0, unit: product.unit, unitCost: product.unitCost || 0, totalCost: 0, occurredAt: formatDateTime(), reference: `TRASLADO-${Date.now()}`, responsible, notes: `${reason}. Origen: ${product.location}. Destino: ${destination.trim()}.` }, ...current]);
+    showToast(`Ubicación de "${product.name}" actualizada a ${destination.trim()}.`);
   }
 
   // Exportar kardex a CSV compatible con Excel
@@ -554,6 +574,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
         >
           ⚠️ Alertas de Stock Mínimo {lowStockCount > 0 && <span className="tab-badge">{lowStockCount}</span>}
         </button>
+        <button className={`tab-btn ${activeTab === "settings" ? "active" : ""}`} onClick={() => setActiveTab("settings")} type="button">Configuración de inventario</button>
         </>}
       </nav>
 
@@ -617,6 +638,22 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                 <option value="available">Disponibles</option>
                 <option value="low">Bajo mínimo requerido</option>
                 <option value="out">Sin existencias (Agotados)</option>
+              </select>
+            </label>
+
+            <label>
+              Ubicación en almacén
+              <select value={locationFilter} onChange={(e) => { setLocationFilter(e.target.value); setCurrentPage(1); }}>
+                <option value="all">Todas las ubicaciones</option>
+                {[...new Set(products.map((p) => p.location).filter(Boolean))].sort().map((location) => <option key={location} value={location}>{location}</option>)}
+              </select>
+            </label>
+
+            <label>
+              Categoría
+              <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}>
+                <option value="all">Todas las categorías</option>
+                {[...new Set(products.map((p) => p.category).filter(Boolean))].sort().map((category) => <option key={category} value={category}>{category}</option>)}
               </select>
             </label>
 
@@ -717,6 +754,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                             >
                               ⚙️ Mínimo
                             </button>
+                            <button className="btn-row-action subtle" onClick={() => relocateProduct(p)} title="Trasladar a otra ubicación" type="button">↔ Reubicar</button>
                           </div>
                         </td>
                       </tr>
@@ -1061,6 +1099,9 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
             </table>
           </div>
         </section>
+      )}
+      {!isMovementsView && activeTab === "settings" && (
+        <section className="dashboard-panel"><div className="panel-title"><div><p>Administración</p><h2>Catálogos y ubicaciones</h2></div></div><p className="panel-intro">Crea categorías y ubicaciones. Los registros usados se desactivan o reasignan; no se eliminan.</p><div className="projects-grid"><article className="project-card"><h3>Nueva categoría</h3><form onSubmit={e=>{e.preventDefault();const value=newCategoryName.trim();if(!value)return;setCustomCategories(v=>[...v,value]);setNewCategoryName("");showToast("Categoría creada.")}}><input aria-label="Nombre de categoría" placeholder="Ej. Soldadura y oxicorte" value={newCategoryName} onChange={e=>setNewCategoryName(e.target.value)}/><button className="inventory-action" type="submit">Crear categoría</button></form>{customCategories.map(x=><p key={x}>{x}</p>)}</article><article className="project-card"><h3>Nueva ubicación</h3><form onSubmit={e=>{e.preventDefault();const value=newLocationName.trim();if(!value)return;setCustomLocations(v=>[...v,value]);setNewLocationName("");showToast("Ubicación creada.")}}><input aria-label="Ruta de ubicación" placeholder="Bodega · Pasillo · Estante · Nivel" value={newLocationName} onChange={e=>setNewLocationName(e.target.value)}/><button className="inventory-action" type="submit">Crear ubicación</button></form>{customLocations.map(x=><p key={x}>{x}</p>)}</article></div></section>
       )}
 
       {/* ========================================================================= */}

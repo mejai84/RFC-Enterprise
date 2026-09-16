@@ -1471,15 +1471,16 @@
    ========================================================================== */
 
 .projects-selector-bar {
-  align-items: center;
+  align-items: flex-start;
   background: #ffffff;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   display: flex;
+  flex-wrap: wrap;
   gap: 14px;
   margin-top: 24px;
-  overflow-x: auto;
+  overflow: visible;
   padding: 14px 20px;
 }
 
@@ -1493,8 +1494,11 @@
 }
 
 .selector-pills {
-  display: flex;
+  display: grid;
+  flex: 1 1 320px;
   gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  min-width: 0;
 }
 
 .prj-pill {
@@ -1505,9 +1509,11 @@
   cursor: pointer;
   display: flex;
   gap: 8px;
+  min-width: 0;
   padding: 8px 14px;
   transition: background 0.18s ease, border-color 0.18s ease;
   white-space: nowrap;
+  width: 100%;
 }
 
 .prj-pill:hover {
@@ -1534,6 +1540,9 @@
 .pill-name {
   color: var(--ink);
   font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .project-detail-container {
@@ -2134,6 +2143,5 @@
 }
 
 .toast-dismiss:hover { color: var(--ink); }
-
 
 

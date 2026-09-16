@@ -25,7 +25,7 @@ Permitir a **Representaciones Figueroa Castro S.A.S.** conocer en tiempo real el
 - **Acceso Directo a Operaciones de Almacén**: Accesos rápidos desde el dashboard para despachar material, emitir vales de salida, gestionar requisiciones de obra y controlar préstamo de herramientas.
 
 ### B. Centro de Costos por Obra / Proyecto
-- **Entidad Obra / Proyecto**: Código único (`OBRA-2026-01`), Nombre, Cliente contratante, Ubicación, Presupuesto asignado de materiales ($ COP) y Estado (`active`, `completed`, `on_hold`).
+- **Entidad Obra / Proyecto**: Código único (`OBRA-2026-01`), Nombre, Cliente contratante, Ubicación, Presupuesto asignado de materiales ($ COP), fecha de inicio, entrega estimada y Estado (`pending`, `active`, `completed`, `on_hold`).
 - **Valorización en Tiempo Real**: Cada salida de almacén se asocia a una obra destino. El sistema calcula:
   $$\text{Costo del Despacho} = \text{Cantidad Despachada} \times \text{Costo Unitario Promedio}$$
 - **Indicadores Financieros por Proyecto**:
@@ -113,4 +113,3 @@ export type ToolLoan = {
 2. **Requisiciones de Material desde Frente de Obra**: ✅ Implementado en Dashboard e Inventario con flujo de aprobación.
 3. **Devoluciones de Material Sobrante**: ✅ Implementado con reajuste de costo de obra y reposición de stock.
 4. **Custodia de Herramientas y Equipos**: ✅ Implementado con módulo de préstamos a trabajadores y trazabilidad por obra.
-

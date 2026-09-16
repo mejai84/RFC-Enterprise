@@ -91,6 +91,7 @@ export function ProjectsWorkspace() {
   // Modals
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
+  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [selectedVoucherMovement, setSelectedVoucherMovement] = useState<InventoryMovement | null>(null);
 
   // Dispatch Form State
@@ -107,6 +108,9 @@ export function ProjectsWorkspace() {
   const [newPrjBudget, setNewPrjBudget] = useState("");
   const [newPrjStartDate, setNewPrjStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [newPrjEstimatedEndDate, setNewPrjEstimatedEndDate] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEstimatedEndDate, setEditEstimatedEndDate] = useState("");
+  const [editStatus, setEditStatus] = useState<Project["status"]>("active");
 
   // Persistir cambios
   useEffect(() => {
@@ -191,7 +195,8 @@ export function ProjectsWorkspace() {
   const handleNewProjectSubmit = (e: FormEvent) => {
     e.preventDefault();
     const budgetNum = parseFloat(newPrjBudget);
-    if (!newPrjName.trim() || !newPrjClient.trim() || !budgetNum) return alert("Complete todos los campos obligatorios.");
+    if (!newPrjName.trim() || !newPrjClient.trim() || !budgetNum || !newPrjStartDate || !newPrjEstimatedEndDate) return alert("Complete todos los campos obligatorios.");
+    if (newPrjEstimatedEndDate < newPrjStartDate) return alert("La fecha estimada debe ser posterior a la fecha de inicio.");
 
     const newPrj: Project = {
       id: `prj-${Date.now()}`,
@@ -202,6 +207,8 @@ export function ProjectsWorkspace() {
       budget: budgetNum,
       status: "active",
       createdAt: new Date().toISOString().split("T")[0],
+      startDate: newPrjStartDate,
+      estimatedEndDate: newPrjEstimatedEndDate,
     };
 
     setProjects((prev) => [...prev, newPrj]);
@@ -212,6 +219,23 @@ export function ProjectsWorkspace() {
     setNewPrjClient("");
     setNewPrjLocation("");
     setNewPrjBudget("");
+    setNewPrjEstimatedEndDate("");
+  };
+
+  const openEditProject = () => {
+    if (!selectedProject) return;
+    setEditStartDate(selectedProject.startDate || "");
+    setEditEstimatedEndDate(selectedProject.estimatedEndDate || "");
+    setEditStatus(selectedProject.status);
+    setIsEditProjectModalOpen(true);
+  };
+
+  const handleEditProjectSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!selectedProject || !editStartDate || !editEstimatedEndDate) return alert("Indique ambas fechas.");
+    if (editEstimatedEndDate < editStartDate) return alert("La fecha estimada debe ser posterior a la fecha de inicio.");
+    setProjects((current) => current.map((project) => project.id === selectedProject.id ? { ...project, startDate: editStartDate, estimatedEndDate: editEstimatedEndDate, status: editStatus } : project));
+    setIsEditProjectModalOpen(false);
   };
 
   return (
@@ -224,6 +248,9 @@ export function ProjectsWorkspace() {
           <small>Consulta detallada del consumo de materiales, insumos gastados y herramientas en custodia por obra.</small>
         </div>
         <div className="dash-quick-btns">
+          <button className="inventory-action btn-secondary-action" onClick={openEditProject}>
+            Editar proyecto
+          </button>
           <button className="inventory-action btn-primary-action" onClick={() => setIsDispatchModalOpen(true)}>
             📤 Despachar a esta Obra
           </button>
@@ -496,6 +523,11 @@ export function ProjectsWorkspace() {
                 </div>
               </div>
 
+              <div className="form-row-2">
+                <div className="form-group"><label>Fecha de inicio:</label><input type="date" required value={newPrjStartDate} onChange={(e) => setNewPrjStartDate(e.target.value)} /></div>
+                <div className="form-group"><label>Fecha estimada de finalizaciÃ³n:</label><input type="date" required min={newPrjStartDate} value={newPrjEstimatedEndDate} onChange={(e) => setNewPrjEstimatedEndDate(e.target.value)} /></div>
+              </div>
+
               <div className="form-group">
                 <label>Notas / Ubicación de uso:</label>
                 <input
@@ -515,6 +547,14 @@ export function ProjectsWorkspace() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isEditProjectModalOpen && selectedProject && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-project-title">
+          <div className="modal-content"><div className="modal-header"><h2 id="edit-project-title">Editar proyecto</h2><button type="button" aria-label="Cerrar" onClick={() => setIsEditProjectModalOpen(false)}>×</button></div>
+            <form onSubmit={handleEditProjectSubmit}><div className="form-row-2"><div className="form-group"><label>Fecha de inicio:</label><input type="date" required value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} /></div><div className="form-group"><label>Fecha estimada de finalizaciÃ³n:</label><input type="date" required min={editStartDate} value={editEstimatedEndDate} onChange={(e) => setEditEstimatedEndDate(e.target.value)} /></div></div><div className="form-group"><label>Estado:</label><select value={editStatus} onChange={(e) => setEditStatus(e.target.value as Project["status"])}><option value="pending">Pendiente</option><option value="active">Activa</option><option value="on_hold">En pausa</option><option value="completed">Finalizada</option></select></div><div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsEditProjectModalOpen(false)}>Cancelar</button><button type="submit" className="btn-submit">Guardar cambios</button></div></form>
           </div>
         </div>
       )}

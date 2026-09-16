@@ -5,7 +5,7 @@ export type Project = {
   client: string;
   location: string;
   budget: number; // Presupuesto estimado de materiales en COP
-  status: "active" | "completed" | "on_hold";
+  status: "pending" | "active" | "completed" | "on_hold";
   createdAt: string;
   startDate?: string; // Fecha de inicio de obra
   estimatedEndDate?: string; // Fecha final tentativa / entrega estimada

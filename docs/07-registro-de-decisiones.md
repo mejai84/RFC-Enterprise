@@ -61,7 +61,7 @@ Este registro conserva decisiones que afectan el rumbo del producto. Una decisi�
 
 ## ADR-005 · Autenticación Supabase Auth
 
-**Fecha:** 2026-09-16  
+**Fecha:** 2026-09-16
 **Estado:** Aceptada
 
 **Contexto.** Se requería un sistema de autenticación seguro, validado en servidor, con tokens JWT y recuperación de credenciales.
@@ -129,5 +129,12 @@ Este registro conserva decisiones que afectan el rumbo del producto. Una decisi�
    - **Nivel 5: Auditor / Contador de Costos**: Kardex valorizado, remisiones históricas, auditoría de consumos y balances financieros sin modificación física de inventario.
 3. **Paneles de Inteligencia en Dashboard:** Top 5 materiales más costosos despachados, gráfico comparativo de gasto por obra, tabla de stock crítico bajo mínimo, saludo contextual y sistema de notificaciones toast.
 
+---
 
+## ADR-011 · Calendario operativo de proyectos
+
+**Fecha:** 2026-09-16  
+**Estado:** Aceptada
+
+**Decisión.** Cada obra registra fecha de inicio, fecha estimada de finalización y estado (`pending`, `active`, `on_hold`, `completed`). La base de datos impide fechas finales anteriores al inicio y protege los registros con RLS para miembros autorizados de la empresa.
 

@@ -19,6 +19,7 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 | INV-001 | Alta | Catálogo reactivo y buscador de 1,191 artículos | Terminado | Búsqueda predictiva, filtros por grupo y estado con paginador fluido |
 | INV-002 | Alta | Kardex valorizado de movimientos (Entradas / Salidas / Ajustes) | Terminado | Validación de existencias, cálculo en tiempo real de costos y exportación CSV |
 | COST-001 | Alta | Costeo de materiales por Obra / Proyecto | Terminado | Asignación de salidas a proyectos, cálculo de gasto acumulado y presupuestos |
+| COST-002 | Alta | Calendario y estado de obra | Terminado | Fecha de inicio, entrega estimada, estado y validación de cronología en Proyectos y Supabase |
 | CORE-002 | Alta | Autenticación y sesión con Supabase Auth | Terminado | Usuario administrador validado y confirmado en base de datos remota |
 | VALE-001 | Media | Generación de Vales de Salida imprimibles (Remisión) | Terminado | Formato formal de remisión imprimible con firmas de entregado y recibido |
 | REQ-001 | Media | Requisiciones de material desde frentes de obra | Terminado | Solicitud por residente de obra y aprobación por jefe de almacén |

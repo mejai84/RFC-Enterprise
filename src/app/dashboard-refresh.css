@@ -325,7 +325,7 @@
   align-items: center;
   background: var(--brand);
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 7px;
   box-shadow: 0 4px 14px rgba(11, 122, 71, 0.22);
   color: #ffffff;
   cursor: pointer;
@@ -334,8 +334,10 @@
   font-weight: 700;
   gap: 10px;
   justify-content: center;
-  min-height: 44px;
-  padding: 11px 20px;
+  min-height: 52px;
+  min-width: 132px;
+  padding: 10px 18px;
+  text-align: center;
   text-decoration: none;
   transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
@@ -923,6 +925,12 @@
 .btn-new-project:hover {
   background: var(--brand-soft) !important;
 }
+
+/* Patrón único de acciones de módulos: primaria, ajuste y secundaria. */
+.btn-edit-project, .btn-despachar-obra { background: #173d2c !important; }
+.btn-budget-adjustment { background: #c98312 !important; }
+.btn-new-project, .inventory-action.secondary { border-color: var(--brand) !important; color: var(--brand-dark) !important; }
+@media (max-width: 640px) { .header-actions { flex-wrap: wrap; } .inventory-action { flex: 1 1 145px; min-width: 0; } }
 
 /* Executive Financial Stat Grid */
 .text-spent {

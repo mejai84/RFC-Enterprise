@@ -94,6 +94,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [isProjectPickerOpen, setIsProjectPickerOpen] = useState(false);
+  const [reopenHistory, setReopenHistory] = useState<Array<{ projectId: string; reason: string; occurredAt: string }>>([]);
   const [isBudgetAdjustmentOpen, setIsBudgetAdjustmentOpen] = useState(false);
   const [selectedVoucherMovement, setSelectedVoucherMovement] = useState<InventoryMovement | null>(null);
 
@@ -248,6 +249,15 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
     setProjects((current) => current.map((project) => project.id === selectedProject.id ? { ...project, startDate: editStartDate, estimatedEndDate: editEstimatedEndDate, status: editStatus } : project));
     setIsEditProjectModalOpen(false);
   };
+  function reopenProject() {
+    if (!selectedProject || selectedProject.status !== "completed") return;
+    const reason = window.prompt("Motivo obligatorio para reabrir la obra:");
+    if (!reason?.trim()) return;
+    const newEndDate = window.prompt("Nueva fecha estimada de finalización (AAAA-MM-DD):", selectedProject.estimatedEndDate || "");
+    if (!newEndDate || newEndDate < (selectedProject.startDate || "")) return alert("Indique una fecha posterior al inicio de la obra.");
+    setProjects(current => current.map(project => project.id === selectedProject.id ? { ...project, status: "active", estimatedEndDate: newEndDate } : project));
+    setReopenHistory(current => [...current, { projectId: selectedProject.id, reason: reason.trim(), occurredAt: new Date().toLocaleString("es-CO") }]);
+  }
 
   const handleBudgetAdjustment = (e: FormEvent) => {
     e.preventDefault();
@@ -271,6 +281,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
           <button className="inventory-action btn-edit-project" onClick={() => setIsProjectPickerOpen(true)}>
             Editar proyecto
           </button>
+          {selectedProject?.status === "completed" && <button className="inventory-action btn-secondary-action" onClick={reopenProject}>Reabrir proyecto</button>}
           <button className="inventory-action btn-budget-adjustment" onClick={() => setIsBudgetAdjustmentOpen(true)}>Ajustar presupuesto</button>
           <button className="inventory-action btn-primary-action" onClick={() => setIsDispatchModalOpen(true)}>
             📤 Despachar a esta Obra

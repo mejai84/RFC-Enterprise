@@ -16,7 +16,7 @@ export {
 
 export type { InventoryMovement, MovementType } from "./domain/movement";
 export type { Product } from "./domain/product";
+export { inventoryUnits, type UnitOfMeasure } from "./domain/unit-of-measure";
 export type { Project } from "./domain/project";
 export type { MaterialRequisition, RequisitionItem, RequisitionStatus } from "./domain/requisition";
 export type { ToolLoan, ToolLoanStatus } from "./domain/tool-loan";
-

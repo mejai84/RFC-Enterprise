@@ -10,6 +10,7 @@ import {
   type Project,
   type InventoryMovement,
   type MovementType,
+  inventoryUnits,
 } from "../index";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
@@ -490,7 +491,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
           ) : (
             <>
               <button className="inventory-action secondary" onClick={() => setIsNewItemModalOpen(true)} type="button">+ Nuevo artículo</button>
-              <button className="inventory-action secondary" onClick={() => openMovementModal(undefined, "entry")} type="button">+ Registrar entrada</button>
+              <button className="inventory-action btn-secondary-action" onClick={() => openMovementModal(undefined, "entry")} type="button">+ Registrar entrada</button>
               <button className="inventory-action" onClick={() => openMovementModal(undefined, "exit")} type="button">+ Registrar salida</button>
             </>
           )}

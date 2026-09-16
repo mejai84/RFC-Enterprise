@@ -287,7 +287,7 @@ export function ProjectsWorkspace() {
           {visibleProjects.map((prj) => (
             <button
               key={prj.id}
-              className={`prj-pill ${prj.id === selectedProjectId ? "is-selected" : ""}`}
+              className={`prj-pill status-${prj.status} ${prj.id === selectedProjectId ? "is-selected" : ""}`}
               onClick={() => setSelectedProjectId(prj.id)}
             >
               <span className="pill-code">{prj.code}</span>

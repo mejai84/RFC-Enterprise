@@ -1551,6 +1551,16 @@
   box-shadow: 0 0 0 2px rgba(11, 122, 71, 0.18);
 }
 
+.prj-pill.status-completed { background: #fff1f2; border-color: #fecdd3; }
+.prj-pill.status-completed .pill-name { color: #b91c1c; }
+.prj-pill.status-on_hold { background: #fffbeb; border-color: #fde68a; }
+.prj-pill.status-on_hold .pill-name { color: #92400e; }
+.prj-pill.status-pending { background: #eff6ff; border-color: #bfdbfe; }
+.prj-pill.status-pending .pill-name { color: #1d4ed8; }
+.prj-pill.status-active .pill-name { color: var(--brand-dark); }
+.prj-pill.status-completed.is-selected { box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.22); }
+.prj-pill.status-on_hold.is-selected { box-shadow: 0 0 0 2px rgba(146, 64, 14, 0.22); }
+
 .pill-code {
   background: #ffffff;
   border: 1px solid var(--line);

@@ -52,9 +52,11 @@ type Props = {
   dataSource?: "demo" | "database";
   loadError?: string;
   initialTab?: TabKey;
+  mode?: "inventory" | "movements";
 };
 
-export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadError, initialTab = "catalog" }: Props) {
+export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadError, initialTab = "catalog", mode = "inventory" }: Props) {
+  const isMovementsView = mode === "movements";
   // Inicialización con persistencia en localStorage
   const [products, setProducts] = useState<StockProduct[]>(() => {
     if (typeof window !== "undefined") {
@@ -432,17 +434,14 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       <section className="dashboard-heading">
         <div>
           <p>Módulo de Operaciones · RFC Enterprise</p>
-          <h1>Control de Inventario y Costos de Obra</h1>
+          <h1>{isMovementsView ? "Kardex de Movimientos" : "Control de Inventario"}</h1>
           <small>
-            Catálogo activo con {numberFormatter.format(products.length)} artículos y costeo de materiales en tiempo real.
+            {isMovementsView ? "Consulta y registra entradas, salidas, ajustes y devoluciones de inventario." : `Catálogo activo con ${numberFormatter.format(products.length)} artículos y existencias disponibles.`}
           </small>
         </div>
         <div className="header-actions">
-          <button className="inventory-action secondary" onClick={() => setIsProjectModalOpen(true)} type="button">
-            + Nueva Obra / Proyecto
-          </button>
           <button className="inventory-action" onClick={() => openMovementModal()} type="button">
-            + Registrar Salida / Entrada
+            {isMovementsView ? "+ Registrar movimiento" : "+ Registrar Salida / Entrada"}
           </button>
         </div>
       </section>

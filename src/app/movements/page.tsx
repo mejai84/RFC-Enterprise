@@ -8,5 +8,5 @@ export const metadata = {
 
 export default async function MovementsPage() {
   const inventory = await getInventoryProducts();
-  return <InventoryWorkspace dataSource={inventory.source} initialProducts={inventory.products} loadError={inventory.error} initialTab="movements" />;
+  return <InventoryWorkspace dataSource={inventory.source} initialProducts={inventory.products} loadError={inventory.error} initialTab="movements" mode="movements" />;
 }

@@ -86,7 +86,7 @@ export function ProjectsWorkspace() {
 
   // Selected Project State
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"materials" | "tools" | "requisitions">("materials");
+  const [activeTab, setActiveTab] = useState<"materials" | "tools" | "requisitions" | "budget">("materials");
   const [projectStatusFilter, setProjectStatusFilter] = useState<"all" | Project["status"]>("all");
 
   // Modals
@@ -253,7 +253,7 @@ export function ProjectsWorkspace() {
     const amount = Number(budgetAdjustment);
     if (!selectedProject || !amount || !budgetReason.trim()) return alert("Indique el valor y el motivo del ajuste.");
     if (selectedProject.budget + amount < projectSpent) return alert("El nuevo presupuesto no puede ser menor al gasto acumulado.");
-    setProjects((current) => current.map((project) => project.id === selectedProject.id ? { ...project, budget: project.budget + amount } : project));
+    setProjects((current) => current.map((project) => project.id === selectedProject.id ? { ...project, budget: project.budget + amount, budgetAdjustments: [...(project.budgetAdjustments || []), { id: `budget-${Date.now()}`, amount, reason: budgetReason.trim(), occurredAt: new Date().toLocaleDateString("es-CO") }] } : project));
     setBudgetAdjustment(""); setBudgetReason(""); setIsBudgetAdjustmentOpen(false);
   };
 
@@ -348,14 +348,15 @@ export function ProjectsWorkspace() {
 
           {/* Detailed Tab Navigation */}
           <div className="project-tabs-header">
-            <button
-              className={`tab-btn ${activeTab === "materials" ? "is-active" : ""}`}
+          <button
+            className={`tab-btn ${activeTab === "materials" ? "is-active" : ""}`}
               onClick={() => setActiveTab("materials")}
             >
               📦 Materiales e Insumos Gastados ({projectMovements.length})
-            </button>
-            <button
-              className={`tab-btn ${activeTab === "tools" ? "is-active" : ""}`}
+          </button>
+          <button className={`tab-btn ${activeTab === "budget" ? "is-active" : ""}`} onClick={() => setActiveTab("budget")}>Ajustes de presupuesto ({selectedProject.budgetAdjustments?.length || 0})</button>
+          <button
+            className={`tab-btn ${activeTab === "tools" ? "is-active" : ""}`}
               onClick={() => setActiveTab("tools")}
             >
               🛠️ Herramientas en Custodia ({projectTools.length})
@@ -447,6 +448,10 @@ export function ProjectsWorkspace() {
           )}
 
           {/* TAB 2: Herramientas en Custodia */}
+          {activeTab === "budget" && (
+            <div className="project-tab-content"><div className="materials-history-card"><h3>Historial de ajustes</h3>{selectedProject.budgetAdjustments?.length ? <table className="project-history-table"><thead><tr><th>Fecha</th><th>Motivo</th><th>Valor</th></tr></thead><tbody>{selectedProject.budgetAdjustments.map((adjustment) => <tr key={adjustment.id}><td>{adjustment.occurredAt}</td><td>{adjustment.reason}</td><td className={adjustment.amount > 0 ? "text-success" : "text-danger"}>{adjustment.amount > 0 ? "+" : ""}{currencyFormatter.format(adjustment.amount)}</td></tr>)}</tbody></table> : <p className="empty-state">Todavía no hay ajustes presupuestales registrados para esta obra.</p>}</div></div>
+          )}
+
           {activeTab === "tools" && (
             <div className="project-tab-content">
               <h3>Herramientas y Equipos en Custodia en este Frente de Obra</h3>

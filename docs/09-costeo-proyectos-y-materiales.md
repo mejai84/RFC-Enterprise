@@ -34,6 +34,7 @@ Permitir a **Representaciones Figueroa Castro S.A.S.** conocer en tiempo real el
   - Saldo presupuestal disponible.
   - Porcentaje de ejecución presupuestal con semáforo visual.
   - Historial de despachos y vales de salida asociados.
+  - Historial de ajustes presupuestales con fecha, motivo y valor aplicado.
 
 ### C. Vales de Salida Imprimibles (Remisión de Almacén)
 - **Formato Oficial de Entrega**: Generación interactiva e imprimible (`@media print`) del Vale de Salida con membrete oficial de RFC Enterprise, folio consecutivo, cliente, obra destino, ítems entregados valorizados y áreas de firma para el Almacenista y el Residente de Obra.

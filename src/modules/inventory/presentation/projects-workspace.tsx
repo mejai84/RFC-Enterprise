@@ -32,7 +32,7 @@ function formatDateTime() {
   }).format(date);
 }
 
-export function ProjectsWorkspace() {
+export function ProjectsWorkspace({ responsibleName }: { responsibleName: string }) {
   // Sincronización con localStorage
   const [products, setProducts] = useState<StockProduct[]>(() => {
     if (typeof window !== "undefined") {
@@ -116,7 +116,7 @@ export function ProjectsWorkspace() {
   const [editStatus, setEditStatus] = useState<Project["status"]>("active");
   const [budgetAdjustment, setBudgetAdjustment] = useState("");
   const [budgetReason, setBudgetReason] = useState("");
-  const [budgetResponsible, setBudgetResponsible] = useState("");
+  const [budgetResponsible, setBudgetResponsible] = useState(responsibleName);
 
   // Persistir cambios
   useEffect(() => {
@@ -255,7 +255,7 @@ export function ProjectsWorkspace() {
     if (!selectedProject || !amount || !budgetReason.trim() || !budgetResponsible.trim()) return alert("Indique el valor, motivo y responsable del ajuste.");
     if (selectedProject.budget + amount < projectSpent) return alert("El nuevo presupuesto no puede ser menor al gasto acumulado.");
     setProjects((current) => current.map((project) => project.id === selectedProject.id ? { ...project, budget: project.budget + amount, budgetAdjustments: [...(project.budgetAdjustments || []), { id: `budget-${Date.now()}`, amount, reason: budgetReason.trim(), responsible: budgetResponsible.trim(), occurredAt: new Date().toLocaleDateString("es-CO") }] } : project));
-    setBudgetAdjustment(""); setBudgetReason(""); setBudgetResponsible(""); setIsBudgetAdjustmentOpen(false);
+    setBudgetAdjustment(""); setBudgetReason(""); setIsBudgetAdjustmentOpen(false);
   };
 
   return (
@@ -680,7 +680,7 @@ export function ProjectsWorkspace() {
 
       {/* Modal Remisión Imprimible */}
       {isBudgetAdjustmentOpen && selectedProject && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="budget-adjustment-title"><div className="modal-content"><div className="modal-header"><h2 id="budget-adjustment-title">Ajustar presupuesto</h2><button type="button" aria-label="Cerrar" onClick={() => setIsBudgetAdjustmentOpen(false)}>×</button></div><p>Proyecto: <strong>{selectedProject.name}</strong></p><form onSubmit={handleBudgetAdjustment}><div className="form-group"><label>Valor del ajuste (COP):</label><input type="number" required placeholder="Use un valor negativo para disminuir" value={budgetAdjustment} onChange={(e) => setBudgetAdjustment(e.target.value)} /></div><div className="form-group"><label>Motivo:</label><input type="text" required placeholder="Ej. Adición contractual" value={budgetReason} onChange={(e) => setBudgetReason(e.target.value)} /></div><div className="form-group"><label>Responsable:</label><input type="text" required placeholder="Nombre de quien autoriza o registra" value={budgetResponsible} onChange={(e) => setBudgetResponsible(e.target.value)} /></div><div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsBudgetAdjustmentOpen(false)}>Cancelar</button><button type="submit" className="btn-submit">Aplicar ajuste</button></div></form></div></div>
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="budget-adjustment-title"><div className="modal-content budget-adjustment-modal"><div className="modal-header"><h2 id="budget-adjustment-title">Ajustar presupuesto</h2><button type="button" aria-label="Cerrar" onClick={() => setIsBudgetAdjustmentOpen(false)}>×</button></div><p>Proyecto: <strong>{selectedProject.name}</strong></p><form onSubmit={handleBudgetAdjustment}><div className="form-group"><label>Valor del ajuste (COP):</label><input type="number" required placeholder="Use un valor negativo para disminuir" value={budgetAdjustment} onChange={(e) => setBudgetAdjustment(e.target.value)} /></div><div className="form-group"><label>Motivo:</label><input type="text" required placeholder="Ej. Adición contractual" value={budgetReason} onChange={(e) => setBudgetReason(e.target.value)} /></div><div className="form-group"><label>Responsable:</label><input type="text" readOnly value={budgetResponsible} /></div><div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsBudgetAdjustmentOpen(false)}>Cancelar</button><button type="submit" className="btn-submit">Aplicar ajuste</button></div></form></div></div>
       )}
 
       <PrintableDispatchVoucher

@@ -1700,6 +1700,15 @@
   margin-top: 28px;
 }
 
+.project-tabs-header { gap: 10px; padding: 10px 12px; }
+.project-tabs-header .tab-btn { min-height: 42px; padding: 10px 16px; }
+.materials-history-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius-md); overflow-x: auto; padding: 22px; }
+.materials-history-card h3 { margin-bottom: 16px; }
+.project-history-table { border-collapse: collapse; min-width: 680px; width: 100%; }
+.project-history-table th { background: var(--canvas); color: var(--muted); font-size: 12px; letter-spacing: .04em; padding: 11px 14px; text-align: left; text-transform: uppercase; }
+.project-history-table td { border-top: 1px solid var(--line); color: var(--ink); padding: 14px; vertical-align: top; }
+.project-history-table th:last-child, .project-history-table td:last-child { text-align: right; white-space: nowrap; }
+
 .tab-btn {
   background: transparent;
   border: 0;

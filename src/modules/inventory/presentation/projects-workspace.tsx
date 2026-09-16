@@ -264,14 +264,14 @@ export function ProjectsWorkspace() {
           <small>Consulta detallada del consumo de materiales, insumos gastados y herramientas en custodia por obra.</small>
         </div>
         <div className="dash-quick-btns">
-          <button className="inventory-action btn-secondary-action" onClick={() => setIsProjectPickerOpen(true)}>
+          <button className="inventory-action btn-edit-project" onClick={() => setIsProjectPickerOpen(true)}>
             Editar proyecto
           </button>
-          <button className="inventory-action btn-secondary-action" onClick={() => setIsBudgetAdjustmentOpen(true)}>Ajustar presupuesto</button>
+          <button className="inventory-action btn-budget-adjustment" onClick={() => setIsBudgetAdjustmentOpen(true)}>Ajustar presupuesto</button>
           <button className="inventory-action btn-primary-action" onClick={() => setIsDispatchModalOpen(true)}>
             📤 Despachar a esta Obra
           </button>
-          <button className="inventory-action btn-secondary-action" onClick={() => setIsNewProjectModalOpen(true)}>
+          <button className="inventory-action btn-new-project" onClick={() => setIsNewProjectModalOpen(true)}>
             ➕ Nueva Obra / Proyecto
           </button>
         </div>

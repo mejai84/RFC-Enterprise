@@ -900,6 +900,30 @@
   color: #ffffff !important;
 }
 
+.btn-edit-project {
+  background: #1e3a2b !important;
+  color: #ffffff !important;
+}
+
+.btn-budget-adjustment {
+  background: #b7791f !important;
+  color: #ffffff !important;
+}
+
+.btn-budget-adjustment:hover {
+  background: #925f18 !important;
+}
+
+.btn-new-project {
+  background: #ffffff !important;
+  border: 1px solid var(--brand) !important;
+  color: var(--brand-dark) !important;
+}
+
+.btn-new-project:hover {
+  background: var(--brand-soft) !important;
+}
+
 /* Executive Financial Stat Grid */
 .text-spent {
   color: #b91c1c !important;
@@ -2152,4 +2176,3 @@
 }
 
 .toast-dismiss:hover { color: var(--ink); }
-

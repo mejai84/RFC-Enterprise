@@ -116,6 +116,7 @@ export function ProjectsWorkspace() {
   const [editStatus, setEditStatus] = useState<Project["status"]>("active");
   const [budgetAdjustment, setBudgetAdjustment] = useState("");
   const [budgetReason, setBudgetReason] = useState("");
+  const [budgetResponsible, setBudgetResponsible] = useState("");
 
   // Persistir cambios
   useEffect(() => {
@@ -251,10 +252,10 @@ export function ProjectsWorkspace() {
   const handleBudgetAdjustment = (e: FormEvent) => {
     e.preventDefault();
     const amount = Number(budgetAdjustment);
-    if (!selectedProject || !amount || !budgetReason.trim()) return alert("Indique el valor y el motivo del ajuste.");
+    if (!selectedProject || !amount || !budgetReason.trim() || !budgetResponsible.trim()) return alert("Indique el valor, motivo y responsable del ajuste.");
     if (selectedProject.budget + amount < projectSpent) return alert("El nuevo presupuesto no puede ser menor al gasto acumulado.");
-    setProjects((current) => current.map((project) => project.id === selectedProject.id ? { ...project, budget: project.budget + amount, budgetAdjustments: [...(project.budgetAdjustments || []), { id: `budget-${Date.now()}`, amount, reason: budgetReason.trim(), occurredAt: new Date().toLocaleDateString("es-CO") }] } : project));
-    setBudgetAdjustment(""); setBudgetReason(""); setIsBudgetAdjustmentOpen(false);
+    setProjects((current) => current.map((project) => project.id === selectedProject.id ? { ...project, budget: project.budget + amount, budgetAdjustments: [...(project.budgetAdjustments || []), { id: `budget-${Date.now()}`, amount, reason: budgetReason.trim(), responsible: budgetResponsible.trim(), occurredAt: new Date().toLocaleDateString("es-CO") }] } : project));
+    setBudgetAdjustment(""); setBudgetReason(""); setBudgetResponsible(""); setIsBudgetAdjustmentOpen(false);
   };
 
   return (
@@ -449,7 +450,7 @@ export function ProjectsWorkspace() {
 
           {/* TAB 2: Herramientas en Custodia */}
           {activeTab === "budget" && (
-            <div className="project-tab-content"><div className="materials-history-card"><h3>Historial de ajustes</h3>{selectedProject.budgetAdjustments?.length ? <table className="project-history-table"><thead><tr><th>Fecha</th><th>Motivo</th><th>Valor</th></tr></thead><tbody>{selectedProject.budgetAdjustments.map((adjustment) => <tr key={adjustment.id}><td>{adjustment.occurredAt}</td><td>{adjustment.reason}</td><td className={adjustment.amount > 0 ? "text-success" : "text-danger"}>{adjustment.amount > 0 ? "+" : ""}{currencyFormatter.format(adjustment.amount)}</td></tr>)}</tbody></table> : <p className="empty-state">Todavía no hay ajustes presupuestales registrados para esta obra.</p>}</div></div>
+            <div className="project-tab-content"><div className="materials-history-card"><h3>Historial de ajustes</h3>{selectedProject.budgetAdjustments?.length ? <table className="project-history-table"><thead><tr><th>Fecha</th><th>Responsable</th><th>Motivo</th><th>Valor</th></tr></thead><tbody>{selectedProject.budgetAdjustments.map((adjustment) => <tr key={adjustment.id}><td>{adjustment.occurredAt}</td><td>{adjustment.responsible}</td><td>{adjustment.reason}</td><td className={adjustment.amount > 0 ? "text-success" : "text-danger"}>{adjustment.amount > 0 ? "+" : ""}{currencyFormatter.format(adjustment.amount)}</td></tr>)}</tbody></table> : <p className="empty-state">Todavía no hay ajustes presupuestales registrados para esta obra.</p>}</div></div>
           )}
 
           {activeTab === "tools" && (
@@ -679,7 +680,7 @@ export function ProjectsWorkspace() {
 
       {/* Modal Remisión Imprimible */}
       {isBudgetAdjustmentOpen && selectedProject && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="budget-adjustment-title"><div className="modal-content"><div className="modal-header"><h2 id="budget-adjustment-title">Ajustar presupuesto</h2><button type="button" aria-label="Cerrar" onClick={() => setIsBudgetAdjustmentOpen(false)}>×</button></div><p>Proyecto: <strong>{selectedProject.name}</strong></p><form onSubmit={handleBudgetAdjustment}><div className="form-group"><label>Valor del ajuste (COP):</label><input type="number" required placeholder="Use un valor negativo para disminuir" value={budgetAdjustment} onChange={(e) => setBudgetAdjustment(e.target.value)} /></div><div className="form-group"><label>Motivo:</label><input type="text" required placeholder="Ej. Adición contractual" value={budgetReason} onChange={(e) => setBudgetReason(e.target.value)} /></div><div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsBudgetAdjustmentOpen(false)}>Cancelar</button><button type="submit" className="btn-submit">Aplicar ajuste</button></div></form></div></div>
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="budget-adjustment-title"><div className="modal-content"><div className="modal-header"><h2 id="budget-adjustment-title">Ajustar presupuesto</h2><button type="button" aria-label="Cerrar" onClick={() => setIsBudgetAdjustmentOpen(false)}>×</button></div><p>Proyecto: <strong>{selectedProject.name}</strong></p><form onSubmit={handleBudgetAdjustment}><div className="form-group"><label>Valor del ajuste (COP):</label><input type="number" required placeholder="Use un valor negativo para disminuir" value={budgetAdjustment} onChange={(e) => setBudgetAdjustment(e.target.value)} /></div><div className="form-group"><label>Motivo:</label><input type="text" required placeholder="Ej. Adición contractual" value={budgetReason} onChange={(e) => setBudgetReason(e.target.value)} /></div><div className="form-group"><label>Responsable:</label><input type="text" required placeholder="Nombre de quien autoriza o registra" value={budgetResponsible} onChange={(e) => setBudgetResponsible(e.target.value)} /></div><div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsBudgetAdjustmentOpen(false)}>Cancelar</button><button type="submit" className="btn-submit">Aplicar ajuste</button></div></form></div></div>
       )}
 
       <PrintableDispatchVoucher

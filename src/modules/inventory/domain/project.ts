@@ -9,7 +9,7 @@ export type Project = {
   createdAt: string;
   startDate?: string; // Fecha de inicio de obra
   estimatedEndDate?: string; // Fecha final tentativa / entrega estimada
-  budgetAdjustments?: Array<{ id: string; amount: number; reason: string; occurredAt: string }>;
+  budgetAdjustments?: Array<{ id: string; amount: number; reason: string; responsible: string; occurredAt: string }>;
 };
 
 export const initialProjects: Project[] = [

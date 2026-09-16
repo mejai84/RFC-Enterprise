@@ -92,6 +92,7 @@ export function ProjectsWorkspace() {
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
+  const [isProjectPickerOpen, setIsProjectPickerOpen] = useState(false);
   const [selectedVoucherMovement, setSelectedVoucherMovement] = useState<InventoryMovement | null>(null);
 
   // Dispatch Form State
@@ -222,11 +223,12 @@ export function ProjectsWorkspace() {
     setNewPrjEstimatedEndDate("");
   };
 
-  const openEditProject = () => {
-    if (!selectedProject) return;
-    setEditStartDate(selectedProject.startDate || "");
-    setEditEstimatedEndDate(selectedProject.estimatedEndDate || "");
-    setEditStatus(selectedProject.status);
+  const openEditProject = (project: Project) => {
+    setSelectedProjectId(project.id);
+    setEditStartDate(project.startDate || "");
+    setEditEstimatedEndDate(project.estimatedEndDate || "");
+    setEditStatus(project.status);
+    setIsProjectPickerOpen(false);
     setIsEditProjectModalOpen(true);
   };
 
@@ -248,7 +250,7 @@ export function ProjectsWorkspace() {
           <small>Consulta detallada del consumo de materiales, insumos gastados y herramientas en custodia por obra.</small>
         </div>
         <div className="dash-quick-btns">
-          <button className="inventory-action btn-secondary-action" onClick={openEditProject}>
+          <button className="inventory-action btn-secondary-action" onClick={() => setIsProjectPickerOpen(true)}>
             Editar proyecto
           </button>
           <button className="inventory-action btn-primary-action" onClick={() => setIsDispatchModalOpen(true)}>
@@ -555,6 +557,18 @@ export function ProjectsWorkspace() {
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-project-title">
           <div className="modal-content"><div className="modal-header"><h2 id="edit-project-title">Editar proyecto</h2><button type="button" aria-label="Cerrar" onClick={() => setIsEditProjectModalOpen(false)}>×</button></div>
             <form onSubmit={handleEditProjectSubmit}><div className="form-row-2"><div className="form-group"><label>Fecha de inicio:</label><input type="date" required value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} /></div><div className="form-group"><label>Fecha estimada de finalizaciÃ³n:</label><input type="date" required min={editStartDate} value={editEstimatedEndDate} onChange={(e) => setEditEstimatedEndDate(e.target.value)} /></div></div><div className="form-group"><label>Estado:</label><select value={editStatus} onChange={(e) => setEditStatus(e.target.value as Project["status"])}><option value="pending">Pendiente</option><option value="active">Activa</option><option value="on_hold">En pausa</option><option value="completed">Finalizada</option></select></div><div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsEditProjectModalOpen(false)}>Cancelar</button><button type="submit" className="btn-submit">Guardar cambios</button></div></form>
+          </div>
+        </div>
+      )}
+
+      {isProjectPickerOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="project-picker-title">
+          <div className="modal-content project-picker-modal">
+            <div className="modal-header"><h2 id="project-picker-title">Seleccionar proyecto para editar</h2><button type="button" aria-label="Cerrar" onClick={() => setIsProjectPickerOpen(false)}>×</button></div>
+            <p className="project-picker-hint">Elige una obra para actualizar sus fechas, estado o información general.</p>
+            <div className="project-picker-grid">
+              {projects.map((project) => <button key={project.id} type="button" className="project-picker-card" onClick={() => openEditProject(project)}><span>{project.code}</span><strong>{project.name}</strong><small>{project.client}</small></button>)}
+            </div>
           </div>
         </div>
       )}

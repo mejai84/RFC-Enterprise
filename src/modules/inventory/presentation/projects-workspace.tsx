@@ -87,6 +87,7 @@ export function ProjectsWorkspace() {
   // Selected Project State
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || "prj-01");
   const [activeTab, setActiveTab] = useState<"materials" | "tools" | "requisitions">("materials");
+  const [projectStatusFilter, setProjectStatusFilter] = useState<"all" | Project["status"]>("all");
 
   // Modals
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
@@ -130,6 +131,7 @@ export function ProjectsWorkspace() {
   const selectedProject = useMemo(() => {
     return projects.find((p) => p.id === selectedProjectId) || projects[0];
   }, [projects, selectedProjectId]);
+  const visibleProjects = useMemo(() => projectStatusFilter === "all" ? projects : projects.filter((project) => project.status === projectStatusFilter), [projects, projectStatusFilter]);
 
   // Project Specific Computations
   const projectMovements = useMemo(() => {
@@ -280,8 +282,9 @@ export function ProjectsWorkspace() {
       {/* Projects Navigation Selector */}
       <section className="projects-selector-bar">
         <span className="selector-label">Seleccionar Obra:</span>
+        <label className="project-status-filter">Estado <select value={projectStatusFilter} onChange={(event) => setProjectStatusFilter(event.target.value as "all" | Project["status"])}><option value="all">Todas</option><option value="pending">Pendientes</option><option value="active">Activas</option><option value="on_hold">En pausa</option><option value="completed">Finalizadas</option></select></label>
         <div className="selector-pills">
-          {projects.map((prj) => (
+          {visibleProjects.map((prj) => (
             <button
               key={prj.id}
               className={`prj-pill ${prj.id === selectedProjectId ? "is-selected" : ""}`}
@@ -291,6 +294,7 @@ export function ProjectsWorkspace() {
               <strong className="pill-name">{prj.name}</strong>
             </button>
           ))}
+          {visibleProjects.length === 0 && <p className="project-filter-empty">No hay obras con este estado.</p>}
         </div>
       </section>
 

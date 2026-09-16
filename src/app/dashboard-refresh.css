@@ -1628,6 +1628,13 @@
   padding: 6px 14px;
 }
 
+.status-badge-lg.status-red { background: #fee2e2; color: #b91c1c; }
+.status-badge-lg.status-yellow { background: #fef3c7; color: #92400e; }
+.status-badge-lg.status-green { background: var(--brand-soft); color: var(--brand-dark); }
+.project-status-filter { align-items: center; color: var(--muted); display: flex; font-size: 12px; font-weight: 700; gap: 6px; white-space: nowrap; }
+.project-status-filter select { background: #fff; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); padding: 6px 8px; }
+.project-filter-empty { color: var(--muted); font-size: 13px; margin: 8px 0; }
+
 .project-metrics-grid {
   display: grid;
   gap: 16px;

@@ -440,9 +440,14 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
           </small>
         </div>
         <div className="header-actions">
-          <button className="inventory-action" onClick={() => openMovementModal()} type="button">
-            {isMovementsView ? "+ Registrar movimiento" : "+ Registrar Salida / Entrada"}
-          </button>
+          {isMovementsView ? (
+            <button className="inventory-action" onClick={() => openMovementModal()} type="button">+ Registrar movimiento</button>
+          ) : (
+            <>
+              <button className="inventory-action secondary" onClick={() => openMovementModal(undefined, "entry")} type="button">+ Registrar entrada</button>
+              <button className="inventory-action" onClick={() => openMovementModal(undefined, "exit")} type="button">+ Registrar salida</button>
+            </>
+          )}
         </div>
       </section>
 

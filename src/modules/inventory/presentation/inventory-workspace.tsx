@@ -24,6 +24,7 @@ const movementLabels: Record<MovementType, string> = {
   entry: "Entrada a Bodega",
   exit: "Salida para Obra",
   adjustment: "Ajuste de Inventario",
+  return: "DevoluciÃ³n a Bodega",
 };
 
 type TabKey = "catalog" | "movements" | "projects" | "low-stock";

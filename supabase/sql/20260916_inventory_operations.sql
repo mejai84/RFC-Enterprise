@@ -7,7 +7,8 @@ create table if not exists public.inventory_locations (
   company_id uuid not null references public.companies(id) on delete restrict,
   branch_id uuid not null references public.branches(id) on delete restrict,
   warehouse text not null, aisle text, shelf text, level text, bin text,
-  code text generated always as (concat_ws('-', warehouse, aisle, shelf, level, bin)) stored,
+  -- `concat_ws` is STABLE, not IMMUTABLE; a generated expression must be immutable.
+  code text generated always as (warehouse || coalesce('-' || aisle, '') || coalesce('-' || shelf, '') || coalesce('-' || level, '') || coalesce('-' || bin, '')) stored,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   unique nulls not distinct (branch_id, warehouse, aisle, shelf, level, bin)

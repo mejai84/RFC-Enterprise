@@ -93,6 +93,7 @@ export function ProjectsWorkspace() {
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [isProjectPickerOpen, setIsProjectPickerOpen] = useState(false);
+  const [isBudgetAdjustmentOpen, setIsBudgetAdjustmentOpen] = useState(false);
   const [selectedVoucherMovement, setSelectedVoucherMovement] = useState<InventoryMovement | null>(null);
 
   // Dispatch Form State
@@ -112,6 +113,8 @@ export function ProjectsWorkspace() {
   const [editStartDate, setEditStartDate] = useState("");
   const [editEstimatedEndDate, setEditEstimatedEndDate] = useState("");
   const [editStatus, setEditStatus] = useState<Project["status"]>("active");
+  const [budgetAdjustment, setBudgetAdjustment] = useState("");
+  const [budgetReason, setBudgetReason] = useState("");
 
   // Persistir cambios
   useEffect(() => {
@@ -143,6 +146,8 @@ export function ProjectsWorkspace() {
 
   const projectRemaining = (selectedProject?.budget || 0) - projectSpent;
   const projectProgress = selectedProject?.budget ? Math.min(Math.round((projectSpent / selectedProject.budget) * 100), 100) : 0;
+  const projectSignal = selectedProject?.status === "completed" ? "red" : selectedProject?.status === "on_hold" ? "yellow" : projectProgress >= 100 ? "red" : projectProgress >= 80 ? "yellow" : "green";
+  const projectSignalLabel = selectedProject?.status === "completed" ? "Finalizada" : selectedProject?.status === "on_hold" ? "En pausa" : projectProgress >= 100 ? "Sobrecosto" : projectProgress >= 80 ? "Alerta de presupuesto" : "Activa";
 
   const projectTools = useMemo(() => {
     return toolLoans.filter((t) => t.projectId === selectedProject?.id);
@@ -240,6 +245,15 @@ export function ProjectsWorkspace() {
     setIsEditProjectModalOpen(false);
   };
 
+  const handleBudgetAdjustment = (e: FormEvent) => {
+    e.preventDefault();
+    const amount = Number(budgetAdjustment);
+    if (!selectedProject || !amount || !budgetReason.trim()) return alert("Indique el valor y el motivo del ajuste.");
+    if (selectedProject.budget + amount < projectSpent) return alert("El nuevo presupuesto no puede ser menor al gasto acumulado.");
+    setProjects((current) => current.map((project) => project.id === selectedProject.id ? { ...project, budget: project.budget + amount } : project));
+    setBudgetAdjustment(""); setBudgetReason(""); setIsBudgetAdjustmentOpen(false);
+  };
+
   return (
     <main className="dashboard-content dashboard-v3" id="main-content" tabIndex={-1}>
       {/* Header */}
@@ -253,6 +267,7 @@ export function ProjectsWorkspace() {
           <button className="inventory-action btn-secondary-action" onClick={() => setIsProjectPickerOpen(true)}>
             Editar proyecto
           </button>
+          <button className="inventory-action btn-secondary-action" onClick={() => setIsBudgetAdjustmentOpen(true)}>Ajustar presupuesto</button>
           <button className="inventory-action btn-primary-action" onClick={() => setIsDispatchModalOpen(true)}>
             📤 Despachar a esta Obra
           </button>
@@ -290,8 +305,8 @@ export function ProjectsWorkspace() {
                 <h2>{selectedProject.name}</h2>
                 <p>Cliente: <strong>{selectedProject.client}</strong> · Ubicación: <strong>{selectedProject.location}</strong></p>
               </div>
-              <span className={`status-badge-lg status-${projectProgress >= 100 ? "red" : projectProgress >= 80 ? "yellow" : "green"}`}>
-                {projectProgress >= 100 ? "🔴 Sobrecosto" : projectProgress >= 80 ? "🟡 Alerta Stock" : "🟢 Activa"}
+              <span className={`status-badge-lg status-${projectSignal}`}>
+                {projectSignalLabel}
               </span>
             </div>
 
@@ -651,6 +666,10 @@ export function ProjectsWorkspace() {
       )}
 
       {/* Modal Remisión Imprimible */}
+      {isBudgetAdjustmentOpen && selectedProject && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="budget-adjustment-title"><div className="modal-content"><div className="modal-header"><h2 id="budget-adjustment-title">Ajustar presupuesto</h2><button type="button" aria-label="Cerrar" onClick={() => setIsBudgetAdjustmentOpen(false)}>×</button></div><p>Proyecto: <strong>{selectedProject.name}</strong></p><form onSubmit={handleBudgetAdjustment}><div className="form-group"><label>Valor del ajuste (COP):</label><input type="number" required placeholder="Use un valor negativo para disminuir" value={budgetAdjustment} onChange={(e) => setBudgetAdjustment(e.target.value)} /></div><div className="form-group"><label>Motivo:</label><input type="text" required placeholder="Ej. Adición contractual" value={budgetReason} onChange={(e) => setBudgetReason(e.target.value)} /></div><div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsBudgetAdjustmentOpen(false)}>Cancelar</button><button type="submit" className="btn-submit">Aplicar ajuste</button></div></form></div></div>
+      )}
+
       <PrintableDispatchVoucher
         movement={selectedVoucherMovement}
         project={selectedProject}

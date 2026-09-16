@@ -222,11 +222,17 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
 
   // Abrir modal de movimiento con producto precargado
   function openMovementModal(product?: StockProduct, defaultType: MovementType = "exit") {
-    const target = product || products[0];
+    const target = product;
     if (target) {
       setSelectedProductId(target.id);
       setModalSearch(target.name);
       setUnitCostInput(String(target.unitCost || 25000));
+    } else {
+      // Una entrada iniciada desde el encabezado debe obligar a elegir el artículo.
+      // No se permite registrar por accidente sobre el primer elemento del catálogo.
+      setSelectedProductId("");
+      setModalSearch("");
+      setUnitCostInput("");
     }
     setShowAutocomplete(false);
     setMovementType(defaultType);
@@ -278,6 +284,10 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     }
 
     const project = projects.find((prj) => prj.id === selectedProjectId);
+    if (movementType === "exit" && (!project || project.status !== "active")) {
+      setFormError("Selecciona una obra activa. No se pueden despachar materiales a obras finalizadas, pendientes o en pausa.");
+      return;
+    }
     const totalCost = Math.abs(qty * unitCost);
 
     const newMovement: InventoryMovement = {
@@ -494,6 +504,9 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
 
       {/* Barra de Pestañas de Navegación */}
       <nav className="inventory-tabs-nav" aria-label="Secciones del módulo">
+        {isMovementsView ? (
+          <button className="tab-btn active" type="button" aria-current="page">Kardex y Movimientos ({movements.length})</button>
+        ) : <>
         <button
           className={`tab-btn ${activeTab === "catalog" ? "active" : ""}`}
           onClick={() => setActiveTab("catalog")}
@@ -525,12 +538,13 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
         >
           ⚠️ Alertas de Stock Mínimo {lowStockCount > 0 && <span className="tab-badge">{lowStockCount}</span>}
         </button>
+        </>}
       </nav>
 
       {/* ========================================================================= */}
       {/* PESTAÑA 1: CATÁLOGO DE EXISTENCIAS */}
       {/* ========================================================================= */}
-      {activeTab === "catalog" && (
+      {!isMovementsView && activeTab === "catalog" && (
         <section className="dashboard-panel inventory-catalog-panel">
           <div className="panel-title">
             <div>
@@ -727,7 +741,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       {/* ========================================================================= */}
       {/* PESTAÑA 2: COSTOS POR PROYECTO / OBRA (LO QUE PIDIÓ EL USUARIO) */}
       {/* ========================================================================= */}
-      {activeTab === "projects" && (
+      {!isMovementsView && activeTab === "projects" && (
         <section className="dashboard-panel projects-cost-panel">
           <div className="panel-title">
             <div>
@@ -840,7 +854,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       {/* ========================================================================= */}
       {/* PESTAÑA 3: HISTORIAL DE MOVIMIENTOS (KARDEX) */}
       {/* ========================================================================= */}
-      {activeTab === "movements" && (
+      {(isMovementsView || activeTab === "movements") && (
         <section className="dashboard-panel inventory-movements-panel">
           <div className="panel-title">
             <div>
@@ -963,7 +977,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       {/* ========================================================================= */}
       {/* PESTAÑA 4: ALERTAS DE STOCK MÍNIMO */}
       {/* ========================================================================= */}
-      {activeTab === "low-stock" && (
+      {!isMovementsView && activeTab === "low-stock" && (
         <section className="dashboard-panel low-stock-panel">
           <div className="panel-title">
             <div>
@@ -1084,11 +1098,11 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
               {/* Buscador Rápido de Artículo */}
               <div className="form-group" style={{ position: "relative" }}>
                 <label>
-                  Artículo a mover <span className="req">*</span>
+                  {movementType === "entry" ? "Artículo a ingresar" : "Artículo a mover"} <span className="req">*</span>
                 </label>
                 <div style={{ position: "relative" }}>
                   <input
-                    placeholder="Escribe el nombre del artículo para buscar…"
+                    placeholder="Busca por nombre, SKU o código de barras…"
                     value={modalSearch}
                     onFocus={() => setShowAutocomplete(true)}
                     onChange={(e) => {
@@ -1100,7 +1114,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                   {showAutocomplete && modalSearch.trim().length > 0 && (
                     <div className="autocomplete-results">
                       {products
-                        .filter((p) => p.name.toLowerCase().includes(modalSearch.toLowerCase()))
+                        .filter((p) => `${p.name} ${p.sku}`.toLowerCase().includes(modalSearch.toLowerCase()))
                         .slice(0, 6)
                         .map((p) => (
                           <button
@@ -1146,9 +1160,10 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                     onChange={(e) => setSelectedProjectId(e.target.value)}
                     required
                   >
+                    <option value="">Selecciona una obra activa</option>
                     {projects.map((prj) => (
-                      <option key={prj.id} value={prj.id}>
-                        {prj.code} - {prj.name} ({prj.client})
+                      <option key={prj.id} value={prj.id} disabled={prj.status !== "active"}>
+                        {prj.code} - {prj.name} ({prj.status === "active" ? "Activa" : prj.status === "completed" ? "Finalizada" : "No disponible"})
                       </option>
                     ))}
                   </select>
@@ -1173,7 +1188,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
 
                 <div className="form-group">
                   <label>
-                    Costo Unitario ($ COP) <span className="req">*</span>
+                  Costo Unitario ($ COP) <span className="req">*</span>
                   </label>
                   <input
                     type="number"
@@ -1189,7 +1204,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
 
               {/* Resumen del Costo Total Calculado */}
               <div className="total-cost-banner">
-                <span>Costo Total del Despacho:</span>
+                <span>{movementType === "exit" ? "Costo total del despacho:" : "Valor total del movimiento:"}</span>
                 <strong>
                   {currencyFormatter.format((Number(quantityInput) || 0) * (Number(unitCostInput) || 0))} COP
                 </strong>

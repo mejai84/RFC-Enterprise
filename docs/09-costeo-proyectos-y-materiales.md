@@ -48,6 +48,13 @@ Permitir a **Representaciones Figueroa Castro S.A.S.** conocer en tiempo real el
 ### F. Custodia y Préstamo de Herramientas a Cuadrillas
 - **Control de Equipos**: Registro de préstamos de herramientas menores y mayores (pulidoras, soldadores, taladros, equipos de seguridad) a trabajadores con fecha de entrega, estado del equipo y fecha de devolución.
 
+### G. Operación de inventario y abastecimiento
+- **Ubicación trazable**: bodega, pasillo, estante, nivel y contenedor por existencia.
+- **Recepción de compra**: proveedor, factura y costo unitario de la entrada.
+- **Conteo físico**: cantidad de sistema versus cantidad contada, motivo, responsable y aprobación antes del ajuste.
+- **Reorden y reportes**: mínimo, cantidad sugerida, consumo por obra, rotación, inventario sin movimiento y valoración por grupo.
+- **Regla de despacho**: sólo una obra en estado `active` puede recibir una salida de materiales.
+
 ---
 
 ## 3. Modelo de Dominio y Entidades Extendidas

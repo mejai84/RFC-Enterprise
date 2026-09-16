@@ -13,7 +13,7 @@ audiencia: Dirección, Producto y Desarrollo
 | --- | --- | --- | --- |
 | `core` | Administración | Base técnica | Contratos de usuarios, roles, permisos, empresas, sedes, auditoría y configuración |
 | `dashboard` | Dashboard Ejecutivo | Operativo v0.3 | Panel principal de obras, KPIs financieros consolidados, semáforos y accesos rápidos de almacén |
-| `inventory` | Inventarios & Kardex | Operativo v0.3 | Catálogo 1,191 artículos, existencias, kardex valorizado, vales imprimibles, requisiciones y devoluciones |
+| `inventory` | Inventarios & Kardex | Operativo v0.4 | Catálogo, kardex separado, búsqueda por SKU/código, control de despachos y modelo de conteos, compras, ubicaciones, alertas y auditoría |
 | `projects` | Costeo de Proyectos | Operativo v0.4 | Centro de costos, calendario de inicio/entrega estimada, estado de obra, presupuestos y control de sobrecostos |
 | `equipment` | Equipos & Custodia | Operativo v0.1 | Préstamo y seguimiento de herramientas a cuadrillas y trabajadores por obra |
 | `purchases` | Compras | Planeado | Sin implementación |
@@ -56,4 +56,9 @@ audiencia: Dirección, Producto y Desarrollo
 - Catálogo completo con 1,191 artículos, Kardex valorizado y exportación CSV.
 - Persistencia híbrida local e integración con identidad Supabase.
 
+## Entrega acordada: Operaciones de inventario v0.4
+
+- El registro de entrada parte sin artículo preseleccionado; la selección se realiza por nombre, SKU o código de barras.
+- `/movements` presenta únicamente el Kardex, sin mezclar catálogo, costos por obra ni alertas.
+- Las salidas se limitan a obras activas. El modelo de datos incorpora compras/recepciones, conteos físicos, ubicaciones detalladas, puntos de reorden, ajustes de presupuesto y auditoría.
 

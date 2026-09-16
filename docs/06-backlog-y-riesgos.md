@@ -26,6 +26,8 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 | DEV-001 | Media | Devoluciones de material sobrante a bodega | Terminado | Reingreso de stock y reversión de costo asignado al proyecto |
 | EQ-001 | Media | Módulo de equipos y custodia de herramientas | Terminado | Control de préstamo y devolución de herramientas por trabajador |
 | QA-001 | Alta | Pruebas continuas y validación de build | Terminado | Validación estática `npm run build` con cero errores |
+| INV-003 | Alta | Operaciones auditables de inventario | En implementación | Migración para ubicaciones, compras, conteos físicos, kardex con costos y auditoría bajo RLS |
+| INV-004 | Media | Alertas y reportes operativos | En implementación | Punto de reorden, sugerencia de compra, consumo por obra, rotación, inmovilizado y valoración por grupo |
 
 ## Riesgos activos
 
@@ -35,3 +37,4 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 | R-002 | Despacho de materiales sin vale de entrega formal | Medio | Baja | Obligatoriedad del número de referencia / orden en el formulario | Almacén |
 | R-003 | Desviación presupuestal inadvertida en obras | Alto | Media | Alertas visuales automáticas cuando la obra supera el 80% y 100% de materiales | Producto |
 | R-004 | PII o secretos expuestos en código | Alto | Baja | Variables de entorno `.env.local` y claves seguras en Supabase | Operación |
+| R-005 | Cambios locales no sincronizados con la base | Alto | Media | Aplicar la migración de operaciones y reemplazar los adaptadores locales por repositorios Supabase protegidos por RLS | Desarrollo |

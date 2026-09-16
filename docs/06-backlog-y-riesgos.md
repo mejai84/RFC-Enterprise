@@ -28,6 +28,7 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 | QA-001 | Alta | Pruebas continuas y validación de build | Terminado | Validación estática `npm run build` con cero errores |
 | INV-003 | Alta | Operaciones auditables de inventario | En implementación | Migración para ubicaciones, compras, conteos físicos, kardex con costos y auditoría bajo RLS |
 | INV-004 | Media | Alertas y reportes operativos | En implementación | Punto de reorden, sugerencia de compra, consumo por obra, rotación, inmovilizado y valoración por grupo |
+| INV-005 | Alta | Alta controlada de artículos | Terminado | Formulario para insumo, herramienta, equipo o dotación con entrada inicial trazable |
 
 ## Riesgos activos
 

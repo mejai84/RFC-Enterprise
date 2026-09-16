@@ -133,6 +133,8 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const [responsibleInput, setResponsibleInput] = useState<string>("");
   const [notesInput, setNotesInput] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [isNewItemModalOpen, setIsNewItemModalOpen] = useState(false);
+  const [newItem, setNewItem] = useState({ name: "", sku: "", category: "Insumo", brand: "", unit: "unidad", location: "Bodega principal", group: "bodega" as StockProduct["inventoryGroup"], quantity: "", cost: "", minimum: "" });
 
   // Estado del modal de nueva obra / proyecto
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -380,6 +382,19 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     setEditingMinimumProduct(null);
   }
 
+  function handleCreateItem(e: FormEvent) {
+    e.preventDefault();
+    const quantity = Number(newItem.quantity);
+    const unitCost = Number(newItem.cost);
+    if (!newItem.name.trim() || !quantity || quantity <= 0 || !Number.isFinite(unitCost) || unitCost < 0) {
+      showToast("Indica nombre, cantidad inicial y costo unitario válidos.", "error"); return;
+    }
+    const id = `new-${Date.now()}`;
+    const product: StockProduct = { id, sku: newItem.sku.trim() || `SKU-${Date.now()}`, name: newItem.name.trim(), category: newItem.category, brand: newItem.brand.trim() || "Sin marca", unit: newItem.unit.trim() || "unidad", location: newItem.location.trim() || "Bodega principal", inventoryGroup: newItem.group, inventoryGroupName: newItem.group === "bodega" ? "Bodega" : newItem.group === "dotacion" ? "Dotación" : "Herramientas de trabajadores", available: quantity, minimum: newItem.minimum === "" ? null : Number(newItem.minimum), notes: null, active: true, unitCost, sourceRow: 0 };
+    const movement: InventoryMovement = { id: `mov-${Date.now()}`, productId: id, productName: product.name, type: "entry", quantity, unit: product.unit, unitCost, totalCost: quantity * unitCost, occurredAt: formatDateTime(), reference: `ING-${new Date().getFullYear()}-${String(movements.length + 1).padStart(3, "0")}`, notes: "Entrada inicial al crear artículo" };
+    setProducts(current => [product, ...current]); setMovements(current => [movement, ...current]); setIsNewItemModalOpen(false); setNewItem({ name: "", sku: "", category: "Insumo", brand: "", unit: "unidad", location: "Bodega principal", group: "bodega", quantity: "", cost: "", minimum: "" }); showToast(`Artículo "${product.name}" creado con su entrada inicial.`);
+  }
+
   // Exportar kardex a CSV compatible con Excel
   function exportMovementsCSV() {
     if (movements.length === 0) {
@@ -454,6 +469,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
             <button className="inventory-action" onClick={() => openMovementModal()} type="button">+ Registrar movimiento</button>
           ) : (
             <>
+              <button className="inventory-action secondary" onClick={() => setIsNewItemModalOpen(true)} type="button">+ Nuevo artículo</button>
               <button className="inventory-action secondary" onClick={() => openMovementModal(undefined, "entry")} type="button">+ Registrar entrada</button>
               <button className="inventory-action" onClick={() => openMovementModal(undefined, "exit")} type="button">+ Registrar salida</button>
             </>
@@ -1256,6 +1272,10 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
             </form>
           </div>
         </div>
+      )}
+
+      {isNewItemModalOpen && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="new-item-title"><div className="modal-card"><div className="modal-header"><div><p>Catálogo de inventario</p><h3 id="new-item-title">Nuevo artículo</h3></div><button className="btn-close-modal" aria-label="Cerrar" onClick={() => setIsNewItemModalOpen(false)} type="button">×</button></div><form onSubmit={handleCreateItem}><div className="form-grid-2"><div className="form-group"><label>Nombre *</label><input required value={newItem.name} onChange={e => setNewItem(v => ({ ...v, name: e.target.value }))} /></div><div className="form-group"><label>SKU / código de barras</label><input value={newItem.sku} onChange={e => setNewItem(v => ({ ...v, sku: e.target.value }))} /></div></div><div className="form-grid-2"><div className="form-group"><label>Tipo / categoría</label><input value={newItem.category} onChange={e => setNewItem(v => ({ ...v, category: e.target.value }))} /></div><div className="form-group"><label>Marca</label><input value={newItem.brand} onChange={e => setNewItem(v => ({ ...v, brand: e.target.value }))} /></div></div><div className="form-grid-2"><div className="form-group"><label>Cantidad inicial *</label><input type="number" min="0.001" step="any" required value={newItem.quantity} onChange={e => setNewItem(v => ({ ...v, quantity: e.target.value }))} /></div><div className="form-group"><label>Costo unitario COP *</label><input type="number" min="0" step="any" required value={newItem.cost} onChange={e => setNewItem(v => ({ ...v, cost: e.target.value }))} /></div></div><div className="form-grid-2"><div className="form-group"><label>Unidad</label><input value={newItem.unit} onChange={e => setNewItem(v => ({ ...v, unit: e.target.value }))} /></div><div className="form-group"><label>Stock mínimo</label><input type="number" min="0" value={newItem.minimum} onChange={e => setNewItem(v => ({ ...v, minimum: e.target.value }))} /></div></div><div className="form-group"><label>Ubicación</label><input value={newItem.location} onChange={e => setNewItem(v => ({ ...v, location: e.target.value }))} /></div><div className="modal-actions"><button className="btn-cancel" type="button" onClick={() => setIsNewItemModalOpen(false)}>Cancelar</button><button className="inventory-action" type="submit">Crear y registrar entrada</button></div></form></div></div>
       )}
 
       {/* ========================================================================= */}

@@ -94,3 +94,5 @@ create policy project_budget_adjustments_manager_insert on public.project_budget
 
 drop policy if exists movements_manager_insert on public.inventory_movements;
 create policy movements_manager_insert on public.inventory_movements for insert to authenticated with check (private.inventory_manager_for(company_id));
+create policy inventory_items_manager_insert on public.inventory_items for insert to authenticated with check (private.inventory_manager_for(company_id));
+create policy inventory_stock_manager_insert on public.inventory_stock for insert to authenticated with check (private.inventory_manager_for(company_id));

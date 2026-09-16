@@ -59,6 +59,6 @@ audiencia: Dirección, Producto y Desarrollo
 ## Entrega acordada: Operaciones de inventario v0.4
 
 - El registro de entrada parte sin artículo preseleccionado; la selección se realiza por nombre, SKU o código de barras.
+- Inventario permite dar de alta un artículo nuevo y registra su existencia inicial como entrada de Kardex.
 - `/movements` presenta únicamente el Kardex, sin mezclar catálogo, costos por obra ni alertas.
 - Las salidas se limitan a obras activas. El modelo de datos incorpora compras/recepciones, conteos físicos, ubicaciones detalladas, puntos de reorden, ajustes de presupuesto y auditoría.
-

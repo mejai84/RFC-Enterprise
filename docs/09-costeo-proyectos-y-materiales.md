@@ -50,6 +50,7 @@ Permitir a **Representaciones Figueroa Castro S.A.S.** conocer en tiempo real el
 
 ### G. Operación de inventario y abastecimiento
 - **Ubicación trazable**: bodega, pasillo, estante, nivel y contenedor por existencia.
+- **Alta de artículos**: el almacenista crea equipos, herramientas, insumos o dotación con SKU, unidad, ubicación, costo, mínimo y una entrada inicial automática en Kardex.
 - **Recepción de compra**: proveedor, factura y costo unitario de la entrada.
 - **Conteo físico**: cantidad de sistema versus cantidad contada, motivo, responsable y aprobación antes del ajuste.
 - **Reorden y reportes**: mínimo, cantidad sugerida, consumo por obra, rotación, inventario sin movimiento y valoración por grupo.

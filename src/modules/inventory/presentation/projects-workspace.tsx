@@ -85,7 +85,7 @@ export function ProjectsWorkspace() {
   });
 
   // Selected Project State
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || "prj-01");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"materials" | "tools" | "requisitions">("materials");
   const [projectStatusFilter, setProjectStatusFilter] = useState<"all" | Project["status"]>("all");
 
@@ -129,7 +129,7 @@ export function ProjectsWorkspace() {
   }, [products, movements, projects, requisitions, toolLoans]);
 
   const selectedProject = useMemo(() => {
-    return projects.find((p) => p.id === selectedProjectId) || projects[0];
+    return projects.find((p) => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
   const visibleProjects = useMemo(() => projectStatusFilter === "all" ? projects : projects.filter((project) => project.status === projectStatusFilter), [projects, projectStatusFilter]);
 
@@ -166,6 +166,7 @@ export function ProjectsWorkspace() {
   // Handle Dispatch Form Submit
   const handleDispatchSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (!selectedProject) return alert("Seleccione una obra antes de registrar un despacho.");
     const qty = parseFloat(quantityInput);
     if (!qty || qty <= 0) return alert("Ingrese una cantidad válida.");
     if (qty > selectedProduct.available) return alert(`Stock insuficiente. Disponible: ${selectedProduct.available}`);
@@ -282,7 +283,7 @@ export function ProjectsWorkspace() {
       {/* Projects Navigation Selector */}
       <section className="projects-selector-bar">
         <span className="selector-label">Seleccionar Obra:</span>
-        <label className="project-status-filter">Estado <select value={projectStatusFilter} onChange={(event) => setProjectStatusFilter(event.target.value as "all" | Project["status"])}><option value="all">Todas</option><option value="pending">Pendientes</option><option value="active">Activas</option><option value="on_hold">En pausa</option><option value="completed">Finalizadas</option></select></label>
+        <label className="project-status-filter">Estado <select value={projectStatusFilter} onChange={(event) => { setProjectStatusFilter(event.target.value as "all" | Project["status"]); setSelectedProjectId(""); }}><option value="all">Todas</option><option value="pending">Pendientes</option><option value="active">Activas</option><option value="on_hold">En pausa</option><option value="completed">Finalizadas</option></select></label>
         <div className="selector-pills">
           {visibleProjects.map((prj) => (
             <button
@@ -297,6 +298,8 @@ export function ProjectsWorkspace() {
           {visibleProjects.length === 0 && <p className="project-filter-empty">No hay obras con este estado.</p>}
         </div>
       </section>
+
+      {!selectedProject && <p className="project-selection-empty">Seleccione una obra para consultar su ficha, costos y movimientos.</p>}
 
       {/* Selected Project Full Ficha */}
       {selectedProject && (

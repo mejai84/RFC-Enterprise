@@ -1,0 +1,24 @@
+/* RFC Enterprise — Brand Override for SVG vector logo */
+
+.site-logo-image {
+  background: transparent;
+  height: 52px;
+  width: auto;
+  object-fit: contain;
+}
+
+.site-nav-cta span {
+  color: var(--accent, #c49024);
+  margin-left: 7px;
+}
+
+.site-footer .site-logo-image {
+  height: 44px;
+  width: auto;
+}
+
+.dashboard-brand img {
+  border-radius: 8px;
+  height: 38px;
+  width: auto;
+}

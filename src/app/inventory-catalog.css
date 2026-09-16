@@ -1,0 +1,648 @@
+/* RFC Enterprise — Advanced Inventory & Project Costing Styles */
+
+.inventory-workspace-pro {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Acciones en el Header */
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.inventory-action.secondary {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-xs);
+  color: var(--ink);
+}
+
+.inventory-action.secondary:hover {
+  background: var(--canvas);
+  border-color: var(--subtle);
+  transform: translateY(-1px);
+}
+
+/* Indicadores / Summary Cards */
+.inventory-summary-cards {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.stat-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 120px;
+  padding: 18px 20px;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.stat-card:hover {
+  border-color: #bcd0c5;
+}
+
+.stat-card span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stat-card strong {
+  color: var(--ink);
+  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  margin: 10px 0 4px;
+}
+
+.stat-card small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.stat-card.valuation strong {
+  color: var(--brand-dark);
+}
+
+.stat-card.project-costs strong {
+  color: #b07e1a;
+}
+
+/* Barra de Pestañas */
+.inventory-tabs-nav {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  box-shadow: var(--shadow-xs);
+}
+
+.tab-btn {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--ink-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 8px;
+  padding: 10px 18px;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.tab-btn:hover {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+.tab-btn.active {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+.tab-badge {
+  background: #fdf2f0;
+  border: 1px solid #f5cfc9;
+  border-radius: 999px;
+  color: #a33b2d;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+}
+
+/* Controles y Filtros */
+.inventory-catalog-controls {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1.6fr 1fr 1fr 140px;
+  margin: 20px 0;
+}
+
+.inventory-catalog-controls label {
+  color: var(--ink-secondary);
+  display: grid;
+  font-size: 11px;
+  font-weight: 800;
+  gap: 6px;
+  letter-spacing: 0.02em;
+}
+
+.inventory-catalog-controls input,
+.inventory-catalog-controls select {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  min-height: 42px;
+  padding: 8px 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.inventory-catalog-controls input:focus-visible,
+.inventory-catalog-controls select:focus-visible {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-glow);
+  outline: none;
+}
+
+/* Tabla de Datos Principal */
+.inventory-table-container {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+.inventory-data-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+  width: 100%;
+}
+
+.inventory-data-table thead {
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+}
+
+.inventory-data-table th {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 12px 14px;
+  text-transform: uppercase;
+}
+
+.inventory-data-table tbody tr {
+  border-bottom: 1px solid #edf2ef;
+  transition: background-color 0.15s ease;
+}
+
+.inventory-data-table tbody tr:hover {
+  background-color: rgba(11, 122, 71, 0.025);
+}
+
+.inventory-data-table td {
+  padding: 12px 14px;
+  vertical-align: middle;
+}
+
+.inventory-data-table td strong {
+  color: var(--ink);
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.inventory-data-table td small {
+  color: var(--muted);
+  display: block;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* Tags y Badges */
+.location-tag,
+.group-tag {
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink-secondary);
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+}
+
+.stock-quantity {
+  font-size: 14px;
+}
+
+.stock-min-hint {
+  color: var(--muted);
+  display: block;
+  font-size: 10.5px;
+}
+
+.status-pill {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+}
+
+.status-pill.ok {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+.status-pill.low {
+  background: var(--accent-soft);
+  color: #8c6310;
+}
+
+.status-pill.out {
+  background: #fdf2f0;
+  color: #a33b2d;
+}
+
+.deficit-badge {
+  background: #fff8e8;
+  border: 1px solid #f1dda9;
+  border-radius: 999px;
+  color: #8b6715;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+
+/* Acciones en Fila */
+.row-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.btn-row-action {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink-secondary);
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 9px;
+  transition: all 0.15s ease;
+}
+
+.btn-row-action:hover {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--brand-dark);
+}
+
+.btn-row-action.subtle {
+  color: var(--muted);
+}
+
+/* Paginación */
+.pagination-bar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+
+.btn-page {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 16px;
+  transition: all 0.15s ease;
+}
+
+.btn-page:hover:not(:disabled) {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--brand-dark);
+}
+
+.btn-page:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========================================================================= */
+/* PESTAÑA: COSTOS POR PROYECTO / OBRA */
+/* ========================================================================= */
+.projects-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  margin-top: 24px;
+}
+
+.project-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.project-card:hover {
+  border-color: #bcd0c5;
+}
+
+.project-card-header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.project-code {
+  background: var(--brand-soft);
+  border-radius: var(--radius-sm);
+  color: var(--brand-dark);
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  padding: 3px 8px;
+}
+
+.project-card-header h3 {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.project-meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.project-meta b {
+  color: var(--ink);
+}
+
+.project-status {
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 9px;
+  text-transform: uppercase;
+}
+
+.project-status.active {
+  background: #e9f8ef;
+  color: #078f55;
+}
+
+.project-financials {
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 18px;
+  padding: 14px;
+}
+
+.fin-metric span {
+  color: var(--muted);
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fin-metric strong {
+  display: block;
+  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
+}
+
+.fin-metric strong.active-cost {
+  color: #b07e1a;
+}
+
+.fin-metric strong.over-cost {
+  color: #b9412d;
+}
+
+/* Barra de Progreso */
+.budget-progress-container {
+  margin-bottom: 20px;
+}
+
+.budget-progress-labels {
+  display: flex;
+  font-size: 11.5px;
+  font-weight: 700;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.budget-progress-track {
+  background: var(--canvas);
+  border-radius: 99px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.budget-progress-bar {
+  border-radius: 99px;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.budget-progress-bar.ok {
+  background: linear-gradient(90deg, #0b7a47 0%, #1db86f 100%);
+}
+
+.budget-progress-bar.warning {
+  background: linear-gradient(90deg, #c49024 0%, #e5aa2b 100%);
+}
+
+.budget-progress-bar.danger {
+  background: linear-gradient(90deg, #d33c2a 0%, #e65b4b 100%);
+}
+
+/* Lista de Materiales en la Obra */
+.project-materials-summary h4 {
+  color: var(--ink-secondary);
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.project-items-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+}
+
+.project-items-list li {
+  align-items: center;
+  border-bottom: 1px solid #edf2ef;
+  display: flex;
+  font-size: 12px;
+  justify-content: space-between;
+  padding-bottom: 6px;
+}
+
+.project-items-list b {
+  display: block;
+}
+
+.project-items-list small {
+  color: var(--muted);
+}
+
+.item-cost {
+  font-family: var(--font-display, 'Playfair Display', Georgia, serif);
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.no-items {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: italic;
+  margin-bottom: 16px;
+}
+
+.project-card-footer {
+  margin-top: auto;
+}
+
+.btn-despachar-obra {
+  align-items: center;
+  background: var(--brand-soft);
+  border: 1px solid rgba(11, 122, 71, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--brand-dark);
+  cursor: pointer;
+  display: flex;
+  font-size: 12.5px;
+  font-weight: 700;
+  justify-content: center;
+  padding: 10px;
+  transition: all 0.18s ease;
+  width: 100%;
+}
+
+.btn-despachar-obra:hover {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #ffffff;
+}
+
+/* Movimientos Badges */
+.mov-badge {
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+}
+
+.mov-badge.entry {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+.mov-badge.exit {
+  background: #fff8e8;
+  color: #936814;
+}
+
+.mov-badge.adjustment {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.qty-indicator.pos {
+  color: #0b7a47;
+  font-weight: 700;
+}
+
+.qty-indicator.neg {
+  color: #c49024;
+  font-weight: 700;
+}
+
+.cost-exit {
+  color: #b07e1a;
+}
+
+.cost-entry {
+  color: #0b7a47;
+}
+
+.dest-tag {
+  background: #f0f7f3;
+  border-radius: var(--radius-sm);
+  color: #1e4d36;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+}
+
+.dest-tag.almacén {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.mov-notes {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* === Responsive === */
+@media (max-width: 1100px) {
+  .inventory-summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .inventory-tabs-nav {
+    flex-wrap: wrap;
+  }
+  .inventory-catalog-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  .inventory-summary-cards {
+    grid-template-columns: 1fr;
+  }
+  .inventory-catalog-controls {
+    grid-template-columns: 1fr;
+  }
+  .project-financials {
+    grid-template-columns: 1fr;
+  }
+}

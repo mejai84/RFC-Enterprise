@@ -276,6 +276,11 @@ export function EmployeesWorkspace() {
     if (!form || form.dataset.modalified) return;
     form.dataset.modalified = "true";
     form.style.display = "none";
+    const formPanel = form.closest(".dashboard-panel");
+    const formTitle = formPanel?.querySelector("h2");
+    if (formTitle) formTitle.textContent = "Administración del directorio";
+    const headingNote = document.querySelector(".employees-page .dashboard-heading small") as HTMLElement | null;
+    if (headingNote) headingNote.style.display = "none";
     const trigger = document.createElement("button");
     trigger.type = "button"; trigger.className = "inventory-action"; trigger.textContent = "Nuevo empleado";
     trigger.addEventListener("click", () => {

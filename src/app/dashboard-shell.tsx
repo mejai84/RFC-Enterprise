@@ -205,15 +205,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="dashboard-sidebar-note">
-          <span aria-hidden="true" />
-          Catálogo de inventario disponible
-        </div>
         <div className="dashboard-sidebar-footer">
           <div className="dashboard-avatar">{initials}</div>
           <div>
             <strong>{currentUser.name}</strong>
             <small>{currentRole}</small>
+          </div>
+          <div className="dashboard-sidebar-account-actions">
+            <Link href="/restablecer-contrasena?mode=change">Cambiar mi contraseña</Link>
+            <button disabled={isSigningOut} onClick={() => void signOut()} type="button">{isSigningOut ? "Saliendo…" : "Cerrar sesión"}</button>
           </div>
         </div>
       </aside>
@@ -231,10 +231,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </button>
           <div className="dashboard-company">
             <strong>RFC Enterprise</strong>
-            <span>
-              <i aria-hidden="true" />
-              Datos de inventario disponibles
-            </span>
           </div>
           <div className="dashboard-top-actions">
             <button aria-label="Sin notificaciones pendientes" type="button">

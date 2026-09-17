@@ -12,7 +12,7 @@ audiencia: Dirección, Producto y Desarrollo
 | Código | Módulo | Estado | Alcance actual |
 | --- | --- | --- | --- |
 | `core` | Administración | Operativo v0.3 | Directorio persistente de empleados, roles, permisos individuales, activación, auditoría, empresas, sedes y configuración |
-| `site` | Sitio institucional | Operativo v0.2 | Portada corporativa ampliada, capacidades, enfoque de trabajo, imágenes sectoriales y formulario de solicitud pendiente de conexión a canal corporativo |
+| `site` | Sitio institucional | Operativo v0.4 | Portada corporativa ampliada, capacidades, enfoque de trabajo, imágenes sectoriales, acceso superior al portal de empleados y formulario que prepara el correo para el canal corporativo |
 | `dashboard` | Dashboard Ejecutivo | Operativo v0.3 | Panel principal de obras, KPIs financieros consolidados, semáforos y accesos rápidos de almacén |
 | `inventory` | Inventarios & Kardex | Operativo v0.4 | Catálogo, kardex separado, búsqueda por SKU/código, control de despachos y modelo de conteos, compras, ubicaciones, alertas y auditoría |
 | `projects` | Costeo de Proyectos | Operativo v0.4 | Centro de costos, calendario de inicio/entrega estimada, estado de obra, presupuestos y control de sobrecostos |
@@ -63,4 +63,5 @@ audiencia: Dirección, Producto y Desarrollo
 - Inventario permite dar de alta un artículo nuevo y registra su existencia inicial como entrada de Kardex.
 - `/movements` presenta únicamente el Kardex, sin mezclar catálogo, costos por obra ni alertas.
 - Todo comprobante, remisión, informe imprimible o documento exportable debe usar el activo oficial `public/rfc-logo.svg` como membrete; no se emplean siglas tipográficas como sustituto.
+- Pendiente del sitio institucional: sustituir el enlace `mailto:` por envío directo desde una Edge Function de Supabase con proveedor transaccional, validación y protección antispam.
 - Las salidas se limitan a obras activas. El modelo de datos incorpora compras/recepciones, conteos físicos, ubicaciones detalladas, puntos de reorden, ajustes de presupuesto y auditoría.

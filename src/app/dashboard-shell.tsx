@@ -1,11 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { initialAdministrator } from "@/core/users";
+import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import { createBrowserClient } from "@supabase/ssr";
 
 type IconName = "grid" | "building" | "boxes" | "arrows" | "checklist" | "chart" | "users" | "menu" | "bell" | "close";
 
@@ -100,6 +102,36 @@ const navigation = [
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(initialAdministrator);
+  const [currentRole, setCurrentRole] = useState("Usuario del portal");
+  const initials = useMemo(() => currentUser.name.split(" ").filter(Boolean).map((part) => part[0]).slice(0, 2).join("").toUpperCase() || "RF", [currentUser.name]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabaseUrl || !supabasePublishableKey) return;
+    const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
+    let active = true;
+    async function loadCurrentUser() {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData.user;
+      if (!user || !active) return;
+      const fallbackName = String(user.user_metadata.full_name || user.email || "Usuario del portal");
+      const [{ data: profile }, { data: memberships }] = await Promise.all([
+        supabase.from("profiles").select("display_name, email").eq("id", user.id).maybeSingle(),
+        supabase.from("user_roles").select("role_id").eq("user_id", user.id).limit(1),
+      ]);
+      let roleName = "Usuario del portal";
+      const roleId = memberships?.[0]?.role_id;
+      if (roleId) {
+        const { data: role } = await supabase.from("roles").select("name").eq("id", roleId).maybeSingle();
+        roleName = role?.name || roleName;
+      }
+      if (!active) return;
+      setCurrentUser({ ...initialAdministrator, id: user.id, name: profile?.display_name || fallbackName, email: profile?.email || user.email || initialAdministrator.email });
+      setCurrentRole(roleName);
+    }
+    void loadCurrentUser();
+    return () => { active = false; };
+  }, []);
 
   return (
     <div className="dashboard-shell">
@@ -162,10 +194,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           Catálogo de inventario disponible
         </div>
         <div className="dashboard-sidebar-footer">
-          <div className="dashboard-avatar">JJ</div>
+          <div className="dashboard-avatar">{initials}</div>
           <div>
-            <strong>{initialAdministrator.name}</strong>
-            <small>Administrador</small>
+            <strong>{currentUser.name}</strong>
+            <small>{currentRole}</small>
           </div>
         </div>
       </aside>
@@ -192,8 +224,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <button aria-label="Sin notificaciones pendientes" type="button">
               <Icon name="bell" />
             </button>
-            <div className="dashboard-avatar" aria-label="Usuario administrador">
-              JJ
+            <div className="dashboard-avatar" aria-label={`Usuario: ${currentUser.name}`}>
+              {initials}
             </div>
           </div>
         </header>

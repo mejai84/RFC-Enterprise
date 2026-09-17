@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ContactForm } from "./contact-form";
 
 const services = [
   {
@@ -40,6 +41,7 @@ export default function Home() {
             <a href="#servicios">Servicios</a>
             <a href="#proceso">Cómo trabajamos</a>
           </div>
+          <Link className="site-portal-access" href="/login">Portal de empleados <span aria-hidden="true">↗</span></Link>
           <a className="site-nav-cta" href="#contacto">Iniciar una conversación <span aria-hidden="true">→</span></a>
         </nav>
 
@@ -130,18 +132,7 @@ export default function Home() {
           <p>Comparta el tipo de intervención, su ubicación y el momento en que necesita ejecutarla. Así podremos preparar una conversación técnica útil desde el inicio.</p>
           <a className="site-address" href="https://maps.google.com/?q=Calle+29+K+27+62+Caucasia+Antioquia" target="_blank" rel="noreferrer">Calle 29 K #27-62<br />Caucasia, Antioquia</a>
         </div>
-        <form className="site-contact-form" aria-describedby="contact-form-note">
-          <div className="site-form-grid">
-            <label>Nombre completo<input name="name" autoComplete="name" placeholder="Cómo le llamamos" required /></label>
-            <label>Empresa u organización<input name="company" autoComplete="organization" placeholder="Opcional" /></label>
-            <label>Correo electrónico<input name="email" type="email" autoComplete="email" placeholder="nombre@empresa.com" required /></label>
-            <label>Ciudad o municipio<input name="location" autoComplete="address-level2" placeholder="Dónde se realizará" required /></label>
-          </div>
-          <label className="site-form-full">Tipo de necesidad<select name="service" defaultValue=""><option value="" disabled>Seleccione una opción</option><option>Arquitectura e ingeniería</option><option>Estructuras metálicas</option><option>Mantenimiento integral</option><option>Paisajismo y exteriores</option><option>Otra necesidad</option></select></label>
-          <label className="site-form-full">Cuéntenos brevemente<textarea name="message" rows={5} placeholder="Alcance, estado actual, fechas o cualquier dato que nos ayude a entender el proyecto." required /></label>
-          <button className="site-form-button" type="button" disabled>Enviar solicitud</button>
-          <p className="site-form-note" id="contact-form-note">El envío se habilitará al configurar el canal corporativo de recepción. Sus datos no se publican en esta página.</p>
-        </form>
+        <ContactForm />
       </section>
 
       <footer className="site-footer">

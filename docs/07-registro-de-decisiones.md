@@ -187,3 +187,23 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 **Decisión.** Los vales de salida, remisiones, informes imprimibles y futuros comprobantes utilizan el archivo oficial `public/rfc-logo.svg` en el membrete. El formato no publica números telefónicos de contacto.
 
 **Consecuencia.** Cualquier nuevo generador de PDF o impresión debe reutilizar este activo y no recrear el logo con texto o una imagen alternativa.
+
+---
+
+## ADR-016 · Acceso institucional al portal de empleados
+
+**Fecha:** 2026-09-17  
+**Estado:** Aceptada
+
+**Decisión.** La cabecera de la portada pública incluye el enlace visible “Portal de empleados”, dirigido a `/login`; permanece disponible en móvil y escritorio sin competir con la llamada de contacto comercial.
+
+---
+
+## ADR-017 · Identidad de sesión y canal de solicitudes
+
+**Fecha:** 2026-09-17  
+**Estado:** Aceptada
+
+**Decisión.** La cabecera del portal consulta el perfil de la sesión autenticada y muestra su `display_name` y rol, sin usar un nombre fijo. El formulario institucional prepara un correo con los datos de la solicitud para `rfcsas094@gmail.com`, sin publicar teléfonos ni persistir los datos en el navegador.
+
+**Pendiente acordado.** Implementar en una fase posterior el envío directo mediante Edge Function de Supabase y un proveedor de correo transaccional. Las claves del proveedor residirán solo en secretos de Supabase; el formulario público deberá usar validación, límite de solicitudes y protección antispam.

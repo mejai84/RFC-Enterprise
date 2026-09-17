@@ -42,11 +42,11 @@ export function PrintableDispatchVoucher({ movement, project, onClose }: Props) 
         <div className="printable-voucher-sheet">
           <header className="voucher-header">
             <div className="voucher-brand">
-              <div className="voucher-logo">RFC</div>
+              <img className="voucher-logo" src="/rfc-logo.svg" alt="Logo de Representaciones Figueroa Castro" />
               <div>
                 <h2>REPRESENTACIONES FIGUEROA CASTRO S.A.S.</h2>
                 <small>NIT: 900.123.456-7 · Almacén & Logística de Obras</small>
-                <p>Caucasia, Antioquia · PBX: (604) 876-5432</p>
+                <p>Caucasia, Antioquia · Operación y proyectos</p>
               </div>
             </div>
             <div className="voucher-folio">

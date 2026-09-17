@@ -37,7 +37,7 @@ Permitir a **Representaciones Figueroa Castro S.A.S.** conocer en tiempo real el
   - Historial de ajustes presupuestales con fecha, responsable autenticado, motivo y valor aplicado.
 
 ### C. Vales de Salida Imprimibles (Remisión de Almacén)
-- **Formato Oficial de Entrega**: Generación interactiva e imprimible (`@media print`) del Vale de Salida con membrete oficial de RFC Enterprise, folio consecutivo, cliente, obra destino, ítems entregados valorizados y áreas de firma para el Almacenista y el Residente de Obra.
+- **Formato Oficial de Entrega**: Generación interactiva e imprimible (`@media print`) del Vale de Salida con el logo oficial `public/rfc-logo.svg`, folio consecutivo, cliente, obra destino, ítems entregados valorizados y áreas de firma para el Almacenista y el Residente de Obra.
 
 ### D. Requisiciones de Material desde Frente de Obra
 - **Flujo Solicitud → Despacho**: Registro de solicitudes formalizadas por los maestros o residentes de obra. Almacén aprueba y procesa automáticamente el despacho descontando stock e imputando el costo.

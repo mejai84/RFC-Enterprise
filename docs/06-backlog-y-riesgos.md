@@ -29,6 +29,8 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 | INV-003 | Alta | Operaciones auditables de inventario | En implementación | Migración para ubicaciones, compras, conteos físicos, kardex con costos y auditoría bajo RLS |
 | INV-004 | Media | Alertas y reportes operativos | En implementación | Punto de reorden, sugerencia de compra, consumo por obra, rotación, inmovilizado y valoración por grupo |
 | INV-005 | Alta | Alta controlada de artículos | Terminado | Formulario para insumo, herramienta, equipo o dotación con entrada inicial trazable |
+| SITE-001 | Media | Portada institucional y captura de solicitudes | En validación | Landing corporativo ampliado, sin teléfonos publicados y con formulario listo para conectar a un correo corporativo o Supabase |
+| CORE-004 | Alta | Administración de empleados y accesos | Terminado | Crear fichas laborales, activar/desactivar, cambiar rol y otorgar o retirar permisos individuales guardados en Supabase bajo RLS y auditoría |
 
 ## Riesgos activos
 
@@ -39,3 +41,5 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 | R-003 | Desviación presupuestal inadvertida en obras | Alto | Media | Alertas visuales automáticas cuando la obra supera el 80% y 100% de materiales | Producto |
 | R-004 | PII o secretos expuestos en código | Alto | Baja | Variables de entorno `.env.local` y claves seguras en Supabase | Operación |
 | R-005 | Cambios locales no sincronizados con la base | Alto | Media | Aplicar la migración de operaciones y reemplazar los adaptadores locales por repositorios Supabase protegidos por RLS | Desarrollo |
+| R-006 | Solicitudes de la portada sin canal de recepción | Medio | Alta | Definir correo corporativo receptor o persistencia segura en Supabase antes de habilitar el envío | Dirección / Operación |
+| R-007 | Empleado sin identidad de acceso al portal | Medio | Media | Configurar secreto administrativo de Supabase para invitar al correo del empleado y enlazar su ficha laboral con Auth | Operación / Desarrollo |

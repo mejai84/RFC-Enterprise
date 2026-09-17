@@ -152,3 +152,38 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 **Consecuencia.** El script `20260916_inventory_operations.sql` debe aplicarse en Supabase antes de habilitar la sincronización de escritura en producción.
 
 **Extensión.** La creación de un artículo incluye su cantidad y costo iniciales y produce un movimiento de entrada, evitando existencias sin trazabilidad.
+
+---
+
+## ADR-013 · Portada institucional orientada a proyectos
+
+**Fecha:** 2026-09-17  
+**Estado:** Aceptada
+
+**Contexto.** El sitio institucional requería explicar con mayor claridad la oferta de RFC y reemplazar los teléfonos visibles por un mecanismo de contacto más apropiado para solicitudes de proyecto.
+
+**Decisión.** Ampliar la portada con capacidades verificables de arquitectura e ingeniería, estructuras metálicas, mantenimiento y paisajismo; un enfoque de trabajo; recursos visuales de Caucasia y operación petrolera industrial; y un formulario de solicitud sin publicar teléfonos.
+
+**Consecuencia.** El formulario conserva sus campos, pero su botón de envío permanece inactivo hasta definir un correo corporativo receptor o una integración segura con Supabase. No se almacenarán datos de contacto en el navegador.
+
+---
+
+## ADR-014 · Directorio laboral y permisos por empleado
+
+**Fecha:** 2026-09-17  
+**Estado:** Aceptada
+
+**Decisión.** Administrar a cada empleado mediante una ficha laboral separada de su identidad de Supabase Auth. La ficha admite activación, uno o más roles y excepciones de permiso explícitas (`grant` o `revoke`), registradas bajo RLS y auditoría.
+
+**Consecuencia.** Un administrador puede preparar el acceso de un empleado antes de que este tenga cuenta. Para enviar la invitación y enlazar la ficha con Auth se requiere configurar en servidor el secreto administrativo de Supabase; nunca se expone en el navegador.
+
+---
+
+## ADR-015 · Identidad visual oficial en documentos operativos
+
+**Fecha:** 2026-09-17  
+**Estado:** Aceptada
+
+**Decisión.** Los vales de salida, remisiones, informes imprimibles y futuros comprobantes utilizan el archivo oficial `public/rfc-logo.svg` en el membrete. El formato no publica números telefónicos de contacto.
+
+**Consecuencia.** Cualquier nuevo generador de PDF o impresión debe reutilizar este activo y no recrear el logo con texto o una imagen alternativa.

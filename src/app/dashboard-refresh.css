@@ -1391,19 +1391,15 @@
 
 .voucher-logo {
   align-items: center;
-  background: #0b7a47;
-  border-radius: 8px;
-  color: #ffffff;
   display: flex;
-  font-family: var(--font-display, serif);
-  font-size: 22px;
-  font-weight: 900;
   height: 52px;
   justify-content: center;
+  object-fit: contain;
   width: 52px;
 }
 
 .voucher-brand h2 { font-size: 16px; font-weight: 800; margin: 0 0 2px; }
+.report-print-header { display: none; }
 .voucher-brand small { color: #4b5563; display: block; font-size: 11px; font-weight: 700; }
 .voucher-brand p { color: #6b7280; font-size: 10.5px; margin: 2px 0 0; }
 
@@ -1478,7 +1474,12 @@
 
 /* Print Media Rules */
 @media print {
-  body * { visibility: hidden; }
+  .dashboard-sidebar, .dashboard-topbar, .no-print { display: none !important; }
+  .report-print-header { align-items: center; border-bottom: 2px solid #0b7a47; display: flex; gap: 12px; margin: 0 0 24px; padding: 0 0 12px; }
+  .report-print-header img { height: 42px; object-fit: contain; width: 42px; }
+  .report-print-header strong, .report-print-header small { display: block; }
+  body * { visibility: visible; }
+  body:has(.printable-voucher-sheet) * { visibility: hidden; }
   .voucher-modal-overlay,
   .voucher-modal-container,
   .printable-voucher-sheet,
@@ -2213,3 +2214,14 @@
 }
 
 .toast-dismiss:hover { color: var(--ink); }
+/* Employees administration */
+.employees-layout { display:grid; gap:20px; grid-template-columns:minmax(250px,.75fr) minmax(0,2fr); }
+.employees-main { display:grid; gap:20px; }
+.employee-row { align-items:center; background:transparent; border:0; border-bottom:1px solid var(--line); display:grid; gap:10px; grid-template-columns:38px 1fr auto; padding:13px 4px; text-align:left; width:100%; }
+.employee-row.is-selected { background:var(--brand-soft); margin:0 -8px; padding-left:12px; padding-right:12px; }
+.employee-row > span { align-items:center; background:var(--ink); border-radius:50%; color:#fff; display:flex; font-size:11px; font-weight:800; height:34px; justify-content:center; width:34px; }
+.employee-row strong { font-size:13px; }.employee-row small,.permission-groups small { color:var(--muted); display:block; font-size:11px; font-weight:500; margin-top:2px; }.employee-row i { color:#a74a32; font-size:11px; font-style:normal; font-weight:700; }.employee-row i.is-active { color:var(--brand); }
+.employee-form { display:grid; gap:16px; grid-template-columns:1fr 1fr; }.employee-form label { display:grid; font-size:12px; font-weight:700; gap:7px; }.employee-form input,.employee-form select { border:1px solid var(--line); border-radius:6px; min-height:42px; padding:9px; }.employee-form button { grid-column:1/-1; justify-self:start; }
+.permission-groups { display:grid; gap:14px; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:22px; }.permission-groups fieldset { border:1px solid var(--line); padding:14px; }.permission-groups legend { color:var(--brand-dark); font-size:12px; font-weight:800; padding:0 5px; text-transform:capitalize; }.permission-groups label { align-items:start; display:flex; font-size:12px; gap:9px; line-height:1.35; margin:12px 0; }.permission-groups input { accent-color:var(--brand); margin-top:2px; }.employee-message { background:var(--brand-soft); color:var(--brand-dark); font-size:13px; font-weight:700; margin-top:18px; padding:12px; }
+@media (max-width:900px) { .employees-layout { grid-template-columns:1fr; } }
+@media (max-width:560px) { .employee-form,.permission-groups { grid-template-columns:1fr; } }

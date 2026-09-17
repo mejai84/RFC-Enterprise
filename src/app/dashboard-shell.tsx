@@ -7,7 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { initialAdministrator } from "@/core/users";
 
-type IconName = "grid" | "building" | "boxes" | "arrows" | "menu" | "bell" | "close";
+type IconName = "grid" | "building" | "boxes" | "arrows" | "checklist" | "chart" | "users" | "menu" | "bell" | "close";
 
 function Icon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
@@ -35,6 +35,24 @@ function Icon({ name }: { name: IconName }) {
       <>
         <path d="M7 3 3 7l4 4M3 7h12a3 3 0 0 1 3 3v1" />
         <path d="m17 21 4-4-4-4M21 17H9a3 3 0 0 1-3-3v-1" />
+      </>
+    ),
+    checklist: (
+      <>
+        <rect x="4" y="3" width="16" height="18" rx="2" />
+        <path d="m8 9 1.5 1.5L12 7.8M13.5 9H17M8 15l1.5 1.5 2.5-2.7M13.5 15H17" />
+      </>
+    ),
+    chart: (
+      <>
+        <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+        <path d="m4 10 6-6 6 9 4-6" />
+      </>
+    ),
+    users: (
+      <>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3.5 20c.5-3.4 2.4-5 5.5-5s5 1.6 5.5 5M16 5.5a3 3 0 0 1 0 5M17 15c2.1.1 3.5 1.8 3.8 5" />
       </>
     ),
     menu: (
@@ -74,8 +92,9 @@ const navigation = [
   { icon: "building" as const, label: "Proyectos & Obras", href: "/projects" },
   { icon: "boxes" as const, label: "Inventarios", href: "/inventory" },
   { icon: "arrows" as const, label: "Movimientos", href: "/movements" },
-  { icon: "grid" as const, label: "Conteos físicos", href: "/counts" },
-  { icon: "grid" as const, label: "Informes", href: "/reports" },
+  { icon: "checklist" as const, label: "Conteos físicos", href: "/counts" },
+  { icon: "chart" as const, label: "Informes", href: "/reports" },
+  { icon: "users" as const, label: "Empleados", href: "/employees" },
 ];
 
 export function DashboardShell({ children }: { children: ReactNode }) {
@@ -140,7 +159,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="dashboard-sidebar-note">
           <span aria-hidden="true" />
-          Catálogo inicial cargado
+          Catálogo de inventario disponible
         </div>
         <div className="dashboard-sidebar-footer">
           <div className="dashboard-avatar">JJ</div>

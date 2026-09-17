@@ -24,6 +24,8 @@ export function EmployeesWorkspace() {
   const [message, setMessage] = useState("Cargando empleados…");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [temporaryPasswordConfirmation, setTemporaryPasswordConfirmation] = useState("");
 
   const groupedPermissions = useMemo(() => Object.entries(corePermissions.reduce<Record<string, (typeof corePermissions)[number][]>>((groups, permission) => {
     (groups[permission.module] ??= []).push(permission);
@@ -199,6 +201,42 @@ export function EmployeesWorkspace() {
     }
     if (error) setMessage(getErrorMessage(error, "No fue posible guardar el permiso."));
     else { await loadEmployees(); setMessage("Permiso actualizado y guardado."); }
+    setIsSaving(false);
+  }
+
+  async function sendPasswordReset() {
+    if (!supabase || !selected || !canManage) return;
+    setIsSaving(true);
+    setMessage("");
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) { setMessage("Tu sesión expiró. Inicia sesión nuevamente."); setIsSaving(false); return; }
+    const response = await fetch("/api/employees/password-reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ employeeId: selected.id }),
+    });
+    const result = await response.json().catch(() => ({}));
+    setMessage(response.ok ? `Enlace de recuperación enviado a ${selected.email}.` : String(result.error || "No fue posible enviar el enlace."));
+    setIsSaving(false);
+  }
+
+  async function setEmployeePassword() {
+    if (!supabase || !selected || !canManage) return;
+    if (temporaryPassword.length < 8) { setMessage("La contraseña debe tener al menos 8 caracteres."); return; }
+    if (temporaryPassword !== temporaryPasswordConfirmation) { setMessage("La confirmación de contraseña no coincide."); return; }
+    setIsSaving(true); setMessage("");
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) { setMessage("Tu sesión expiró. Inicia sesión nuevamente."); setIsSaving(false); return; }
+    const response = await fetch("/api/employees/password-reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ employeeId: selected.id, password: temporaryPassword }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (response.ok) { setTemporaryPassword(""); setTemporaryPasswordConfirmation(""); }
+    setMessage(response.ok ? `Contraseña actualizada para ${selected.name}. Entrégasela por un canal seguro.` : String(result.error || "No fue posible establecer la contraseña."));
     setIsSaving(false);
   }
 

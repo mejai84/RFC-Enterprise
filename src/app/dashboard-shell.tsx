@@ -243,6 +243,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <button className="dashboard-signout" aria-label="Cerrar sesión y cambiar de usuario" disabled={isSigningOut} onClick={() => void signOut()} type="button">
               <Icon name="logout" /><span>{isSigningOut ? "Saliendo…" : "Cerrar sesión"}</span>
             </button>
+            <Link className="dashboard-password-link" href="/restablecer-contrasena?mode=change">Cambiar contraseña</Link>
             <div className="dashboard-avatar" aria-label={`Usuario: ${currentUser.name}`}>
               {initials}
             </div>

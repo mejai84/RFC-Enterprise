@@ -269,3 +269,14 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 **Decisión.** Los maestros y residentes generan requisiciones dentro de la obra; el almacén las recibe como pendientes, confirma las cantidades disponibles y emite el despacho y su Kardex. Los perfiles existentes que ya poseen empresa y rol se incorporan al directorio de empleados mediante una sincronización idempotente, sin alterar su rol ni duplicar registros.
 
 **Consecuencia.** El indicador de requisiciones pendientes solo aumenta cuando una solicitud ha sido enviada desde una obra. El directorio representa tanto empleados creados desde administración como usuarios ya habilitados para el portal.
+
+---
+
+## ADR-024 · Recuperación y cambio de contraseña
+
+**Fecha:** 2026-09-17
+**Estado:** Aceptada
+
+**Decisión.** El inicio de sesión incluye recuperación por correo con enlace de un solo uso y el portal ofrece cambio voluntario con confirmación de la clave actual. Las operaciones se ejecutan mediante Supabase Auth y las credenciales no se persisten en tablas de negocio.
+
+**Consecuencia.** Debe configurarse la URL de retorno de producción en Supabase Auth y un servicio SMTP de producción para una entrega confiable de los correos.

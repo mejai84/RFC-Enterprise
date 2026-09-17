@@ -64,3 +64,7 @@ img, svg { display: block; max-width: 100%; }
 .primary-button:disabled { opacity: 0.7; cursor: not-allowed; }
 .auth-note { color: var(--muted); font-size: 12px; margin-bottom: 0 !important; text-align: center; }
 .auth-error { background: #fef2f0; border: 1px solid #f3c8c0; border-radius: var(--radius-sm); color: #a33b2d; font-size: 12px; font-weight: 700; margin-top: 16px; padding: 11px 14px; }
+.auth-success { background: #edf8f1; border: 1px solid #b7dfc5; border-radius: var(--radius-sm); color: #176b42 !important; font-size: 12px; font-weight: 700; margin: 16px 0 0 !important; padding: 11px 14px; }
+.auth-password-link { color: var(--brand); display: inline-block; font-size: 13px; font-weight: 700; margin-top: 16px; text-decoration: underline; text-underline-offset: 3px; }
+.auth-password-link-centered { display: block; text-align: center; }
+.dashboard-password-link { color: var(--brand); font-size: 12px; font-weight: 750; padding: 8px; text-decoration: none; white-space: nowrap; }

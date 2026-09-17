@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { isSupabaseConfigured, supabaseUrl, supabasePublishableKey } from "@/lib/supabase/config";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -83,6 +84,9 @@ export function LoginForm() {
           required
         />
       </label>
+      <Link className="auth-password-link" href="/restablecer-contrasena">
+        ¿Olvidaste tu contraseña?
+      </Link>
       {error ? (
         <p className="auth-error" role="alert">
           {error}

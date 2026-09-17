@@ -7,6 +7,10 @@ audiencia: Dirección, Operaciones, Almacén, Contabilidad y Desarrollo
 
 # Ficha de Módulo: Costeo de Materiales por Obra y Control de Inventarios
 
+## Unidad de compra vs. unidad de consumo
+
+Las entradas pueden recibirse en una presentación comercial y consumirse en una unidad menor. Cada nuevo artículo guarda la presentación, su equivalencia y su costo; el inventario valoriza y descuenta en la unidad de consumo. Ejemplo: una caja de 100 tornillos a COP 50.000 ingresa 100 unidades a COP 500 cada una.
+
 Este documento define la arquitectura funcional, el modelo de datos y los flujos operativos para el **costeo de materiales por obra, gestión de kardex y control de despachos** en RFC Enterprise.
 
 ---

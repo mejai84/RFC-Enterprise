@@ -9,7 +9,7 @@ import { initialAdministrator } from "@/core/users";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import { createBrowserClient } from "@supabase/ssr";
 
-type IconName = "grid" | "building" | "boxes" | "arrows" | "checklist" | "chart" | "users" | "menu" | "bell" | "close";
+type IconName = "grid" | "building" | "boxes" | "arrows" | "checklist" | "chart" | "users" | "logout" | "menu" | "bell" | "close";
 
 function Icon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
@@ -55,6 +55,12 @@ function Icon({ name }: { name: IconName }) {
       <>
         <circle cx="9" cy="8" r="3" />
         <path d="M3.5 20c.5-3.4 2.4-5 5.5-5s5 1.6 5.5 5M16 5.5a3 3 0 0 1 0 5M17 15c2.1.1 3.5 1.8 3.8 5" />
+      </>
+    ),
+    logout: (
+      <>
+        <path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" />
+        <path d="m14 8 4 4-4 4M18 12H9" />
       </>
     ),
     menu: (
@@ -104,6 +110,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(initialAdministrator);
   const [currentRole, setCurrentRole] = useState("Usuario del portal");
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const initials = useMemo(() => currentUser.name.split(" ").filter(Boolean).map((part) => part[0]).slice(0, 2).join("").toUpperCase() || "RF", [currentUser.name]);
 
   useEffect(() => {
@@ -132,6 +139,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     void loadCurrentUser();
     return () => { active = false; };
   }, []);
+
+  async function signOut() {
+    setIsSigningOut(true);
+    if (isSupabaseConfigured && supabaseUrl && supabasePublishableKey) {
+      const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
+      await supabase.auth.signOut();
+    }
+    window.location.assign("/login");
+  }
 
   return (
     <div className="dashboard-shell">
@@ -223,6 +239,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <div className="dashboard-top-actions">
             <button aria-label="Sin notificaciones pendientes" type="button">
               <Icon name="bell" />
+            </button>
+            <button className="dashboard-signout" aria-label="Cerrar sesión y cambiar de usuario" disabled={isSigningOut} onClick={() => void signOut()} type="button">
+              <Icon name="logout" /><span>{isSigningOut ? "Saliendo…" : "Cerrar sesión"}</span>
             </button>
             <div className="dashboard-avatar" aria-label={`Usuario: ${currentUser.name}`}>
               {initials}

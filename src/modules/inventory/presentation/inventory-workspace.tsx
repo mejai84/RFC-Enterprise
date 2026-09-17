@@ -12,6 +12,7 @@ import {
   type MovementType,
   inventoryUnits,
 } from "../index";
+import { InlineCatalogCombobox } from "./inline-catalog-combobox";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -20,6 +21,11 @@ const currencyFormatter = new Intl.NumberFormat("es-CO", {
 });
 
 const numberFormatter = new Intl.NumberFormat("es-CO");
+const spanishCollator = new Intl.Collator("es-CO", { numeric: true, sensitivity: "base" });
+
+function normalizeForSearch(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
 
 const movementLabels: Record<MovementType, string> = {
   entry: "Entrada a Bodega",
@@ -124,6 +130,8 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [customLocations, setCustomLocations] = useState<string[]>([]);
+  const [customUnits, setCustomUnits] = useState<string[]>([]);
+  const [customBrands, setCustomBrands] = useState<string[]>([]);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newLocationName, setNewLocationName] = useState("");
 
@@ -141,7 +149,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const [notesInput, setNotesInput] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isNewItemModalOpen, setIsNewItemModalOpen] = useState(false);
-  const [newItem, setNewItem] = useState({ name: "", sku: "", category: "Insumo", brand: "", unit: "unidad", location: "Bodega principal", warehouse: "Bodega principal", aisle: "", shelf: "", level: "", bin: "", group: "bodega" as StockProduct["inventoryGroup"], quantity: "", cost: "", minimum: "" });
+  const [newItem, setNewItem] = useState({ name: "", sku: "", category: "", brand: "", unit: "", purchaseUnit: "", unitsPerPurchase: "", location: "", warehouse: "", aisle: "", shelf: "", level: "", bin: "", group: "bodega" as StockProduct["inventoryGroup"], quantity: "", cost: "", minimum: "" });
 
   // Estado del modal de nueva obra / proyecto
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -176,6 +184,11 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     [products]
   );
 
+  const categoryOptions = useMemo(() => [...new Set(["Insumo", ...customCategories, ...products.map((product) => product.category)])], [customCategories, products]);
+  const unitOptions = useMemo(() => [...new Set([...customUnits, ...inventoryUnits.map((unit) => unit.symbol), ...products.map((product) => product.unit)])], [customUnits, products]);
+  const brandOptions = useMemo(() => [...new Set(["Sin marca", ...customBrands, ...products.map((product) => product.brand)])], [customBrands, products]);
+  const locationOptions = useMemo(() => [...new Set([...customLocations, ...products.map((product) => product.location)])], [customLocations, products]);
+
   // Filtrado de productos del catálogo
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -189,7 +202,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       if (!q) return true;
       const haystack = `${p.name} ${p.sku} ${p.category} ${p.brand} ${p.location}`.toLowerCase();
       return haystack.includes(q);
-    });
+    }).sort((a, b) => spanishCollator.compare(a.name, b.name));
   }, [products, query, groupFilter, stockFilter, locationFilter, categoryFilter]);
 
   // Paginación
@@ -393,16 +406,19 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
 
   function handleCreateItem(e: FormEvent) {
     e.preventDefault();
-    const quantity = Number(newItem.quantity);
-    const unitCost = Number(newItem.cost);
-    if (!newItem.name.trim() || !quantity || quantity <= 0 || !Number.isFinite(unitCost) || unitCost < 0) {
-      showToast("Indica nombre, cantidad inicial y costo unitario válidos.", "error"); return;
+    const purchaseQuantity = Number(newItem.quantity);
+    const unitsPerPurchase = Number(newItem.unitsPerPurchase);
+    const purchaseUnitCost = Number(newItem.cost);
+    if (!newItem.name.trim() || !purchaseQuantity || purchaseQuantity <= 0 || !unitsPerPurchase || unitsPerPurchase <= 0 || !Number.isFinite(purchaseUnitCost) || purchaseUnitCost < 0) {
+      showToast("Indica una cantidad recibida, equivalencia y costo de compra válidos.", "error"); return;
     }
+    const quantity = purchaseQuantity * unitsPerPurchase;
+    const unitCost = purchaseUnitCost / unitsPerPurchase;
     const id = `new-${Date.now()}`;
-    const location = [newItem.warehouse, newItem.aisle && `Pasillo ${newItem.aisle}`, newItem.shelf && `Estante ${newItem.shelf}`, newItem.level && `Nivel ${newItem.level}`, newItem.bin && `Contenedor ${newItem.bin}`].filter(Boolean).join(" · ");
-    const product: StockProduct = { id, sku: newItem.sku.trim() || `SKU-${Date.now()}`, name: newItem.name.trim(), category: newItem.category, brand: newItem.brand.trim() || "Sin marca", unit: newItem.unit.trim() || "unidad", location, inventoryGroup: newItem.group, inventoryGroupName: newItem.group === "bodega" ? "Bodega" : newItem.group === "dotacion" ? "Dotación" : "Herramientas de trabajadores", available: quantity, minimum: newItem.minimum === "" ? null : Number(newItem.minimum), notes: null, active: true, unitCost, sourceRow: 0 };
+    const location = newItem.location.trim();
+    const product: StockProduct = { id, sku: newItem.sku.trim() || `SKU-${Date.now()}`, name: newItem.name.trim(), category: newItem.category, brand: newItem.brand.trim() || "Sin marca", unit: newItem.unit.trim(), purchaseUnit: newItem.purchaseUnit.trim(), unitsPerPurchase, purchaseUnitCost, location, inventoryGroup: newItem.group, inventoryGroupName: newItem.group === "bodega" ? "Bodega" : newItem.group === "dotacion" ? "Dotación" : "Herramientas de trabajadores", available: quantity, minimum: newItem.minimum === "" ? null : Number(newItem.minimum), notes: null, active: true, unitCost, sourceRow: 0 };
     const movement: InventoryMovement = { id: `mov-${Date.now()}`, productId: id, productName: product.name, type: "entry", quantity, unit: product.unit, unitCost, totalCost: quantity * unitCost, occurredAt: formatDateTime(), reference: `ING-${new Date().getFullYear()}-${String(movements.length + 1).padStart(3, "0")}`, notes: "Entrada inicial al crear artículo" };
-    setProducts(current => [product, ...current]); setMovements(current => [movement, ...current]); setIsNewItemModalOpen(false); setNewItem({ name: "", sku: "", category: "Insumo", brand: "", unit: "unidad", location: "Bodega principal", warehouse: "Bodega principal", aisle: "", shelf: "", level: "", bin: "", group: "bodega", quantity: "", cost: "", minimum: "" }); showToast(`Artículo "${product.name}" creado con su entrada inicial.`);
+    setProducts(current => [product, ...current]); setMovements(current => [movement, ...current]); setIsNewItemModalOpen(false); setNewItem({ name: "", sku: "", category: "", brand: "", unit: "", purchaseUnit: "", unitsPerPurchase: "", location: "", warehouse: "", aisle: "", shelf: "", level: "", bin: "", group: "bodega", quantity: "", cost: "", minimum: "" }); showToast(`Artículo "${product.name}" creado: ${quantity} ${product.unit} disponibles.`);
   }
 
   function relocateProduct(product: StockProduct) {
@@ -937,7 +953,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
               Filtrar por obra / proyecto
               <select onChange={(e) => setMovementProjectFilter(e.target.value)} value={movementProjectFilter}>
                 <option value="all">Todas las obras / Almacén</option>
-                {projects.map((p) => (
+                {[...projects].sort((a, b) => spanishCollator.compare(`${a.code} ${a.name}`, `${b.code} ${b.name}`)).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.code} - {p.name}
                   </option>
@@ -1169,11 +1185,12 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                     }}
                   />
                   {/* Sugerencias de búsqueda solo si está buscando activamente */}
-                  {showAutocomplete && modalSearch.trim().length > 0 && (
+                  {showAutocomplete && (
                     <div className="autocomplete-results">
-                      {products
-                        .filter((p) => `${p.name} ${p.sku}`.toLowerCase().includes(modalSearch.toLowerCase()))
-                        .slice(0, 6)
+                      {[...products]
+                        .filter((p) => normalizeForSearch(`${p.name} ${p.sku} ${p.category}`).includes(normalizeForSearch(modalSearch)))
+                        .sort((a, b) => spanishCollator.compare(a.name, b.name))
+                        .slice(0, 8)
                         .map((p) => (
                           <button
                             key={p.id}
@@ -1219,7 +1236,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                     required
                   >
                     <option value="">Selecciona una obra activa</option>
-                    {projects.map((prj) => (
+                    {[...projects].sort((a, b) => spanishCollator.compare(`${a.code} ${a.name}`, `${b.code} ${b.name}`)).map((prj) => (
                       <option key={prj.id} value={prj.id} disabled={prj.status !== "active"}>
                         {prj.code} - {prj.name} ({prj.status === "active" ? "Activa" : prj.status === "completed" ? "Finalizada" : "No disponible"})
                       </option>
@@ -1317,7 +1334,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       )}
 
       {isNewItemModalOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="new-item-title"><div className="modal-card"><div className="modal-header"><div><p>Catálogo de inventario</p><h3 id="new-item-title">Nuevo artículo</h3></div><button className="btn-close-modal" aria-label="Cerrar" onClick={() => setIsNewItemModalOpen(false)} type="button">×</button></div><form onSubmit={handleCreateItem}><div className="form-grid-2"><div className="form-group"><label>Nombre *</label><input required value={newItem.name} onChange={e => setNewItem(v => ({ ...v, name: e.target.value }))} /></div><div className="form-group"><label>SKU / código de barras</label><input value={newItem.sku} onChange={e => setNewItem(v => ({ ...v, sku: e.target.value }))} /></div></div><div className="form-grid-2"><div className="form-group"><label>Tipo / categoría</label><input value={newItem.category} onChange={e => setNewItem(v => ({ ...v, category: e.target.value }))} /></div><div className="form-group"><label>Marca</label><input value={newItem.brand} onChange={e => setNewItem(v => ({ ...v, brand: e.target.value }))} /></div></div><div className="form-grid-2"><div className="form-group"><label>Cantidad inicial *</label><input type="number" min="0.001" step="any" required value={newItem.quantity} onChange={e => setNewItem(v => ({ ...v, quantity: e.target.value }))} /></div><div className="form-group"><label>Costo unitario COP *</label><input type="number" min="0" step="any" required value={newItem.cost} onChange={e => setNewItem(v => ({ ...v, cost: e.target.value }))} /></div></div><div className="form-grid-2"><div className="form-group"><label>Unidad</label><input value={newItem.unit} onChange={e => setNewItem(v => ({ ...v, unit: e.target.value }))} /></div><div className="form-group"><label>Stock mínimo</label><input type="number" min="0" value={newItem.minimum} onChange={e => setNewItem(v => ({ ...v, minimum: e.target.value }))} /></div></div><div className="form-group"><label>Ubicación</label><input value={newItem.location} onChange={e => setNewItem(v => ({ ...v, location: e.target.value }))} /></div><div className="modal-actions"><button className="btn-cancel" type="button" onClick={() => setIsNewItemModalOpen(false)}>Cancelar</button><button className="inventory-action" type="submit">Crear y registrar entrada</button></div></form></div></div>
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="new-item-title"><div className="modal-card"><div className="modal-header"><div><p>Catálogo de inventario</p><h3 id="new-item-title">Nuevo artículo</h3></div><button className="btn-close-modal" aria-label="Cerrar" onClick={() => setIsNewItemModalOpen(false)} type="button">×</button></div><form onSubmit={handleCreateItem}><div className="form-grid-2"><div className="form-group"><label>Nombre *</label><input required value={newItem.name} onChange={e => setNewItem(v => ({ ...v, name: e.target.value }))} /></div><div className="form-group"><label>SKU / código de barras</label><input value={newItem.sku} onChange={e => setNewItem(v => ({ ...v, sku: e.target.value }))} /></div></div><div className="form-grid-2"><div className="form-group"><label>Tipo / categoría *</label><InlineCatalogCombobox label="Tipo o categoría" options={categoryOptions} onChange={category => setNewItem(v => ({ ...v, category }))} onCreate={category => setCustomCategories(values => [...new Set([...values, category])])} placeholder="Busca o crea una categoría" required value={newItem.category} /></div><div className="form-group"><label>Marca</label><InlineCatalogCombobox label="Marca" options={brandOptions} onChange={brand => setNewItem(v => ({ ...v, brand }))} onCreate={brand => setCustomBrands(values => [...new Set([...values, brand])])} placeholder="Busca o crea una marca" value={newItem.brand} /></div></div><div className="form-grid-2"><div className="form-group"><label>Unidad de consumo *</label><InlineCatalogCombobox label="Unidad de consumo" options={unitOptions} onChange={unit => setNewItem(v => ({ ...v, unit }))} onCreate={unit => setCustomUnits(values => [...new Set([...values, unit])])} placeholder="Ej. unidad" required value={newItem.unit} /></div><div className="form-group"><label>Presentación de compra *</label><InlineCatalogCombobox label="Presentación de compra" options={unitOptions} onChange={purchaseUnit => setNewItem(v => ({ ...v, purchaseUnit }))} onCreate={purchaseUnit => setCustomUnits(values => [...new Set([...values, purchaseUnit])])} placeholder="Ej. caja" required value={newItem.purchaseUnit} /></div></div><div className="form-grid-2"><div className="form-group"><label>Contenido por presentación *</label><input min="1" placeholder="Ej. 100" required step="any" type="number" value={newItem.unitsPerPurchase} onChange={e => setNewItem(v => ({ ...v, unitsPerPurchase: e.target.value }))} /></div><div className="form-group"><label>Cantidad recibida *</label><input min="0.001" placeholder="Ej. 3 cajas" required step="any" type="number" value={newItem.quantity} onChange={e => setNewItem(v => ({ ...v, quantity: e.target.value }))} /></div></div><div className="form-grid-2"><div className="form-group"><label>Costo por presentación COP *</label><input type="number" min="0" step="any" required value={newItem.cost} onChange={e => setNewItem(v => ({ ...v, cost: e.target.value }))} /></div><div className="form-group"><label>Stock mínimo ({newItem.unit || "consumo"})</label><input type="number" min="0" value={newItem.minimum} onChange={e => setNewItem(v => ({ ...v, minimum: e.target.value }))} /></div></div>{Number(newItem.quantity) > 0 && Number(newItem.unitsPerPurchase) > 0 ? <p className="conversion-preview">Se registrarán <strong>{Number(newItem.quantity) * Number(newItem.unitsPerPurchase)} {newItem.unit || "unidades"}</strong> en stock ({newItem.quantity} {newItem.purchaseUnit || "presentaciones"} × {newItem.unitsPerPurchase}).</p> : null}<div className="form-group"><label>Ubicación *</label><InlineCatalogCombobox label="Ubicación" options={locationOptions} onChange={location => setNewItem(v => ({ ...v, location }))} onCreate={location => setCustomLocations(values => [...new Set([...values, location])])} placeholder="Busca o crea una ubicación" required value={newItem.location} /></div><div className="modal-actions"><button className="btn-cancel" type="button" onClick={() => setIsNewItemModalOpen(false)}>Cancelar</button><button className="inventory-action" type="submit">Crear y registrar entrada</button></div></form></div></div>
       )}
 
       {/* ========================================================================= */}

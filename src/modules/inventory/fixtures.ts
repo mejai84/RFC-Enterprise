@@ -18,6 +18,9 @@ export type StockProduct = Product & {
   inventoryGroup: InventoryGroup;
   inventoryGroupName: string;
   unitCost?: number; // Costo unitario promedio en COP
+  purchaseUnit?: string; // Presentación recibida del proveedor, p. ej. caja
+  unitsPerPurchase?: number; // Unidades de consumo contenidas por presentación
+  purchaseUnitCost?: number; // Costo de una presentación de compra en COP
   sourceRow: number;
 };
 

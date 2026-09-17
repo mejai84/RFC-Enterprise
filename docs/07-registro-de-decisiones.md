@@ -157,7 +157,7 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 
 ## ADR-013 · Portada institucional orientada a proyectos
 
-**Fecha:** 2026-09-17  
+**Fecha:** 2026-09-17
 **Estado:** Aceptada
 
 **Contexto.** El sitio institucional requería explicar con mayor claridad la oferta de RFC y reemplazar los teléfonos visibles por un mecanismo de contacto más apropiado para solicitudes de proyecto.
@@ -170,7 +170,7 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 
 ## ADR-014 · Directorio laboral y permisos por empleado
 
-**Fecha:** 2026-09-17  
+**Fecha:** 2026-09-17
 **Estado:** Aceptada
 
 **Decisión.** Administrar a cada empleado mediante una ficha laboral separada de su identidad de Supabase Auth. La ficha admite activación, uno o más roles y excepciones de permiso explícitas (`grant` o `revoke`), registradas bajo RLS y auditoría.
@@ -207,3 +207,45 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 **Decisión.** La cabecera del portal consulta el perfil de la sesión autenticada y muestra su `display_name` y rol, sin usar un nombre fijo. El formulario institucional prepara un correo con los datos de la solicitud para `rfcsas094@gmail.com`, sin publicar teléfonos ni persistir los datos en el navegador.
 
 **Pendiente acordado.** Implementar en una fase posterior el envío directo mediante Edge Function de Supabase y un proveedor de correo transaccional. Las claves del proveedor residirán solo en secretos de Supabase; el formulario público deberá usar validación, límite de solicitudes y protección antispam.
+
+---
+
+## ADR-018 · Cierre de sesión y cambio de usuario
+
+**Fecha:** 2026-09-17
+**Estado:** Aceptada
+
+**Decisión.** La cabecera del portal incorpora una acción visible para cerrar la sesión de Supabase y volver a `/login`. Esto permite que otra persona use el mismo equipo sin reutilizar la sesión anterior.
+
+---
+
+## ADR-019 · Catálogos buscables durante el alta de inventario
+
+**Fecha:** 2026-09-17
+**Estado:** Aceptada
+
+**Decisión.** El formulario de nuevo artículo inicia sin categoría, marca, unidad ni ubicación preseleccionadas y usa sugerencias filtrables para esos valores. Categoría, unidad y ubicación son obligatorias; la marca conserva “Sin marca” como opción explícita. Si el valor no existe, el usuario puede crearlo y seleccionarlo en el mismo campo, sin abrir otra página ni perder lo ya diligenciado.
+
+**Consecuencia.** La ubicación seleccionada se guarda directamente en el artículo. Los catálogos muestran primero las opciones existentes ordenadas alfabéticamente y evitan entradas repetidas por mayúsculas o acentos.
+
+---
+
+## ADR-020 · Unidades de compra y consumo
+
+**Fecha:** 2026-09-17
+**Estado:** Aceptada
+
+**Decisión.** Los artículos nuevos registran una unidad de consumo, una presentación de compra y un factor de conversión. La cantidad y el costo capturados corresponden a la presentación recibida; existencias y costo unitario se calculan en la unidad de consumo.
+
+**Ejemplo.** Tres cajas de 100 tornillos se registran como 300 unidades disponibles; cada despacho puede descontar una o varias unidades.
+
+---
+
+## ADR-021 · Manual de usuario operativo
+
+**Fecha:** 2026-09-17
+**Estado:** Aceptada
+
+**Decisión.** RFC Enterprise cuenta con un manual paso a paso para los roles operativos y administrativos. Cubre acceso, catálogo, unidades de compra y consumo, movimientos, ajustes físicos, conteos, proyectos, informes, empleados y permisos.
+
+**Consecuencia.** El manual debe actualizarse cuando se aprueben nuevos módulos o cambien los procesos de operación.

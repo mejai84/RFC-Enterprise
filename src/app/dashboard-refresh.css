@@ -282,6 +282,8 @@
   height: 18px;
   width: 18px;
 }
+.dashboard-top-actions .dashboard-signout { gap: 7px; padding: 0 12px; width: auto; }
+.dashboard-signout span { font-size: 12px; font-weight: 750; white-space: nowrap; }
 
 /* Dashboard Content */
 .dashboard-content {
@@ -809,6 +811,8 @@
     height: 38px;
     width: 38px;
   }
+  .dashboard-top-actions .dashboard-signout { padding: 0; width: 38px; }
+  .dashboard-signout span { display: none; }
 }
 
 @media (max-width: 420px) {

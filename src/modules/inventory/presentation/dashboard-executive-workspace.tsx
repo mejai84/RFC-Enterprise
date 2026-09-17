@@ -15,6 +15,7 @@ import {
   type ToolLoan,
 } from "../index";
 import { PrintableDispatchVoucher } from "./printable-dispatch-voucher";
+import { SearchableProductPicker } from "./searchable-product-picker";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -23,6 +24,7 @@ const currencyFormatter = new Intl.NumberFormat("es-CO", {
 });
 
 const numberFormatter = new Intl.NumberFormat("es-CO");
+const spanishCollator = new Intl.Collator("es-CO", { numeric: true, sensitivity: "base" });
 
 function formatDateTime() {
   const date = new Date();
@@ -224,13 +226,19 @@ export function DashboardExecutiveWorkspace() {
   };
 
   const selectedProduct = useMemo(() => {
-    return products.find((p) => p.id === selectedProductId) || products[0];
+    return products.find((p) => p.id === selectedProductId);
   }, [products, selectedProductId]);
+
+  const alphabetizedProjects = useMemo(
+    () => [...projects].sort((a, b) => spanishCollator.compare(`${a.code} ${a.name}`, `${b.code} ${b.name}`)),
+    [projects]
+  );
 
   // Handle New Dispatch (Salida a Obra)
   const handleDispatchSubmit = (e: FormEvent) => {
     e.preventDefault();
     const qty = parseFloat(quantityInput);
+    if (!selectedProduct) return alert("Selecciona un material de la lista antes de continuar.");
     if (!qty || qty <= 0) return alert("Ingrese una cantidad válida.");
     if (qty > selectedProduct.available) return alert(`Stock insuficiente. Solo hay ${selectedProduct.available} unidades.`);
 
@@ -270,6 +278,7 @@ export function DashboardExecutiveWorkspace() {
   const handleReturnSubmit = (e: FormEvent) => {
     e.preventDefault();
     const qty = parseFloat(quantityInput);
+    if (!selectedProduct) return alert("Selecciona un material de la lista antes de continuar.");
     if (!qty || qty <= 0) return alert("Ingrese una cantidad válida.");
 
     const prj = projects.find((p) => p.id === selectedProjectId);
@@ -307,6 +316,7 @@ export function DashboardExecutiveWorkspace() {
   // Handle Nueva Requisición
   const handleRequisitionSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (!selectedProduct) return alert("Selecciona un material de la lista antes de continuar.");
     const prj = projects.find((p) => p.id === reqProject);
     const newReq: MaterialRequisition = {
       id: `req-${Date.now()}`,
@@ -819,19 +829,18 @@ export function DashboardExecutiveWorkspace() {
             <form onSubmit={handleDispatchSubmit}>
               <div className="form-group">
                 <label>Seleccionar Material / Insumo:</label>
-                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} (Disp: {p.available} {p.unit}) - {currencyFormatter.format(p.unitCost || 25000)}
-                    </option>
-                  ))}
-                </select>
+                <SearchableProductPicker
+                  products={products}
+                  value={selectedProductId}
+                  onChange={setSelectedProductId}
+                  formatDetail={(product) => `${product.sku} · ${currencyFormatter.format(product.unitCost || 25000)}`}
+                />
               </div>
 
               <div className="form-group">
                 <label>Obra Destino (Imputación de Costo):</label>
                 <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
-                  {projects.map((prj) => (
+                  {alphabetizedProjects.map((prj) => (
                     <option key={prj.id} value={prj.id}>
                       {prj.code} - {prj.name}
                     </option>
@@ -906,7 +915,7 @@ export function DashboardExecutiveWorkspace() {
               <div className="form-group">
                 <label>Obra de Origen (Reversión de Costo):</label>
                 <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
-                  {projects.map((prj) => (
+                  {alphabetizedProjects.map((prj) => (
                     <option key={prj.id} value={prj.id}>
                       {prj.code} - {prj.name}
                     </option>
@@ -916,13 +925,7 @@ export function DashboardExecutiveWorkspace() {
 
               <div className="form-group">
                 <label>Material Devuelto a Bodega:</label>
-                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.unit})
-                    </option>
-                  ))}
-                </select>
+                <SearchableProductPicker products={products} value={selectedProductId} onChange={setSelectedProductId} />
               </div>
 
               <div className="form-row-2">
@@ -973,7 +976,7 @@ export function DashboardExecutiveWorkspace() {
               <div className="form-group">
                 <label>Obra / Frente de Trabajo:</label>
                 <select value={reqProject} onChange={(e) => setReqProject(e.target.value)}>
-                  {projects.map((prj) => (
+                  {alphabetizedProjects.map((prj) => (
                     <option key={prj.id} value={prj.id}>
                       {prj.code} - {prj.name}
                     </option>
@@ -983,13 +986,7 @@ export function DashboardExecutiveWorkspace() {
 
               <div className="form-group">
                 <label>Insumo Requerido:</label>
-                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.unit})
-                    </option>
-                  ))}
-                </select>
+                <SearchableProductPicker products={products} value={selectedProductId} onChange={setSelectedProductId} />
               </div>
 
               <div className="form-row-2">
@@ -1071,7 +1068,7 @@ export function DashboardExecutiveWorkspace() {
               <div className="form-group">
                 <label>Obra Asignada:</label>
                 <select value={selectedProjectId} onChange={(e) => setSelectedProjectId(e.target.value)}>
-                  {projects.map((prj) => (
+                  {alphabetizedProjects.map((prj) => (
                     <option key={prj.id} value={prj.id}>
                       {prj.code} - {prj.name}
                     </option>

@@ -1179,6 +1179,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                     placeholder="Busca por nombre, SKU o código de barras…"
                     value={modalSearch}
                     onFocus={() => setShowAutocomplete(true)}
+                    onBlur={() => setShowAutocomplete(false)}
                     onChange={(e) => {
                       setModalSearch(e.target.value);
                       setShowAutocomplete(true);
@@ -1196,6 +1197,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                             key={p.id}
                             type="button"
                             className="autocomplete-item"
+                            onMouseDown={(event) => event.preventDefault()}
                             onClick={() => handleSelectProductInModal(p)}
                           >
                             <div>

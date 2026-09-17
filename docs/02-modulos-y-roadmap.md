@@ -70,4 +70,5 @@ audiencia: Dirección, Producto y Desarrollo
 - Una requisición se crea desde la obra por maestro o residente; pasa a la bandeja de despachos del almacén, donde se valida disponibilidad, se despacha y se genera el movimiento de Kardex asociado a la obra.
 - Los perfiles que ya tienen rol y empresa en Supabase se sincronizan con el directorio de empleados, preservando sus roles y sin duplicar fichas laborales existentes.
 - El acceso ofrece recuperación por correo y cambio voluntario de contraseña. Supabase Auth administra las credenciales; la aplicación nunca las almacena.
+- La administración de empleados usa acciones y modales para registrar fichas, editar datos y gestionar accesos; evita formularios permanentes que sobrecarguen la pantalla.
 - El manual de usuario de RFC Enterprise documenta los procedimientos de acceso, inventario, movimientos, conteos, obras, informes, empleados y permisos.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { StockProduct } from "../index";
 
 const spanishCollator = new Intl.Collator("es-CO", { numeric: true, sensitivity: "base" });
@@ -27,11 +27,20 @@ export function SearchableProductPicker({
 }: Props) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const selectedProduct = products.find((product) => product.id === value);
 
   useEffect(() => {
     setQuery(selectedProduct?.name ?? "");
   }, [selectedProduct?.name, value]);
+
+  useEffect(() => {
+    function closeWhenClickingOutside(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
+    }
+    document.addEventListener("pointerdown", closeWhenClickingOutside);
+    return () => document.removeEventListener("pointerdown", closeWhenClickingOutside);
+  }, []);
 
   const results = useMemo(() => {
     const search = normalize(query.trim());
@@ -42,7 +51,7 @@ export function SearchableProductPicker({
   }, [products, query]);
 
   return (
-    <div style={{ position: "relative" }}>
+    <div ref={rootRef} style={{ position: "relative" }}>
       <input
         aria-autocomplete="list"
         aria-expanded={isOpen}

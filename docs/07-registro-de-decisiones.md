@@ -249,3 +249,23 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 **Decisión.** RFC Enterprise cuenta con un manual paso a paso para los roles operativos y administrativos. Cubre acceso, catálogo, unidades de compra y consumo, movimientos, ajustes físicos, conteos, proyectos, informes, empleados y permisos.
 
 **Consecuencia.** El manual debe actualizarse cuando se aprueben nuevos módulos o cambien los procesos de operación.
+
+---
+
+## ADR-022 · Informes operativos interactivos
+
+**Fecha:** 2026-09-17
+**Estado:** Aceptada
+
+**Decisión.** Informes consolida inventario, Kardex, stock crítico y ejecución por obra con filtros de categoría y obra, indicadores, gráficos SVG responsivos, CSV e impresión con identidad RFC. Los datos se leen de la operación local actual para reflejar los movimientos del portal.
+
+---
+
+## ADR-023 · Flujo de requisiciones y sincronización del directorio
+
+**Fecha:** 2026-09-17
+**Estado:** Aceptada
+
+**Decisión.** Los maestros y residentes generan requisiciones dentro de la obra; el almacén las recibe como pendientes, confirma las cantidades disponibles y emite el despacho y su Kardex. Los perfiles existentes que ya poseen empresa y rol se incorporan al directorio de empleados mediante una sincronización idempotente, sin alterar su rol ni duplicar registros.
+
+**Consecuencia.** El indicador de requisiciones pendientes solo aumenta cuando una solicitud ha sido enviada desde una obra. El directorio representa tanto empleados creados desde administración como usuarios ya habilitados para el portal.

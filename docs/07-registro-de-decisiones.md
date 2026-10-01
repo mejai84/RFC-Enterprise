@@ -433,10 +433,18 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
    - Vista Kanban con tarjetas arrastrables/desplazables con badges de estado, valores formateados en COP, origen de correo, responsable y alerta de estancamiento.
    - Alternancia ágil a vista de Tabla con búsqueda en vivo, filtros por estado y ordenamiento.
    - Modal de detalle con historial cronológico auditable (`quote_history`), cambio de estado con notas explicativas y vinculación a proyecto.
-4. **Consecutivo Automatizado**: Códigos no editables tipo `COT-AAAA-###` (ej. `COT-2026-001`).
+4. **Consecutivo Estandarizado RFC**: Formato exacto compuesto: `COT-{numero_consecutivo_automatico}-{año_actual}-{nombre_empresa}-{obra}` (ej. `COT-001-2026-OCENSA-CHIMENEA_CCM`), garantizando unicidad, indexación y correspondencia directa con nombres de archivos y expedientes físicos.
 5. **Esquema de Base de Datos y RLS**:
    - Tablas `public.quotes` y `public.quote_history` en Supabase con políticas RLS de lectura y escritura para personal autorizado.
 6. **Protección de Rutas**: Registro en `src/core/modules/catalog.ts` y protección SSR en `src/proxy.ts` (`/quotes`).
+
+**Evolución e Ideas Acordadas para Próximas Fases:**
+- **Pre-costeo / Estimación Paramétrica**: Desglose rápido de Materiales (vinculados al catálogo de 1,191 insumos), Cuadrillas/Mano de obra y Equipos/Maquinaria para generar el APU.
+- **Conversión 1-Click a Proyecto (`/projects`)**: Creación automática de la ficha de obra con su centro de costos, presupuesto y fechas al pasar a estado confirmado o en ejecución.
+- **Control de Versiones y Revisiones (R0, R1, R2)**: Trazabilidad de ajustes solicitados por el cliente sin perder la cotización original.
+- **Semáforo de Vencimiento de Ofertas**: Validez comercial en días con alertas antes del vencimiento por variación de precios de insumos.
+- **Registro de Visita Técnica Previa**: Acta de inspección de campo, fotos y levantamiento preliminar antes de cotizar.
+- **Exportación de Propuesta Económica en PDF**: Generación membretada lista para enviar al cliente.
 
 **Consecuencia.** La empresa estandariza el flujo comercial desde la recepción del correo hasta el cierre de obra, garantizando cero solicitudes extraviadas, alertas de seguimiento comercial oportunas y enlace directo al módulo de costeo de proyectos.
 

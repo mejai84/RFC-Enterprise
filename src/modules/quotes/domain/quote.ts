@@ -67,20 +67,53 @@ export type Quote = {
 
 /* ── Generador de código consecutivo ──────────────────────── */
 
+/** Limpia texto para usar en códigos sin espacios ni caracteres especiales */
+export function slugifyCodePart(text: string, maxLen = 16): string {
+  if (!text) return "GENERAL";
+  const clean = text
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // elimina tildes
+    .replace(/[^A-Z0-9]+/g, "_")     // reemplaza espacios y símbolos con _
+    .replace(/^_+|_+$/g, "");        // recorta guiones bajos al inicio/final
+  return clean.slice(0, maxLen) || "GENERAL";
+}
+
+/**
+ * Consecutivo estándar RFC:
+ * COT-{numero_consecutivo_automatico}-{año_actual}-{nombre_empresa}-{obra}
+ * Ejemplo: COT-001-2026-OCENSA-CHIMENEA_CCM
+ */
 export function getNextQuoteCode(
   quotes: ReadonlyArray<Pick<Quote, "code">>,
+  client = "CLIENTE",
+  workName = "OBRA",
   year?: number,
 ): string {
   const y = year ?? new Date().getFullYear();
-  const prefix = `COT-${y}-`;
+
+  // Buscar el número consecutivo más alto del año en cualquier formato existente
   const maxSeq = quotes.reduce((highest, q) => {
-    if (q.code.startsWith(prefix)) {
-      const seq = parseInt(q.code.slice(prefix.length), 10);
+    // Coincidir COT-###-AAAA...
+    const matchNew = q.code.match(/^COT-(\d+)-(\d{4})/i);
+    if (matchNew && parseInt(matchNew[2], 10) === y) {
+      const seq = parseInt(matchNew[1], 10);
+      return Number.isNaN(seq) ? highest : Math.max(highest, seq);
+    }
+    // Coincidir formato anterior COT-AAAA-###
+    const matchOld = q.code.match(/^COT-(\d{4})-(\d+)/i);
+    if (matchOld && parseInt(matchOld[1], 10) === y) {
+      const seq = parseInt(matchOld[2], 10);
       return Number.isNaN(seq) ? highest : Math.max(highest, seq);
     }
     return highest;
   }, 0);
-  return `${prefix}${String(maxSeq + 1).padStart(3, "0")}`;
+
+  const seqStr = String(maxSeq + 1).padStart(3, "0");
+  const clientSlug = slugifyCodePart(client, 14);
+  const workSlug = slugifyCodePart(workName, 22);
+
+  return `COT-${seqStr}-${y}-${clientSlug}-${workSlug}`;
 }
 
 /* ── Helpers ──────────────────────────────────────────────── */

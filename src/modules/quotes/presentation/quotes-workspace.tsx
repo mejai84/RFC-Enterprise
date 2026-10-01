@@ -126,7 +126,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
 
     if (!title || !client) return;
 
-    const code = getNextQuoteCode(quotes);
+    const code = getNextQuoteCode(quotes, client, title);
     const now = new Date().toISOString();
     const newQuote: Quote = {
       id: uid(),

@@ -10,7 +10,7 @@ import type { Quote } from "./domain/quote";
 export const initialQuotes: Quote[] = [
   {
     id: "cot-001",
-    code: "COT-2026-038",
+    code: "COT-001-2026-OCENSA-CHIMENEA_CCM",
     title: "Reparación chimenea CCM Caucasia",
     client: "OCENSA",
     contactName: "Andrés Gómez",
@@ -33,7 +33,7 @@ export const initialQuotes: Quote[] = [
   },
   {
     id: "cot-002",
-    code: "COT-2026-039",
+    code: "COT-002-2026-MINEROS-CUBIERTA_BODEGA",
     title: "Mantenimiento cubierta bodega central",
     client: "Mineros S.A.",
     contactName: "Patricia Rendón",
@@ -56,7 +56,7 @@ export const initialQuotes: Quote[] = [
   },
   {
     id: "cot-003",
-    code: "COT-2026-040",
+    code: "COT-003-2026-CONSORCIO-CERRAMIENTO",
     title: "Cerramiento perimetral planta de beneficio",
     client: "Consorcio Minero del Bajo Cauca",
     contactName: "Luis Herrera",
@@ -75,7 +75,7 @@ export const initialQuotes: Quote[] = [
   },
   {
     id: "cot-004",
-    code: "COT-2026-041",
+    code: "COT-004-2026-ALCALDIA-ESTRUCTURA_GIM",
     title: "Fabricación e instalación estructura metálica gimnasio",
     client: "Alcaldía de Caucasia",
     contactName: "Martha Pérez",
@@ -102,7 +102,7 @@ export const initialQuotes: Quote[] = [
   },
   {
     id: "cot-005",
-    code: "COT-2026-035",
+    code: "COT-005-2026-DRUMMOND-REMODELACION",
     title: "Remodelación oficinas administrativas",
     client: "Drummond Ltd.",
     contactName: "Ricardo Vega",
@@ -126,7 +126,7 @@ export const initialQuotes: Quote[] = [
   },
   {
     id: "cot-006",
-    code: "COT-2026-036",
+    code: "COT-006-2026-EPM-TANQUE_ELEVADO",
     title: "Suministro e instalación tanque elevado 10m³",
     client: "EPM Aguas del Bajo Cauca",
     contactName: "Sandra Muñoz",
@@ -151,7 +151,7 @@ export const initialQuotes: Quote[] = [
   },
   {
     id: "cot-007",
-    code: "COT-2026-037",
+    code: "COT-007-2026-CERVUNION-TORRE_ENFRIAM",
     title: "Mantenimiento y pintura torre de enfriamiento",
     client: "Cervecería Unión",
     contactName: "Felipe Arias",
@@ -177,7 +177,7 @@ export const initialQuotes: Quote[] = [
   },
   {
     id: "cot-008",
-    code: "COT-2026-042",
+    code: "COT-008-2026-INVIAS-REFUERZO_PUENTE",
     title: "Soldadura y refuerzo vigas puente vehicular",
     client: "INVÍAS – Regional Antioquia",
     contactName: "Carlos Duque",

@@ -43,6 +43,8 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 | UI-003 | Baja | Orden e iconografía de pestañas de obra | Terminado | Materiales, herramientas, personal, requisiciones y ajustes informativos al final, con iconos SVG por función |
 | UI-004 | Media | Búsqueda y configuración de catálogo | Terminado | Formularios sin solapamientos, icono de configuración y búsqueda de artículos con coincidencias en vivo |
 | SEC-001 | Crítica | Endurecimiento integral de seguridad v1.0 | Terminado | Proxy/Middleware SSR, cookies de sesión, headers HTTP, RLS hardening, política de contraseñas y rate limiting |
+| QTE-001 | Alta | Tablero Kanban y pipeline de cotizaciones v0.1 | Terminado | 12 estados operativos, vista Kanban y lista, filtros, badges de estado, consecutivo `COT-AAAA-###`, modal detallado con historial y notas |
+| QTE-002 | Media | Persistencia Supabase y conversión a Obra/Proyecto | Terminado | Tablas `quotes` y `quote_history` con RLS, enlace con proyectos existentes y cálculo de estancamiento (>3 días) |
 
 ## Riesgos activos
 

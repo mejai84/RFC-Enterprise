@@ -405,4 +405,40 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 
 **Consecuencia.** El equipo cuenta con un mecanismo profesional, repetible y automatizado para validar el comportamiento del ERP antes de despliegues y prevenir regresiones en la experiencia de usuario y seguridad.
 
+---
+
+## ADR-035 · Módulo de Cotizaciones, Embudo Comercial (Kanban) y Trazabilidad Operativa
+
+**Fecha:** 2026-10-01  
+**Estado:** Aceptada
+
+**Contexto.** La recepción de solicitudes por correo (planos, visitas de obra, cotizaciones APU) no contaba con un canal operativo centralizado dentro del ERP. Los requerimientos corrían el riesgo de perderse entre correos y mensajes, sin seguimiento de tiempos de respuesta, responsables ni enlace directo hacia la creación del proyecto de obra una vez adjudicado.
+
+**Decisión.**
+1. **Módulo Desacoplado `quotes`**: Crear el dominio comercial en `src/modules/quotes/` con contrato público en `index.ts`.
+2. **Ciclo de Vida de 12 Estados Operativos**:
+   - `received`: 📥 Recibido (llegó correo/solicitud).
+   - `in_review`: 🔎 En revisión (análisis de planos, alcance y requisitos).
+   - `estimating`: 📝 Cotización en proceso (APU, materiales, cuadrilla y precios).
+   - `sent`: 📤 Cotización enviada al cliente.
+   - `awaiting_response`: ⏳ Esperando respuesta del cliente (con alerta automática si >3 días sin gestión).
+   - `revision_requested`: 🔄 Por modificar (ajustes solicitados por el cliente).
+   - `confirmed`: ✅ Trabajo confirmado (aprobación / orden de servicio).
+   - `in_execution`: 🚧 En ejecución (obra iniciada en frentes de trabajo).
+   - `work_completed`: 📋 Trabajo terminado (ejecución física finalizada).
+   - `billing_pending`: 💰 Pendiente facturación / pago (actas o trámite contable).
+   - `closed`: 🟢 Cerrado (finalizado integralmente).
+   - `lost`: ❌ No adjudicado (no aprobada o cancelada).
+3. **Tablero Kanban Interactivo & Vista Tabular**:
+   - Vista Kanban con tarjetas arrastrables/desplazables con badges de estado, valores formateados en COP, origen de correo, responsable y alerta de estancamiento.
+   - Alternancia ágil a vista de Tabla con búsqueda en vivo, filtros por estado y ordenamiento.
+   - Modal de detalle con historial cronológico auditable (`quote_history`), cambio de estado con notas explicativas y vinculación a proyecto.
+4. **Consecutivo Automatizado**: Códigos no editables tipo `COT-AAAA-###` (ej. `COT-2026-001`).
+5. **Esquema de Base de Datos y RLS**:
+   - Tablas `public.quotes` y `public.quote_history` en Supabase con políticas RLS de lectura y escritura para personal autorizado.
+6. **Protección de Rutas**: Registro en `src/core/modules/catalog.ts` y protección SSR en `src/proxy.ts` (`/quotes`).
+
+**Consecuencia.** La empresa estandariza el flujo comercial desde la recepción del correo hasta el cierre de obra, garantizando cero solicitudes extraviadas, alertas de seguimiento comercial oportunas y enlace directo al módulo de costeo de proyectos.
+
+
 

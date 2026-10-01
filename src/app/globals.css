@@ -3,6 +3,7 @@
 @import "./dashboard-refresh.css";
 @import "./inventory-interactions.css";
 @import "./inventory-catalog.css";
+@import "./quotes-pipeline.css";
 @import "./responsive-devices.css";
 
 :root {

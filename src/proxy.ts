@@ -4,6 +4,7 @@ import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib
 
 const PROTECTED_ROUTES = [
   "/dashboard",
+  "/quotes",
   "/inventory",
   "/projects",
   "/movements",

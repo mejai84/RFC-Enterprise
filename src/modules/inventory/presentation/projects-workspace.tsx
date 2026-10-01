@@ -2,19 +2,27 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { createBrowserClient } from "@supabase/ssr";
 import {
   inventoryProducts,
   inventoryProjects,
   inventoryRequisitions,
   inventoryToolLoans,
   sampleInitialMovements,
+  getNextProjectCode,
+  getInventoryItemKind,
+  projectTypeOptions,
   type InventoryMovement,
+  type AssignedProjectEmployee,
   type MaterialRequisition,
   type Project,
+  type ProjectType,
   type StockProduct,
   type ToolLoan,
 } from "../index";
 import { PrintableDispatchVoucher } from "./printable-dispatch-voucher";
+import { CurrencyInput } from "@/shared/components/currency-input";
+import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -22,17 +30,32 @@ const currencyFormatter = new Intl.NumberFormat("es-CO", {
   maximumFractionDigits: 0,
 });
 
-function formatDateTime() {
-  const date = new Date();
+function formatDateTime(date = new Date()) {
   return new Intl.DateTimeFormat("es-CO", {
+    year: "numeric",
+    month: "2-digit",
     day: "2-digit",
-    month: "short",
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
   }).format(date);
 }
 
+type ProjectTabIconName = "materials" | "tools" | "budget" | "team" | "requisitions";
+
+function ProjectTabIcon({ name }: { name: ProjectTabIconName }) {
+  const paths = {
+    materials: <><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" /><path d="m3 7.5 9 4.5 9-4.5M12 12v9" /></>,
+    tools: <><path d="m14.7 6.3 3-3a4 4 0 0 1-5.4 5.4l-7.5 7.5a2.1 2.1 0 0 0 3 3l7.5-7.5a4 4 0 0 1 5.4-5.4l-3 3" /></>,
+    budget: <><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></>,
+    team: <><circle cx="12" cy="8" r="3" /><path d="M5 21a7 7 0 0 1 14 0M18 8a2.5 2.5 0 0 1 0 5M19 16a4.5 4.5 0 0 1 2 3.8" /></>,
+    requisitions: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 3v3h6V3M8 11h8M8 15h5" /></>,
+  }[name];
+  return <svg aria-hidden="true" className="project-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths}</svg>;
+}
+
 export function ProjectsWorkspace({ responsibleName }: { responsibleName: string }) {
+  const supabase = useMemo(() => isSupabaseConfigured && supabaseUrl && supabasePublishableKey ? createBrowserClient(supabaseUrl, supabasePublishableKey) : null, []);
   // Sincronización con localStorage
   const [products, setProducts] = useState<StockProduct[]>(() => {
     if (typeof window !== "undefined") {
@@ -86,7 +109,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
 
   // Selected Project State
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"materials" | "tools" | "requisitions" | "budget">("materials");
+  const [activeTab, setActiveTab] = useState<"materials" | "tools" | "requisitions" | "budget" | "team">("materials");
   const [projectStatusFilter, setProjectStatusFilter] = useState<"all" | Project["status"]>("all");
 
   // Modals
@@ -97,6 +120,17 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
   const [reopenHistory, setReopenHistory] = useState<Array<{ projectId: string; reason: string; occurredAt: string }>>([]);
   const [isBudgetAdjustmentOpen, setIsBudgetAdjustmentOpen] = useState(false);
   const [selectedVoucherMovement, setSelectedVoucherMovement] = useState<InventoryMovement | null>(null);
+  const [availableEmployees, setAvailableEmployees] = useState<AssignedProjectEmployee[]>([]);
+  const [employeeToAssignId, setEmployeeToAssignId] = useState("");
+  const [toolProductId, setToolProductId] = useState("");
+  const [toolSearch, setToolSearch] = useState("");
+  const [toolResponsibleId, setToolResponsibleId] = useState("");
+  const [toolExpectedReturnDate, setToolExpectedReturnDate] = useState("");
+  const [toolLoanNotes, setToolLoanNotes] = useState("");
+  const [isToolLoanFormOpen, setIsToolLoanFormOpen] = useState(false);
+  const [toolLoanToReturn, setToolLoanToReturn] = useState<ToolLoan | null>(null);
+  const [toolReturnStatus, setToolReturnStatus] = useState<"returned" | "damaged">("returned");
+  const [toolReturnNotes, setToolReturnNotes] = useState("");
 
   // Dispatch Form State
   const [selectedProductId, setSelectedProductId] = useState(products[0]?.id || "");
@@ -104,8 +138,12 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
   const [responsibleInput, setResponsibleInput] = useState("Maestro de Obra");
   const [notesInput, setNotesInput] = useState("");
 
+  function openDispatchModal() {
+    setIsDispatchModalOpen(true);
+  }
+
   // New Project Form State
-  const [newPrjCode, setNewPrjCode] = useState("");
+  const [newPrjType, setNewPrjType] = useState<ProjectType>("obra");
   const [newPrjName, setNewPrjName] = useState("");
   const [newPrjClient, setNewPrjClient] = useState("");
   const [newPrjLocation, setNewPrjLocation] = useState("");
@@ -118,6 +156,30 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
   const [budgetAdjustment, setBudgetAdjustment] = useState("");
   const [budgetReason, setBudgetReason] = useState("");
   const [budgetResponsible, setBudgetResponsible] = useState(responsibleName);
+
+  async function openTeamTab() {
+    setActiveTab("team");
+    if (!supabase) return;
+    const { data } = await supabase.from("employees").select("id, full_name, job_title").eq("is_active", true).order("full_name");
+    setAvailableEmployees((data ?? []).map((employee) => ({ id: employee.id, name: employee.full_name, title: employee.job_title })));
+  }
+
+  function addEmployeeToProject() {
+    if (!selectedProject) return;
+    const employee = availableEmployees.find((item) => item.id === employeeToAssignId);
+    if (!employee || selectedProject.assignedEmployees?.some((item) => item.id === employee.id)) return;
+    setProjects((current) => current.map((project) => {
+      if (project.id !== selectedProject.id) return project;
+      const assigned = project.assignedEmployees ?? [];
+      return { ...project, assignedEmployees: [...assigned, employee] };
+    }));
+    setEmployeeToAssignId("");
+  }
+
+  function removeAssignedEmployee(employeeId: string) {
+    if (!selectedProject) return;
+    setProjects((current) => current.map((project) => project.id === selectedProject.id ? { ...project, assignedEmployees: (project.assignedEmployees ?? []).filter((employee) => employee.id !== employeeId) } : project));
+  }
 
   // Persistir cambios
   useEffect(() => {
@@ -133,6 +195,10 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
   const selectedProject = useMemo(() => {
     return projects.find((p) => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
+  const newPrjCode = useMemo(
+    () => getNextProjectCode(projects, newPrjType, newPrjStartDate),
+    [newPrjStartDate, newPrjType, projects],
+  );
   const visibleProjects = useMemo(() => projectStatusFilter === "all" ? projects : projects.filter((project) => project.status === projectStatusFilter), [projects, projectStatusFilter]);
 
   // Project Specific Computations
@@ -164,6 +230,70 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
   const selectedProduct = useMemo(() => {
     return products.find((p) => p.id === selectedProductId) || products[0];
   }, [products, selectedProductId]);
+  const availableTools = useMemo(
+    () => products.filter((product) => (getInventoryItemKind(product) === "tool" || getInventoryItemKind(product) === "equipment") && product.available > 0),
+    [products],
+  );
+  const filteredAvailableTools = useMemo(() => {
+    const search = toolSearch.trim().toLocaleLowerCase("es-CO");
+    if (!search) return availableTools.slice(0, 12);
+    return availableTools.filter((tool) => `${tool.name} ${tool.sku} ${tool.category} ${tool.brand}`.toLocaleLowerCase("es-CO").includes(search)).slice(0, 12);
+  }, [availableTools, toolSearch]);
+
+  function handleToolLoanSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!selectedProject) return;
+    const tool = availableTools.find((product) => product.id === toolProductId);
+    const responsible = selectedProject.assignedEmployees?.find((employee) => employee.id === toolResponsibleId);
+    if (!tool || !responsible) return alert("Seleccione una herramienta disponible y la persona responsable.");
+
+    const newLoan: ToolLoan = {
+      id: `loan-${Date.now()}`,
+      code: `PRST-${new Date().getFullYear()}-${String(toolLoans.length + 1).padStart(3, "0")}`,
+      toolId: tool.id,
+      toolName: tool.name,
+      workerName: `${responsible.name}${responsible.title ? ` (${responsible.title})` : ""}`,
+      projectId: selectedProject.id,
+      projectName: selectedProject.name,
+      loanDate: formatDateTime(),
+      expectedReturnDate: toolExpectedReturnDate || undefined,
+      status: "active",
+      notes: toolLoanNotes.trim() || undefined,
+    };
+
+    setToolLoans((current) => [newLoan, ...current]);
+    setProducts((current) => current.map((product) => product.id === tool.id ? { ...product, available: product.available - 1 } : product));
+    setToolProductId("");
+    setToolSearch("");
+    setToolResponsibleId("");
+    setToolExpectedReturnDate("");
+    setToolLoanNotes("");
+    setIsToolLoanFormOpen(false);
+  }
+
+  function cancelToolAssignment(loan: ToolLoan) {
+    if (!window.confirm(`¿Anular la asignación de ${loan.toolName}? La herramienta volverá a estar disponible.`)) return;
+    setToolLoans((current) => current.filter((item) => item.id !== loan.id));
+    setProducts((current) => current.map((product) => product.id === loan.toolId ? { ...product, available: product.available + 1 } : product));
+  }
+
+  function handleToolReturnSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!toolLoanToReturn) return;
+    const returnedAt = formatDateTime();
+    setToolLoans((current) => current.map((loan) => loan.id === toolLoanToReturn.id ? {
+      ...loan,
+      status: toolReturnStatus,
+      actualReturnDate: returnedAt,
+      notes: [loan.notes, toolReturnNotes.trim()].filter(Boolean).join(" · ") || undefined,
+    } : loan));
+    if (toolReturnStatus === "returned") {
+      setProducts((current) => current.map((product) => product.id === toolLoanToReturn.toolId ? { ...product, available: product.available + 1 } : product));
+    }
+    setToolLoanToReturn(null);
+    setToolReturnStatus("returned");
+    setToolReturnNotes("");
+  }
 
   // Handle Dispatch Form Submit
   const handleDispatchSubmit = (e: FormEvent) => {
@@ -211,7 +341,8 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
 
     const newPrj: Project = {
       id: `prj-${Date.now()}`,
-      code: newPrjCode || `OBRA-2026-${String(projects.length + 1).padStart(2, "0")}`,
+      code: newPrjCode,
+      type: newPrjType,
       name: newPrjName,
       client: newPrjClient,
       location: newPrjLocation || "Antioquia",
@@ -225,7 +356,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
     setProjects((prev) => [...prev, newPrj]);
     setSelectedProjectId(newPrj.id);
     setIsNewProjectModalOpen(false);
-    setNewPrjCode("");
+    setNewPrjType("obra");
     setNewPrjName("");
     setNewPrjClient("");
     setNewPrjLocation("");
@@ -246,7 +377,13 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
     e.preventDefault();
     if (!selectedProject || !editStartDate || !editEstimatedEndDate) return alert("Indique ambas fechas.");
     if (editEstimatedEndDate < editStartDate) return alert("La fecha estimada debe ser posterior a la fecha de inicio.");
-    setProjects((current) => current.map((project) => project.id === selectedProject.id ? { ...project, startDate: editStartDate, estimatedEndDate: editEstimatedEndDate, status: editStatus } : project));
+    let actualEndDate = selectedProject.actualEndDate;
+    if (editStatus === "completed") {
+      actualEndDate = window.prompt("Fecha real de entrega o finalización (AAAA-MM-DD):", actualEndDate || editEstimatedEndDate) || "";
+      if (!actualEndDate) return;
+      if (actualEndDate < editStartDate) return alert("La fecha real de entrega no puede ser anterior al inicio de la obra.");
+    }
+    setProjects((current) => current.map((project) => project.id === selectedProject.id ? { ...project, startDate: editStartDate, estimatedEndDate: editEstimatedEndDate, actualEndDate, status: editStatus } : project));
     setIsEditProjectModalOpen(false);
   };
   function reopenProject() {
@@ -255,7 +392,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
     if (!reason?.trim()) return;
     const newEndDate = window.prompt("Nueva fecha estimada de finalización (AAAA-MM-DD):", selectedProject.estimatedEndDate || "");
     if (!newEndDate || newEndDate < (selectedProject.startDate || "")) return alert("Indique una fecha posterior al inicio de la obra.");
-    setProjects(current => current.map(project => project.id === selectedProject.id ? { ...project, status: "active", estimatedEndDate: newEndDate } : project));
+    setProjects(current => current.map(project => project.id === selectedProject.id ? { ...project, status: "active", estimatedEndDate: newEndDate, actualEndDate: undefined } : project));
     setReopenHistory(current => [...current, { projectId: selectedProject.id, reason: reason.trim(), occurredAt: new Date().toLocaleString("es-CO") }]);
   }
 
@@ -283,7 +420,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
           </button>
           {selectedProject?.status === "completed" && <button className="inventory-action btn-secondary-action" onClick={reopenProject}>Reabrir proyecto</button>}
           <button className="inventory-action btn-budget-adjustment" onClick={() => setIsBudgetAdjustmentOpen(true)}>Ajustar presupuesto</button>
-          <button className="inventory-action btn-primary-action" onClick={() => setIsDispatchModalOpen(true)}>
+          <button className="inventory-action btn-primary-action" onClick={openDispatchModal}>
             📤 Despachar a esta Obra
           </button>
           <button className="inventory-action btn-new-project" onClick={() => setIsNewProjectModalOpen(true)}>
@@ -322,7 +459,9 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
               <div>
                 <span className="prj-code-badge">{selectedProject.code}</span>
                 <h2>{selectedProject.name}</h2>
+                {selectedProject.actualEndDate ? <p>Entrega real: <strong>{selectedProject.actualEndDate}</strong></p> : null}
                 <p>Cliente: <strong>{selectedProject.client}</strong> · Ubicación: <strong>{selectedProject.location}</strong></p>
+                {selectedProject.assignedEmployees?.length ? <p>Personal asignado: <strong>{selectedProject.assignedEmployees.map((employee) => employee.name).join(", ")}</strong></p> : null}
               </div>
               <span className={`status-badge-lg status-${projectSignal}`}>
                 {projectSignalLabel}
@@ -362,23 +501,27 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
           <div className="project-tabs-header">
           <button
             className={`tab-btn ${activeTab === "materials" ? "is-active" : ""}`}
+              style={{ order: 1 }}
               onClick={() => setActiveTab("materials")}
             >
-              📦 Materiales e Insumos Gastados ({projectMovements.length})
+              <ProjectTabIcon name="materials" />Materiales e insumos gastados ({projectMovements.length})
           </button>
-          <button className={`tab-btn ${activeTab === "budget" ? "is-active" : ""}`} onClick={() => setActiveTab("budget")}>Ajustes de presupuesto ({selectedProject.budgetAdjustments?.length || 0})</button>
+          <button style={{ order: 5 }} className={`tab-btn ${activeTab === "budget" ? "is-active" : ""}`} onClick={() => setActiveTab("budget")}><ProjectTabIcon name="budget" />Ajustes de presupuesto ({selectedProject.budgetAdjustments?.length || 0})</button>
           <button
             className={`tab-btn ${activeTab === "tools" ? "is-active" : ""}`}
+              style={{ order: 2 }}
               onClick={() => setActiveTab("tools")}
             >
-              🛠️ Herramientas en Custodia ({projectTools.length})
+              <ProjectTabIcon name="tools" />Herramientas en custodia ({projectTools.length})
             </button>
             <button
               className={`tab-btn ${activeTab === "requisitions" ? "is-active" : ""}`}
+              style={{ order: 4 }}
               onClick={() => setActiveTab("requisitions")}
             >
-              📝 Requisiciones ({projectRequisitions.length})
+              <ProjectTabIcon name="requisitions" />Requisiciones ({projectRequisitions.length})
             </button>
+            <button style={{ order: 3 }} className={`tab-btn ${activeTab === "team" ? "is-active" : ""}`} onClick={() => void openTeamTab()}><ProjectTabIcon name="team" />Personal de obra ({selectedProject.assignedEmployees?.length || 0})</button>
           </div>
 
           {/* TAB 1: Materiales e Insumos Gastados */}
@@ -386,7 +529,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
             <div className="project-tab-content">
               <div className="tab-actions-bar">
                 <h3>Historial Valorizado de Insumos Despachados a esta Obra</h3>
-                <button className="btn-mini-dispatch" onClick={() => setIsDispatchModalOpen(true)}>
+                <button className="btn-mini-dispatch" onClick={openDispatchModal}>
                   + Despachar Insumos
                 </button>
               </div>
@@ -394,7 +537,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
               {projectMovements.length === 0 ? (
                 <div className="empty-state-box">
                   <p>Aún no se han registrado despachos de material para esta obra.</p>
-                  <button className="btn-submit" onClick={() => setIsDispatchModalOpen(true)}>
+                  <button className="btn-submit" onClick={openDispatchModal}>
                     Registrar Primer Despacho
                   </button>
                 </div>
@@ -466,21 +609,59 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
 
           {activeTab === "tools" && (
             <div className="project-tab-content">
-              <h3>Herramientas y Equipos en Custodia en este Frente de Obra</h3>
-              {projectTools.length === 0 ? (
-                <div className="empty-state-box">
-                  <p>No hay herramientas asignadas en custodia a esta obra.</p>
-                </div>
-              ) : (
+              <div className="tab-actions-bar">
+                <div><h3>Herramientas y Equipos en Custodia</h3><p className="panel-intro">Asigne una herramienta disponible a una persona del equipo y registre su devolución desde esta misma obra.</p></div>
+                <button type="button" className="btn-mini-add" onClick={() => setIsToolLoanFormOpen(true)}>+ Asignar herramienta</button>
+              </div>
+
+              {isToolLoanFormOpen && <form className="materials-history-card" onSubmit={handleToolLoanSubmit}>
+                <h4>Asignar herramienta a esta obra</h4>
+                {selectedProject.assignedEmployees?.length ? (
+                  <>
+                    <div className="form-row-2">
+                      <div className="form-group">
+                        <label htmlFor="tool-search">Buscar herramienta o equipo disponible</label>
+                        <input id="tool-search" type="search" autoComplete="off" placeholder="Nombre, código, marca o categoría" value={toolSearch} onChange={(event) => setToolSearch(event.target.value)} />
+                        <div className="autocomplete-results">
+                          {filteredAvailableTools.length ? filteredAvailableTools.map((tool) => <button className="autocomplete-option" key={tool.id} type="button" onClick={() => { setToolProductId(tool.id); setToolSearch(tool.name); }}><div><strong>{tool.name}</strong><small>{tool.category} · {getInventoryItemKind(tool) === "equipment" ? "Equipo" : "Herramienta"}</small></div><b>Disp. {tool.available}</b></button>) : <p className="empty-state">No se encontraron herramientas disponibles.</p>}
+                        </div>
+                        <label htmlFor="tool-product">Herramienta seleccionada</label>
+                        <select id="tool-product" required value={toolProductId} onChange={(event) => setToolProductId(event.target.value)}>
+                          <option value="">Seleccione una herramienta</option>
+                          {availableTools.map((tool) => <option key={tool.id} value={tool.id}>{tool.name} · Disponibles: {tool.available}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="tool-responsible">Responsable en obra</label>
+                        <select id="tool-responsible" required value={toolResponsibleId} onChange={(event) => setToolResponsibleId(event.target.value)}>
+                          <option value="">Seleccione una persona</option>
+                          {selectedProject.assignedEmployees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name} · {employee.title}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-row-2">
+                      <div className="form-group"><label htmlFor="tool-expected-return">Fecha prevista de devolución</label><input id="tool-expected-return" type="date" min={new Date().toISOString().slice(0, 10)} value={toolExpectedReturnDate} onChange={(event) => setToolExpectedReturnDate(event.target.value)} /></div>
+                      <div className="form-group"><label htmlFor="tool-loan-notes">Estado inicial / observaciones</label><input id="tool-loan-notes" type="text" placeholder="Ej. Entregada completa y en buen estado" value={toolLoanNotes} onChange={(event) => setToolLoanNotes(event.target.value)} /></div>
+                    </div>
+                    <div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsToolLoanFormOpen(false)}>Cancelar</button><button className="btn-submit" type="submit" disabled={!availableTools.length}>Registrar custodia</button></div>
+                  </>
+                ) : <p className="empty-state">Primero agregue al responsable en la pestaña <strong>Personal de obra</strong>.</p>}
+              </form>}
+
+              {projectTools.length === 0 ? <div className="empty-state-box"><p>No hay herramientas asignadas en custodia a esta obra.</p></div> : (
                 <div className="tools-grid-view">
-                  {projectTools.map((t) => (
-                    <div className={`tool-card status-${t.status}`} key={t.id}>
+                  {projectTools.map((tool) => (
+                    <div className={`tool-card status-${tool.status}`} key={tool.id}>
                       <div className="tool-card-icon">🛠️</div>
                       <div>
-                        <strong>{t.toolName}</strong>
-                        <p>Trabajador a cargo: <strong>{t.workerName}</strong></p>
-                        <small>Fecha entrega: {t.loanDate} · Estado: {t.status === "active" ? "En Custodia" : "Devuelto"}</small>
+                        <strong>{tool.toolName}</strong>
+                        <p>Responsable: <strong>{tool.workerName}</strong></p>
+                        <small>Salida: {tool.loanDate} · {tool.status === "active" ? "En custodia" : tool.status === "damaged" ? "Devuelta con novedad" : "Devuelta"}</small>
+                        {tool.expectedReturnDate ? <small>Devolución prevista: {tool.expectedReturnDate}</small> : null}
+                        {tool.actualReturnDate ? <small>Devolución registrada: {tool.actualReturnDate}</small> : null}
+                        {tool.notes ? <small>Observación: {tool.notes}</small> : null}
                       </div>
+                      {tool.status === "active" ? <div className="tool-card-actions"><button type="button" className="btn-return-tool" onClick={() => setToolLoanToReturn(tool)}>Registrar devolución</button><button type="button" className="btn-cancel" onClick={() => cancelToolAssignment(tool)}>Anular asignación</button></div> : null}
                     </div>
                   ))}
                 </div>
@@ -518,6 +699,17 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
               )}
             </div>
           )}
+
+          {activeTab === "team" && (
+            <div className="project-tab-content">
+              <div className="materials-history-card">
+                <h3>Personal de obra</h3>
+                <p className="panel-intro">Selecciona una persona del directorio y agrégala a esta obra. Puedes retirarla si fue asignada por error.</p>
+                {availableEmployees.length ? <div className="form-row-2"><div className="form-group"><label htmlFor="project-employee">Empleado disponible</label><select id="project-employee" value={employeeToAssignId} onChange={(event) => setEmployeeToAssignId(event.target.value)}><option value="">Selecciona un empleado</option>{availableEmployees.filter((employee) => !selectedProject.assignedEmployees?.some((item) => item.id === employee.id)).map((employee) => <option key={employee.id} value={employee.id}>{employee.name} · {employee.title}</option>)}</select></div><div className="form-group"><label>&nbsp;</label><button type="button" className="btn-submit" disabled={!employeeToAssignId} onClick={addEmployeeToProject}>Agregar a la obra</button></div></div> : <p className="empty-state">No hay empleados activos disponibles en el directorio.</p>}
+                {selectedProject.assignedEmployees?.length ? <div className="project-team-list">{selectedProject.assignedEmployees.map((employee) => <div key={employee.id} className="employee-team-option"><span><strong>{employee.name}</strong><small>{employee.title}</small></span><button type="button" className="btn-cancel" onClick={() => removeAssignedEmployee(employee.id)}>Retirar</button></div>)}</div> : <p className="empty-state">Aún no hay personal asignado a esta obra.</p>}
+              </div>
+            </div>
+          )}
         </section>
       )}
 
@@ -529,7 +721,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
               <h2>📤 Despachar Insumos a: {selectedProject.name}</h2>
               <button onClick={() => setIsDispatchModalOpen(false)}>✕</button>
             </div>
-            <form onSubmit={handleDispatchSubmit}>
+            <form noValidate onSubmit={handleDispatchSubmit}>
               <div className="form-group">
                 <label>Seleccionar Material / Insumo:</label>
                 <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}>
@@ -564,11 +756,6 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
                 </div>
               </div>
 
-              <div className="form-row-2">
-                <div className="form-group"><label>Fecha de inicio:</label><input type="date" required value={newPrjStartDate} onChange={(e) => setNewPrjStartDate(e.target.value)} /></div>
-                <div className="form-group"><label>Fecha estimada de finalizaciÃ³n:</label><input type="date" required min={newPrjStartDate} value={newPrjEstimatedEndDate} onChange={(e) => setNewPrjEstimatedEndDate(e.target.value)} /></div>
-              </div>
-
               <div className="form-group">
                 <label>Notas / Ubicación de uso:</label>
                 <input
@@ -595,7 +782,26 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
       {isEditProjectModalOpen && selectedProject && (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-project-title">
           <div className="modal-content"><div className="modal-header"><h2 id="edit-project-title">Editar proyecto</h2><button type="button" aria-label="Cerrar" onClick={() => setIsEditProjectModalOpen(false)}>×</button></div>
-            <form onSubmit={handleEditProjectSubmit}><div className="form-row-2"><div className="form-group"><label>Fecha de inicio:</label><input type="date" required value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} /></div><div className="form-group"><label>Fecha estimada de finalizaciÃ³n:</label><input type="date" required min={editStartDate} value={editEstimatedEndDate} onChange={(e) => setEditEstimatedEndDate(e.target.value)} /></div></div><div className="form-group"><label>Estado:</label><select value={editStatus} onChange={(e) => setEditStatus(e.target.value as Project["status"])}><option value="pending">Pendiente</option><option value="active">Activa</option><option value="on_hold">En pausa</option><option value="completed">Finalizada</option></select></div><div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsEditProjectModalOpen(false)}>Cancelar</button><button type="submit" className="btn-submit">Guardar cambios</button></div></form>
+            <form onSubmit={handleEditProjectSubmit}>
+              <div className="form-row-2">
+                <div className="form-group">
+                  <label htmlFor="edit-project-start-date">Fecha de inicio</label>
+                  <input id="edit-project-start-date" type="date" required value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-project-estimated-end-date">Fecha estimada de finalización</label>
+                  <input id="edit-project-estimated-end-date" type="date" required min={editStartDate} value={editEstimatedEndDate} onChange={(e) => setEditEstimatedEndDate(e.target.value)} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-project-status">Estado</label>
+                <select id="edit-project-status" value={editStatus} onChange={(e) => setEditStatus(e.target.value as Project["status"])}>
+                  <option value="pending">Pendiente</option><option value="active">Activa</option><option value="on_hold">En pausa</option><option value="completed">Finalizada</option>
+                </select>
+                <small>Al finalizar, se solicitará la fecha real de entrega.</small>
+              </div>
+              <div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsEditProjectModalOpen(false)}>Cancelar</button><button type="submit" className="btn-submit">Guardar cambios</button></div>
+            </form>
           </div>
         </div>
       )}
@@ -623,22 +829,30 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
             <form onSubmit={handleNewProjectSubmit}>
               <div className="form-row-2">
                 <div className="form-group">
-                  <label>Código Obra:</label>
-                  <input
-                    type="text"
-                    placeholder="ej. OBRA-2026-05"
-                    value={newPrjCode}
-                    onChange={(e) => setNewPrjCode(e.target.value)}
-                  />
+                  <label htmlFor="new-project-type">Tipo de proyecto:</label>
+                  <select id="new-project-type" value={newPrjType} onChange={(event) => setNewPrjType(event.target.value as ProjectType)}>
+                    {projectTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
                 </div>
                 <div className="form-group">
-                  <label>Presupuesto de Materiales ($ COP):</label>
+                  <label htmlFor="new-project-code">Código asignado automáticamente:</label>
                   <input
-                    type="number"
+                    id="new-project-code"
+                    type="text"
+                    readOnly
+                    value={newPrjCode}
+                  />
+                  <small>El consecutivo se calcula por tipo y fecha de inicio.</small>
+                </div>
+              </div>
+              <div className="form-row-2">
+                <div className="form-group">
+                  <label>Presupuesto de Materiales ($ COP):</label>
+                  <CurrencyInput
                     required
                     placeholder="ej. 25000000"
                     value={newPrjBudget}
-                    onChange={(e) => setNewPrjBudget(e.target.value)}
+                    onValueChange={setNewPrjBudget}
                   />
                 </div>
               </div>
@@ -676,6 +890,30 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
                 </div>
               </div>
 
+              <div className="form-row-2">
+                <div className="form-group">
+                  <label htmlFor="new-project-start-date">Fecha de inicio:</label>
+                  <input
+                    id="new-project-start-date"
+                    type="date"
+                    required
+                    value={newPrjStartDate}
+                    onChange={(event) => setNewPrjStartDate(event.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="new-project-estimated-end-date">Fecha posible de finalización:</label>
+                  <input
+                    id="new-project-estimated-end-date"
+                    type="date"
+                    required
+                    min={newPrjStartDate}
+                    value={newPrjEstimatedEndDate}
+                    onChange={(event) => setNewPrjEstimatedEndDate(event.target.value)}
+                  />
+                </div>
+              </div>
+
               <div className="modal-actions">
                 <button type="button" className="btn-cancel" onClick={() => setIsNewProjectModalOpen(false)}>
                   Cancelar
@@ -691,7 +929,32 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
 
       {/* Modal Remisión Imprimible */}
       {isBudgetAdjustmentOpen && selectedProject && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="budget-adjustment-title"><div className="modal-content budget-adjustment-modal"><div className="modal-header"><h2 id="budget-adjustment-title">Ajustar presupuesto</h2><button type="button" aria-label="Cerrar" onClick={() => setIsBudgetAdjustmentOpen(false)}>×</button></div><p>Proyecto: <strong>{selectedProject.name}</strong></p><form onSubmit={handleBudgetAdjustment}><div className="form-group"><label>Valor del ajuste (COP):</label><input type="number" required placeholder="Use un valor negativo para disminuir" value={budgetAdjustment} onChange={(e) => setBudgetAdjustment(e.target.value)} /></div><div className="form-group"><label>Motivo:</label><input type="text" required placeholder="Ej. Adición contractual" value={budgetReason} onChange={(e) => setBudgetReason(e.target.value)} /></div><div className="form-group"><label>Responsable:</label><input type="text" readOnly value={budgetResponsible} /></div><div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsBudgetAdjustmentOpen(false)}>Cancelar</button><button type="submit" className="btn-submit">Aplicar ajuste</button></div></form></div></div>
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="budget-adjustment-title"><div className="modal-content budget-adjustment-modal"><div className="modal-header"><h2 id="budget-adjustment-title">Ajustar presupuesto</h2><button type="button" aria-label="Cerrar" onClick={() => setIsBudgetAdjustmentOpen(false)}>×</button></div><p>Proyecto: <strong>{selectedProject.name}</strong></p><form onSubmit={handleBudgetAdjustment}><div className="form-group"><label>Valor del ajuste (COP):</label><CurrencyInput required placeholder="Use un valor negativo para disminuir" value={budgetAdjustment} onValueChange={setBudgetAdjustment} /></div><div className="form-group"><label>Motivo:</label><input type="text" required placeholder="Ej. Adición contractual" value={budgetReason} onChange={(e) => setBudgetReason(e.target.value)} /></div><div className="form-group"><label>Responsable:</label><input type="text" readOnly value={budgetResponsible} /></div><div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setIsBudgetAdjustmentOpen(false)}>Cancelar</button><button type="submit" className="btn-submit">Aplicar ajuste</button></div></form></div></div>
+      )}
+
+      {toolLoanToReturn && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="return-tool-title">
+          <div className="modal-content">
+            <div className="modal-header"><h2 id="return-tool-title">Registrar devolución</h2><button type="button" aria-label="Cerrar" onClick={() => setToolLoanToReturn(null)}>×</button></div>
+            <p>Herramienta: <strong>{toolLoanToReturn.toolName}</strong></p>
+            <p>Responsable: <strong>{toolLoanToReturn.workerName}</strong></p>
+            <form onSubmit={handleToolReturnSubmit}>
+              <div className="form-group">
+                <label htmlFor="tool-return-status">Estado al recibir</label>
+                <select id="tool-return-status" value={toolReturnStatus} onChange={(event) => setToolReturnStatus(event.target.value as "returned" | "damaged")}>
+                  <option value="returned">Devuelta en buen estado</option>
+                  <option value="damaged">Devuelta con novedad o dañada</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="tool-return-notes">Observaciones de devolución</label>
+                <input id="tool-return-notes" type="text" required={toolReturnStatus === "damaged"} placeholder={toolReturnStatus === "damaged" ? "Describa la novedad" : "Ej. Recibida completa y operativa"} value={toolReturnNotes} onChange={(event) => setToolReturnNotes(event.target.value)} />
+              </div>
+              <small>La fecha y hora de devolución se registran automáticamente al confirmar.</small>
+              <div className="modal-actions"><button type="button" className="btn-cancel" onClick={() => setToolLoanToReturn(null)}>Cancelar</button><button type="submit" className="btn-submit">Confirmar devolución</button></div>
+            </form>
+          </div>
+        </div>
       )}
 
       <PrintableDispatchVoucher

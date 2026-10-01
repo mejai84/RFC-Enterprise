@@ -29,7 +29,9 @@ Permitir a **Representaciones Figueroa Castro S.A.S.** conocer en tiempo real el
 - **Acceso Directo a Operaciones de Almacén**: Accesos rápidos desde el dashboard para despachar material, emitir vales de salida, gestionar requisiciones de obra y controlar préstamo de herramientas.
 
 ### B. Centro de Costos por Obra / Proyecto
-- **Entidad Obra / Proyecto**: Código único (`OBRA-2026-01`), Nombre, Cliente contratante, Ubicación, Presupuesto asignado de materiales ($ COP), fecha de inicio, entrega estimada y Estado (`pending`, `active`, `completed`, `on_hold`).
+- **Entidad Obra / Proyecto**: Tipo (`obra`, `mantenimiento` u `otro`), código único generado automáticamente (`OBRA-20260918-01`, `MANT-20260918-01` u `OTRO-20260918-01`), Nombre, Cliente contratante, Ubicación, Presupuesto asignado de materiales ($ COP), fecha de inicio, entrega estimada y Estado (`pending`, `active`, `completed`, `on_hold`). El consecutivo es independiente por tipo y fecha de inicio.
+- **Captura de valores COP**: presupuestos, costos de compra, costos unitarios y ajustes se muestran con `$` y puntos de miles al abandonar el campo, sin alterar el valor numérico usado en cálculos y persistencia.
+- **Personal de obra**: después de crear y seleccionar el proyecto, la pestaña Personal de obra permite elegir un empleado activo, agregarlo a la lista y retirarlo si se seleccionó por error. La asignación conserva la identidad, nombre y cargo mostrados para consulta en la ficha de la obra.
 - **Valorización en Tiempo Real**: Cada salida de almacén se asocia a una obra destino. El sistema calcula:
   $$\text{Costo del Despacho} = \text{Cantidad Despachada} \times \text{Costo Unitario Promedio}$$
 - **Indicadores Financieros por Proyecto**:
@@ -126,3 +128,36 @@ export type ToolLoan = {
 2. **Requisiciones de Material desde Frente de Obra**: ✅ Implementado en Dashboard e Inventario con flujo de aprobación.
 3. **Devoluciones de Material Sobrante**: ✅ Implementado con reajuste de costo de obra y reposición de stock.
 4. **Custodia de Herramientas y Equipos**: ✅ Implementado con módulo de préstamos a trabajadores y trazabilidad por obra.
+
+---
+
+## 5. Fechas operativas y cierre
+
+- La fecha y hora de cada despacho se generan automáticamente y acompañan el movimiento de salida y la remisión imprimible.
+- La fecha estimada de finalización es una proyección de planeación; no se usa para fechar un despacho.
+- Al finalizar la obra, el usuario registra la fecha real de entrega. Puede ser anterior a la estimada, pero no anterior al inicio de la obra.
+
+## 6. Custodia de herramientas y equipos
+
+- La obra puede recibir herramientas y equipos únicamente desde existencias disponibles en Dotación o Herramientas de trabajadores.
+- Cada asignación se asocia a una persona de Personal de obra y reduce una unidad disponible.
+- La devolución registra automáticamente fecha y hora. Cuando se declara una novedad o daño, la herramienta no se devuelve a disponibilidad hasta su revisión.
+- El botón Asignar herramienta abre el registro de custodia; una asignación activa errónea puede anularse y devuelve la unidad a disponibilidad.
+- La selección usa una búsqueda por nombre, código, marca o categoría y solo lista activos reutilizables clasificados como Herramienta o Equipo.
+
+## 7. Clasificación del catálogo
+
+- Materiales e insumos: artículos consumibles que se despachan y se cargan al costo de la obra.
+- Herramientas y equipos: activos reutilizables que se asignan temporalmente a una persona y se controlan por custodia.
+- Dotación/EPP: elementos de protección y uniformes, diferenciados de las herramientas para evitar asignaciones incorrectas.
+
+## 8. Navegación de la ficha de obra
+
+- El orden de consulta es: Materiales e insumos, Herramientas en custodia, Personal de obra, Requisiciones y Ajustes de presupuesto al final como información de consulta.
+- Cada pestaña usa un icono SVG funcional para facilitar la identificación rápida en pantalla y dispositivos táctiles.
+
+## 9. Usabilidad del catálogo de inventario
+
+- Buscar artículo presenta coincidencias en vivo por nombre, código, marca, categoría o ubicación.
+- Seleccionar una coincidencia restaura filtros restrictivos para que el resultado se vea en el catálogo.
+- La configuración de categorías y ubicaciones usa formularios alineados, con etiquetas e icono identificador.

@@ -15,7 +15,7 @@ audiencia: Dirección, Producto y Desarrollo
 | `site` | Sitio institucional | Operativo v0.4 | Portada corporativa ampliada, capacidades, enfoque de trabajo, imágenes sectoriales, acceso superior al portal de empleados y formulario que prepara el correo para el canal corporativo |
 | `dashboard` | Dashboard Ejecutivo | Operativo v0.4 | Panel principal e informes funcionales con filtros, KPIs, gráficos SVG accesibles, exportación CSV, impresión y análisis de inventario, Kardex, stock crítico y obras |
 | `inventory` | Inventarios & Kardex | Operativo v0.4 | Catálogo, kardex separado, búsqueda por SKU/código y listas alfabéticas filtrables, alta de artículos con catálogos editables en el mismo modal, control de despachos y modelo de conteos, compras, ubicaciones, alertas y auditoría |
-| `projects` | Costeo de Proyectos | Operativo v0.4 | Centro de costos, calendario de inicio/entrega estimada, estado de obra, presupuestos y control de sobrecostos |
+| `projects` | Costeo de Proyectos | Operativo v0.4 | Centro de costos, tipo de proyecto, código consecutivo automático, asignación de empleados, calendario de inicio/entrega estimada, estado de obra, presupuestos y control de sobrecostos |
 | `equipment` | Equipos & Custodia | Operativo v0.1 | Préstamo y seguimiento de herramientas a cuadrillas y trabajadores por obra |
 | `purchases` | Compras | Planeado | Sin implementación |
 | `suppliers` | Proveedores | Planeado | Sin implementación |
@@ -68,7 +68,15 @@ audiencia: Dirección, Producto y Desarrollo
 - Pendiente del sitio institucional: sustituir el enlace `mailto:` por envío directo desde una Edge Function de Supabase con proveedor transaccional, validación y protección antispam.
 - Las salidas se limitan a obras activas. El modelo de datos incorpora compras/recepciones, conteos físicos, ubicaciones detalladas, puntos de reorden, ajustes de presupuesto y auditoría.
 - Una requisición se crea desde la obra por maestro o residente; pasa a la bandeja de despachos del almacén, donde se valida disponibilidad, se despacha y se genera el movimiento de Kardex asociado a la obra.
+- Al crear un proyecto se selecciona su tipo (Obra, Mantenimiento u Otro). El sistema asigna un código ineditable con prefijo y consecutivo independientes por tipo y fecha de inicio: `OBRA-AAAAMMDD-##`, `MANT-AAAAMMDD-##` u `OTRO-AAAAMMDD-##`.
 - Los perfiles que ya tienen rol y empresa en Supabase se sincronizan con el directorio de empleados, preservando sus roles y sin duplicar fichas laborales existentes.
 - El acceso ofrece recuperación por correo y cambio voluntario de contraseña. Supabase Auth administra las credenciales; la aplicación nunca las almacena.
 - La administración de empleados usa acciones y modales para registrar fichas, editar datos y gestionar accesos; evita formularios permanentes que sobrecarguen la pantalla.
+- Los campos de valores monetarios en COP se formatean al perder foco, usando símbolo `$` y separador de miles colombiano; al enfocarlos se habilita la edición numérica.
+- Después de crear y seleccionar una obra, la pestaña Personal de obra permite elegir un empleado del directorio, agregarlo a la lista de personal y retirarlo si se asignó por error.
+- Cada despacho registra automáticamente la fecha y hora de entrega en el movimiento y en su remisión. Al finalizar una obra se captura por separado la fecha real de entrega, que puede anticiparse a la fecha estimada.
+- La pestaña Herramientas y Equipos en Custodia incluye el botón Asignar herramienta, permite asignar una unidad disponible a una persona del equipo de obra, registrar fecha prevista y observaciones, confirmar la devolución o anular una asignación hecha por error.
+- El catálogo clasifica operativamente cada artículo como Material/Insumo, Herramienta, Equipo o Dotación/EPP. Las asignaciones de custodia solo ofrecen Herramientas y Equipos disponibles y permiten buscarlos por nombre, código, marca o categoría.
+- Las pestañas de obra se presentan en el orden operativo: Materiales e insumos, Herramientas en custodia, Personal de obra, Requisiciones y, al final, Ajustes de presupuesto como consulta informativa; cada una tiene un icono SVG propio.
+- Configuración de inventario dispone formularios con controles alineados e icono SVG. La búsqueda de catálogo muestra coincidencias en vivo y, al elegir una, restablece filtros restrictivos para presentar el artículo seleccionado.
 - El manual de usuario de RFC Enterprise documenta los procedimientos de acceso, inventario, movimientos, conteos, obras, informes, empleados y permisos.

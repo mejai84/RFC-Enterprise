@@ -6,6 +6,7 @@ import {
   inventoryProjects,
   inventorySourceSummary,
   sampleInitialMovements,
+  getInventoryItemKind,
   type StockProduct,
   type Project,
   type InventoryMovement,
@@ -13,6 +14,7 @@ import {
   inventoryUnits,
 } from "../index";
 import { InlineCatalogCombobox } from "./inline-catalog-combobox";
+import { CurrencyInput } from "@/shared/components/currency-input";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -120,6 +122,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [query, setQuery] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
+  const [itemKindFilter, setItemKindFilter] = useState<"all" | "material" | "tool" | "equipment" | "ppe">("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -188,12 +191,21 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const unitOptions = useMemo(() => [...new Set([...customUnits, ...inventoryUnits.map((unit) => unit.symbol), ...products.map((product) => product.unit)])], [customUnits, products]);
   const brandOptions = useMemo(() => [...new Set(["Sin marca", ...customBrands, ...products.map((product) => product.brand)])], [customBrands, products]);
   const locationOptions = useMemo(() => [...new Set([...customLocations, ...products.map((product) => product.location)])], [customLocations, products]);
+  const catalogSearchResults = useMemo(() => {
+    const search = normalizeForSearch(query.trim());
+    if (!search) return [];
+    return products
+      .filter((product) => normalizeForSearch(`${product.name} ${product.sku} ${product.category} ${product.brand} ${product.location}`).includes(search))
+      .sort((a, b) => spanishCollator.compare(a.name, b.name))
+      .slice(0, 8);
+  }, [products, query]);
 
   // Filtrado de productos del catálogo
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
     return products.filter((p) => {
       if (groupFilter !== "all" && p.inventoryGroup !== groupFilter) return false;
+      if (itemKindFilter !== "all" && getInventoryItemKind(p) !== itemKindFilter) return false;
       if (locationFilter !== "all" && p.location !== locationFilter) return false;
       if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
       if (stockFilter === "low" && (p.minimum === null || p.available > p.minimum)) return false;
@@ -203,7 +215,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       const haystack = `${p.name} ${p.sku} ${p.category} ${p.brand} ${p.location}`.toLowerCase();
       return haystack.includes(q);
     }).sort((a, b) => spanishCollator.compare(a.name, b.name));
-  }, [products, query, groupFilter, stockFilter, locationFilter, categoryFilter]);
+  }, [products, query, groupFilter, itemKindFilter, stockFilter, locationFilter, categoryFilter]);
 
   // Paginación
   const totalPages = Math.ceil(filteredProducts.length / pageSize) || 1;
@@ -365,6 +377,11 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     const newPrj: Project = {
       id: `prj-${Date.now()}`,
       code: newProjectCode.trim().toUpperCase(),
+      type: newProjectCode.trim().toUpperCase().startsWith("MANT-")
+        ? "mantenimiento"
+        : newProjectCode.trim().toUpperCase().startsWith("OBRA-")
+          ? "obra"
+          : "otro",
       name: newProjectName.trim(),
       client: newProjectClient.trim() || "Representaciones Figueroa",
       location: newProjectLocation.trim() || "Caucasia, Antioquia",
@@ -591,7 +608,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
         >
           ⚠️ Alertas de Stock Mínimo {lowStockCount > 0 && <span className="tab-badge">{lowStockCount}</span>}
         </button>
-        <button className={`tab-btn ${activeTab === "settings" ? "active" : ""}`} onClick={() => setActiveTab("settings")} type="button">Configuración de inventario</button>
+        <button className={`tab-btn ${activeTab === "settings" ? "active" : ""}`} onClick={() => setActiveTab("settings")} type="button"><svg aria-hidden="true" className="inventory-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 2-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-2.8v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3L9 19l-2-2 .1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H5.6v-2.8h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L7 8.2l2-2 .1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.2h2.8V5a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 2 2-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2V14H21a1.7 1.7 0 0 0-1.6 1Z" /></svg>Configuración de inventario</button>
         </>}
       </nav>
 
@@ -624,6 +641,9 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                 placeholder="Nombre, código, marca, categoría o ubicación…"
                 value={query}
               />
+              {query.trim() && <div className="catalog-live-results" role="listbox" aria-label="Coincidencias de artículos">
+                {catalogSearchResults.length ? catalogSearchResults.map((product) => <button key={product.id} type="button" className="autocomplete-item" onClick={() => { setQuery(product.name); setGroupFilter("all"); setItemKindFilter("all"); setStockFilter("all"); setLocationFilter("all"); setCategoryFilter("all"); setCurrentPage(1); }}><span><strong>{product.name}</strong><small>{product.sku || "Sin código"} · {product.category}</small></span><b>{product.available} {product.unit}</b></button>) : <p className="autocomplete-empty">No se encontraron artículos.</p>}
+              </div>}
             </label>
 
             <label>
@@ -655,6 +675,17 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                 <option value="available">Disponibles</option>
                 <option value="low">Bajo mínimo requerido</option>
                 <option value="out">Sin existencias (Agotados)</option>
+              </select>
+            </label>
+
+            <label>
+              Tipo operativo
+              <select value={itemKindFilter} onChange={(e) => { setItemKindFilter(e.target.value as typeof itemKindFilter); setCurrentPage(1); }}>
+                <option value="all">Todos</option>
+                <option value="material">Material / insumo</option>
+                <option value="tool">Herramienta</option>
+                <option value="equipment">Equipo</option>
+                <option value="ppe">Dotación / EPP</option>
               </select>
             </label>
 
@@ -729,6 +760,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                         </td>
                         <td>
                           <span className="group-tag">{p.inventoryGroupName}</span>
+                          <small>{getInventoryItemKind(p) === "material" ? "Material / insumo" : getInventoryItemKind(p) === "tool" ? "Herramienta" : getInventoryItemKind(p) === "equipment" ? "Equipo" : "Dotación / EPP"}</small>
                         </td>
                         <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                           {currencyFormatter.format(cost)}
@@ -1118,7 +1150,14 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
         </section>
       )}
       {!isMovementsView && activeTab === "settings" && (
-        <section className="dashboard-panel"><div className="panel-title"><div><p>Administración</p><h2>Catálogos y ubicaciones</h2></div></div><p className="panel-intro">Crea categorías y ubicaciones. Los registros usados se desactivan o reasignan; no se eliminan.</p><div className="projects-grid"><article className="project-card"><h3>Nueva categoría</h3><form onSubmit={e=>{e.preventDefault();const value=newCategoryName.trim();if(!value)return;setCustomCategories(v=>[...v,value]);setNewCategoryName("");showToast("Categoría creada.")}}><input aria-label="Nombre de categoría" placeholder="Ej. Soldadura y oxicorte" value={newCategoryName} onChange={e=>setNewCategoryName(e.target.value)}/><button className="inventory-action" type="submit">Crear categoría</button></form>{customCategories.map(x=><p key={x}>{x}</p>)}</article><article className="project-card"><h3>Nueva ubicación</h3><form onSubmit={e=>{e.preventDefault();const value=newLocationName.trim();if(!value)return;setCustomLocations(v=>[...v,value]);setNewLocationName("");showToast("Ubicación creada.")}}><input aria-label="Ruta de ubicación" placeholder="Bodega · Pasillo · Estante · Nivel" value={newLocationName} onChange={e=>setNewLocationName(e.target.value)}/><button className="inventory-action" type="submit">Crear ubicación</button></form>{customLocations.map(x=><p key={x}>{x}</p>)}</article></div></section>
+        <section className="dashboard-panel inventory-settings-panel">
+          <div className="panel-title"><div><p>Administración</p><h2>Catálogos y ubicaciones</h2></div></div>
+          <p className="panel-intro">Crea categorías y ubicaciones. Los registros usados se desactivan o reasignan; no se eliminan.</p>
+          <div className="inventory-settings-grid">
+            <article className="project-card"><h3>Nueva categoría</h3><form className="inventory-settings-form" onSubmit={e=>{e.preventDefault();const value=newCategoryName.trim();if(!value)return;setCustomCategories(v=>[...v,value]);setNewCategoryName("");showToast("Categoría creada.")}}><label htmlFor="new-category">Nombre de categoría</label><input id="new-category" placeholder="Ej. Soldadura y oxicorte" value={newCategoryName} onChange={e=>setNewCategoryName(e.target.value)}/><button className="inventory-action" type="submit">Crear categoría</button></form>{customCategories.map(x=><p key={x}>{x}</p>)}</article>
+            <article className="project-card"><h3>Nueva ubicación</h3><form className="inventory-settings-form" onSubmit={e=>{e.preventDefault();const value=newLocationName.trim();if(!value)return;setCustomLocations(v=>[...v,value]);setNewLocationName("");showToast("Ubicación creada.")}}><label htmlFor="new-location">Ruta de ubicación</label><input id="new-location" placeholder="Bodega · Pasillo · Estante · Nivel" value={newLocationName} onChange={e=>setNewLocationName(e.target.value)}/><button className="inventory-action" type="submit">Crear ubicación</button></form>{customLocations.map(x=><p key={x}>{x}</p>)}</article>
+          </div>
+        </section>
       )}
 
       {/* ========================================================================= */}
@@ -1267,12 +1306,9 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                   <label>
                   Costo Unitario ($ COP) <span className="req">*</span>
                   </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="100"
+                  <CurrencyInput
                     value={unitCostInput}
-                    onChange={(e) => setUnitCostInput(e.target.value)}
+                    onValueChange={setUnitCostInput}
                     placeholder="25000"
                     required
                   />
@@ -1368,12 +1404,10 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                 </div>
                 <div className="form-group">
                   <label>Presupuesto Materiales ($ COP)</label>
-                  <input
-                    type="number"
-                    step="100000"
+                  <CurrencyInput
                     placeholder="25000000"
                     value={newProjectBudget}
-                    onChange={(e) => setNewProjectBudget(e.target.value)}
+                    onValueChange={setNewProjectBudget}
                     required
                   />
                 </div>

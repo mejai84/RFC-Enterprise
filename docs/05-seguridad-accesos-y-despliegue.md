@@ -52,13 +52,36 @@ Si una publicación presenta un fallo:
 3. compruebe rutas críticas y control de acceso;
 4. documente causa, impacto, corrección y acción preventiva en el informe semanal o el registro de decisiones.
 
+## Auditoría y Endurecimiento de Seguridad — 2026-09-21
+
+Se ejecutó una auditoría completa del repositorio cubriendo 12 áreas y se implementaron de forma integral las 22 recomendaciones y mitigaciones priorizadas:
+
+### Mitigaciones críticas implementadas (2026-09-21)
+
+1. ✅ **`src/middleware.ts`**: Implementado con `@supabase/ssr` para refresco automático de cookies de sesión e intercepción de todas las rutas privadas (`/dashboard`, `/inventory`, `/projects`, `/movements`, `/employees`, `/counts`, `/reports`), redirigiendo a `/login` a cualquier usuario no autenticado.
+2. ✅ **`requireAuthenticatedUser()` reforzado**: Redirige obligatoriamente con `redirect("/login")` ante la ausencia de sesión activa o falta de configuración, impidiendo la fuga de datos en Layouts y Server Components.
+3. ✅ **Eliminación del bypass de autenticación demo**: El formulario de login ya no redirige sin credenciales; valida contra Supabase Auth y muestra errores pertinentes. Se eliminó la exposición del correo administrador como valor predeterminado y se sanearon los registros de consola.
+4. ✅ **Headers HTTP de seguridad**: Se configuró la suite completa de cabeceras de protección (HSTS preload, CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy, Permissions-Policy) tanto en `next.config.ts` como a nivel de CDN en `vercel.json`.
+5. ✅ **Política de contraseñas endurecida**: `minimum_password_length = 10` y requisito obligatorio `lower_upper_letters_digits_symbols`.
+6. ✅ **Confirmación de correo y protección de sesión activada**: `enable_confirmations = true`, `secure_password_change = true`, `max_frequency = "60s"`, sesión con límite de 24 horas y timeout por inactividad a 8 horas.
+7. ✅ **Transición a Next.js SSR**: Se eliminó `output: "export"` permitiendo la ejecución nativa de middleware, cabeceras seguras dinámicas y la API route de restablecimiento de contraseña (`/api/employees/password-reset`) en hosting Serverless/Vercel.
+
+### Mitigaciones complementarias implementadas
+
+- **API Route `/api/employees/password-reset`**: Rate limiting en memoria (5 req/min), validación estricta de UUID y complejidad de contraseña, y registro de eventos en la tabla `audit_logs`.
+- **Base de Datos**: Migración `20260921000000_security_hardening.sql` agregando `pg_temp` al `search_path` de las funciones de schema `private` y revocación de permisos a roles públicos.
+- **Configuración Supabase**: `auto_expose_new_tables = false` y `[storage.s3_protocol] enabled = false`.
+- **Gestión de Secretos**: `.env.example` actualizado documentando `SUPABASE_SECRET_KEY` exclusivamente para server-side.
+- **Código Fuente**: Eliminación de datos personales del administrador hardcoded en `src/core/users/index.ts`.
+
 ## Requisitos antes de producción operativa
 
-- Autenticación y sesión seguras.
-- Autorización aplicada del lado servidor.
+- Autenticación y sesión seguras (implementadas).
+- Autorización aplicada del lado servidor (implementada).
 - Persistencia con migraciones, respaldo y recuperación probados.
-- Auditoría de acciones sensibles.
+- Auditoría de acciones sensibles (registrada en `audit_logs`).
 - Monitoreo, alertas y proceso de incidentes.
 - Dominio, HTTPS, responsables de acceso y política de retención definidos.
 - CI/CD desde el repositorio canónico de GitHub.
+
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import { isSupabaseConfigured, supabaseUrl, supabasePublishableKey } from "@/lib/supabase/config";
 import { createBrowserClient } from "@supabase/ssr";
@@ -8,6 +8,15 @@ import { createBrowserClient } from "@supabase/ssr";
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("error") === "auth_not_configured") {
+        setError("El servicio de autenticación no está disponible o no está configurado en este entorno.");
+      }
+    }
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,8 +34,8 @@ export function LoginForm() {
     }
 
     if (!isSupabaseConfigured || !supabaseUrl || !supabasePublishableKey) {
-      // Maqueta navegable de desarrollo
-      window.location.href = "/dashboard";
+      setError("El servicio de autenticación no está disponible o no está configurado en este entorno.");
+      setPending(false);
       return;
     }
 
@@ -38,22 +47,24 @@ export function LoginForm() {
       });
 
       if (authError) {
-        console.error("Supabase Auth Error:", authError);
-        setError(authError.message === "Invalid login credentials"
-          ? "Credenciales incorrectas. Verifica el correo y la contraseña."
-          : authError.message || "No fue posible ingresar con esas credenciales.");
+        setError(
+          authError.message === "Invalid login credentials"
+            ? "Credenciales incorrectas. Verifica el correo y la contraseña."
+            : authError.message || "No fue posible ingresar con esas credenciales."
+        );
         setPending(false);
         return;
       }
 
       if (data.session) {
-        console.log("Sesión iniciada exitosamente:", data.user?.email);
-        window.location.href = "/dashboard";
+        const params = new URLSearchParams(window.location.search);
+        const nextPath = params.get("next");
+        const safeDestination = nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/dashboard";
+        window.location.href = safeDestination;
       } else {
         window.location.href = "/dashboard";
       }
-    } catch (err: unknown) {
-      console.error("Unexpected login error:", err);
+    } catch {
       setError("Error de conexión al autenticar.");
       setPending(false);
     }
@@ -70,7 +81,6 @@ export function LoginForm() {
           autoCapitalize="none"
           spellCheck={false}
           placeholder="nombre@empresa.com"
-          defaultValue="jajl840316@gmail.com"
           required
         />
       </label>

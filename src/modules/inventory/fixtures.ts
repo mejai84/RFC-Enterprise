@@ -6,6 +6,7 @@ import { sampleInitialRequisitions, type MaterialRequisition } from "./domain/re
 import { sampleInitialToolLoans, type ToolLoan } from "./domain/tool-loan";
 
 export type InventoryGroup = "bodega" | "dotacion" | "trabajadores";
+export type InventoryItemKind = "material" | "tool" | "equipment" | "ppe";
 
 export type StockProduct = Product & {
   unit: string;
@@ -23,6 +24,16 @@ export type StockProduct = Product & {
   purchaseUnitCost?: number; // Costo de una presentación de compra en COP
   sourceRow: number;
 };
+
+/** Clasificación operativa para no confundir activos reutilizables con insumos consumibles. */
+export function getInventoryItemKind(product: Pick<StockProduct, "inventoryGroup" | "category" | "name">): InventoryItemKind {
+  const text = `${product.category} ${product.name}`.toLocaleLowerCase("es-CO");
+  if (product.inventoryGroup === "dotacion" || /protecci|uniforme|dotaci.n|seguridad personal|casco|guante|bota|rodillera/.test(text)) return "ppe";
+  if (/consumible|electrodo|disco de corte|lija|broca|tornill|clavo|remache/.test(text)) return "material";
+  if (/herramientas? el.ctrica|equipo de |taladro|pulidora|esmeril|soldadora|soldadura|mezcladora|compresor|generador/.test(text)) return "equipment";
+  if (/herramient|medici.n|llave|martillo|mazo|pala|pal.n|palustre|nivel|segueta|tenaza|tijera|alicate|destornillador|flex.metro|metro/.test(text)) return "tool";
+  return "material";
+}
 
 // Estimación de costo base realista para los artículos que no lo traigan especificado
 export function getProductUnitCost(product: { category?: string; name?: string; unitCost?: number }): number {

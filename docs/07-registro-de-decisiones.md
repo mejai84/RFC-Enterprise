@@ -280,3 +280,129 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 **Decisión.** El inicio de sesión incluye recuperación por correo con enlace de un solo uso y el portal ofrece cambio voluntario con confirmación de la clave actual. Las operaciones se ejecutan mediante Supabase Auth y las credenciales no se persisten en tablas de negocio.
 
 **Consecuencia.** Debe configurarse la URL de retorno de producción en Supabase Auth y un servicio SMTP de producción para una entrega confiable de los correos.
+
+---
+
+## ADR-025 · Tipificación y código automático de proyectos
+
+**Fecha:** 2026-09-18
+**Estado:** Aceptada
+
+**Decisión.** Al dar de alta un proyecto, el usuario selecciona `obra`, `mantenimiento` u `otro`. La aplicación calcula y muestra, sin permitir su edición, un código con el prefijo del tipo y un consecutivo de dos dígitos por fecha de inicio: `OBRA-AAAAMMDD-##`, `MANT-AAAAMMDD-##` u `OTRO-AAAAMMDD-##`.
+
+**Consecuencia.** El tipo y el código quedan asociados al proyecto en la persistencia local actual. Los datos que no pueden inferirse de forma fiable —nombre, cliente, ubicación, presupuesto y fecha estimada— continúan siendo diligenciados por el usuario.
+
+---
+
+## ADR-026 · Formato de captura para valores monetarios COP
+
+**Fecha:** 2026-09-18
+**Estado:** Aceptada
+
+**Decisión.** Los campos de presupuestos, costos y ajustes monetarios conservan internamente una cadena numérica para sus cálculos. Al perder foco, muestran el valor como pesos colombianos sin decimales —por ejemplo, `$500.000`— y al recibir foco se presentan nuevamente para edición numérica.
+
+**Consecuencia.** La aplicación reduce errores de lectura en formularios sin modificar los valores almacenados o las operaciones de cálculo.
+
+---
+
+## ADR-027 · Asignación de empleados a proyectos
+
+**Fecha:** 2026-09-18
+**Estado:** Aceptada
+
+**Decisión.** El formulario de alta de obras se limita a los datos de la obra. Después de crear y seleccionar el proyecto, una pestaña Personal de obra consulta el directorio de empleados activos. El usuario elige una persona, la agrega a una lista visible y puede retirarla si se asignó por error. La ficha del proyecto conserva y muestra el personal asignado.
+
+**Consecuencia.** La asignación queda en la persistencia local actual del módulo de proyectos. Su relación transaccional en Supabase se incorporará con la migración operativa de Proyectos.
+
+---
+
+## ADR-028 · Fechas de despacho y de entrega real de obra
+
+**Fecha:** 2026-09-18
+**Estado:** Aceptada
+
+**Decisión.** La fecha y hora del despacho se capturan automáticamente al confirmar la salida y quedan en el movimiento de inventario y la remisión. La fecha real de entrega o finalización se solicita al marcar la obra como finalizada; se valida contra la fecha de inicio, pero puede ser anterior a la fecha estimada.
+
+**Consecuencia.** Se diferencia la evidencia operativa de cada entrega de insumos del hito de cierre de la obra. Reabrir una obra elimina la fecha real de entrega anterior y exige una nueva fecha estimada.
+
+---
+
+## ADR-029 · Custodia de herramientas por obra
+
+**Fecha:** 2026-09-18
+**Estado:** Aceptada
+
+**Decisión.** Las herramientas y equipos se asignan desde existencias disponibles a una persona previamente incluida en Personal de obra. El préstamo registra responsable, fecha de salida automática, fecha prevista y observaciones. La devolución se confirma con fecha y hora automática y un estado: buen estado o con novedad/dañada.
+
+**Consecuencia.** Asignar una herramienta disminuye la disponibilidad en una unidad. Devolverla en buen estado repone esa unidad; una devolución dañada conserva el registro de novedad y no repone la disponibilidad hasta su revisión. Una asignación activa registrada por error puede anularse explícitamente, eliminando su custodia y reponiendo la unidad.
+
+---
+
+## ADR-030 · Clasificación operativa de artículos y búsqueda de custodia
+
+**Fecha:** 2026-09-18
+**Estado:** Aceptada
+
+**Decisión.** El sistema clasifica los artículos del catálogo a partir de su grupo, categoría y nombre en Material/Insumo, Herramienta, Equipo o Dotación/EPP. El catálogo permite filtrar por esta clasificación. El registro de custodia solo presenta Herramientas y Equipos disponibles y ofrece búsqueda por nombre, código, marca o categoría antes de seleccionarlos.
+
+**Consecuencia.** Los consumibles, materiales y elementos de protección no aparecen en la asignación de herramientas. Las herramientas que estén ubicadas en Bodega o en Herramientas de trabajadores se pueden encontrar y custodiar bajo la misma regla.
+
+---
+
+## ADR-031 · Orden operativo de pestañas de obra
+
+**Fecha:** 2026-09-18
+**Estado:** Aceptada
+
+**Decisión.** Las pestañas de la ficha de obra se ordenan como Materiales e insumos, Herramientas en custodia, Personal de obra, Requisiciones y Ajustes de presupuesto. Este último queda al final como información de consulta. Cada pestaña usa un icono SVG asociado a su función.
+
+**Consecuencia.** La interfaz refleja la consulta y gestión habitual de una obra, prioriza los costos y custodia operativa, y evita iconos dependientes de emojis o de la plataforma.
+
+---
+
+## ADR-032 · Búsqueda visible y formularios alineados en Inventario
+
+**Fecha:** 2026-09-18
+**Estado:** Aceptada
+
+**Decisión.** La búsqueda del catálogo ofrece una lista de coincidencias mientras se escribe. Al seleccionar una coincidencia, se restablecen filtros de grupo, tipo, existencias, ubicación y categoría para mostrar el artículo. Los formularios de categorías y ubicaciones usan una grilla específica que evita que los botones cubran los campos; Configuración incorpora un icono SVG.
+
+**Consecuencia.** Los artículos se encuentran aunque un filtro previo no tenga resultados. La configuración mantiene etiquetas visibles y controles utilizables en escritorio y dispositivos táctiles.
+
+---
+
+## ADR-033 · Suite de Endurecimiento de Seguridad y Transición a Next.js SSR
+
+**Fecha:** 2026-09-21  
+**Estado:** Aceptada
+
+**Contexto.** El proyecto operaba con exportación puramente estática (`output: "export"`), lo que impedía la ejecución de middleware de borde, el refresco de cookies de sesión en servidor, el uso de cabeceras HTTP de seguridad dinámicas y el funcionamiento de API routes transaccionales (`/api/employees/password-reset`). Además, la auditoría integral de seguridad identificó bypasses potenciales en login sin Supabase, ausencia de redirección forzada en Server Components, contraseñas débiles y datos personales en bundle cliente.
+
+**Decisión.**
+1. **Transición a SSR en Next.js**: Remover `output: "export"` para habilitar el motor Serverless en Vercel.
+2. **Middleware de Borde (`src/middleware.ts`)**: Proteger rutas `/dashboard`, `/inventory`, `/projects`, `/movements`, `/employees`, `/counts` y `/reports`, redirigiendo automáticamente a `/login` si no hay sesión activa y refrescando cookies `@supabase/ssr`.
+3. **Autenticación Estricta en Servidor**: Modificar `requireAuthenticatedUser()` para invocar `redirect("/login")` inmediatamente en lugar de retornar valores nulos pasivos.
+4. **Endurecimiento de Login**: Eliminar bypass demo sin Supabase, erradicar credenciales hardcoded por defecto y limpiar logs con correos o errores internos.
+5. **Headers de Seguridad y CDN**: Configurar HSTS preload, CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff y Referrer-Policy en `next.config.ts` y `vercel.json`.
+6. **Hardening de API Route**: Añadir validación estricta de UUID y contraseña, control de tasa (rate limiting a 5 req/min) y registro en `audit_logs`.
+7. **Políticas de Base de Datos y Supabase**: Elevar longitud mínima a 10 caracteres con complejidad, requerir confirmación por correo, limitar frecuencia a 60s, fijar timeouts de sesión a 8h por inactividad y 24h absoluto, deshabilitar auto-exposición de tablas y S3, e incorporar `pg_temp` al `search_path` de funciones `private`.
+
+**Consecuencia.** La aplicación se alinea con los estándares de seguridad empresarial requeridos antes de producción, salvaguarda las rutas privadas contra accesos anónimos y garantiza la trazabilidad auditable de operaciones sensibles.
+
+---
+
+## ADR-034 · Adopción de Framework de Pruebas E2E y Validación de Escenarios de Negocio
+
+**Fecha:** 2026-09-22  
+**Estado:** Aceptada
+
+**Contexto.** A medida que los módulos de Inventario, Movimientos, Proyectos y Empleados crecen en complejidad, realizar pruebas manuales dispersas en pantalla no asegura la integridad de los flujos críticos (control de acceso, consistencia de inventario, filtros y presupuestos).
+
+**Decisión.**
+1. Adoptar **Playwright** (`@playwright/test`) como estándar de pruebas E2E e integración de interfaz siguiendo las guías de `playwright-best-practices`.
+2. Estructurar las pruebas bajo el directorio `tests/e2e/` con soporte para reportes visuales y de lista en consola (`npm run test:e2e`).
+3. Validar el control de acceso en rutas protegidas, la navegación corporativa y los formularios interactivos de cada módulo.
+
+**Consecuencia.** El equipo cuenta con un mecanismo profesional, repetible y automatizado para validar el comportamiento del ERP antes de despliegues y prevenir regresiones en la experiencia de usuario y seguridad.
+
+

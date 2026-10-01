@@ -17,6 +17,8 @@ export const corePermissions = [
   { code: "projects.manage", description: "Crear y editar obras y presupuestos.", module: "projects" },
   { code: "projects.requisitions.create", description: "Crear solicitudes/requisiciones de material desde obra.", module: "projects" },
   { code: "projects.requisitions.approve", description: "Aprobar técnicamente requisiciones de obra.", module: "projects" },
+  { code: "apu.view", description: "Consultar análisis de precios unitarios.", module: "apu" },
+  { code: "apu.manage", description: "Crear y editar APUs y sus recursos.", module: "apu" },
 
   // Inventarios / Almacén
   { code: "inventory.catalog.view", description: "Consultar catálogo y niveles de stock.", module: "inventory" },

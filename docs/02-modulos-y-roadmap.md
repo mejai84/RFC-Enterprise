@@ -81,3 +81,8 @@ audiencia: Dirección, Producto y Desarrollo
 - Las pestañas de obra se presentan en el orden operativo: Materiales e insumos, Herramientas en custodia, Personal de obra, Requisiciones y, al final, Ajustes de presupuesto como consulta informativa; cada una tiene un icono SVG propio.
 - Configuración de inventario dispone formularios con controles alineados e icono SVG. La búsqueda de catálogo muestra coincidencias en vivo y, al elegir una, restablece filtros restrictivos para presentar el artículo seleccionado.
 - El manual de usuario de RFC Enterprise documenta los procedimientos de acceso, inventario, movimientos, conteos, obras, informes, empleados y permisos.
+<!-- Registro 2026-10-01: `/quotes` se compone dentro de DashboardShell; conserva barra lateral, menu movil y control de sesion del portal. -->
+<!-- Registro 2026-10-01: el Kanban de `/quotes` presenta el tramo completo de ejecucion: En ejecucion, Trabajo terminado, Pendiente pago y Cerrado. -->
+<!-- Registro 2026-10-01: el Kanban de `/quotes` deriva sus columnas del catalogo unico de 12 estados; ningun estado seleccionable queda oculto. -->
+<!-- Registro 2026-10-01: convertir una cotizacion confirmada crea una Obra activa persistente, enlaza ambos registros y la presenta en `/projects`. -->
+<!-- Registro 2026-10-01: se crea el modulo `/apu` para construir analisis de precios unitarios por actividad, con rubros de materiales, equipos/herramientas, mano de obra y transporte enlazados al catalogo de Inventarios. -->

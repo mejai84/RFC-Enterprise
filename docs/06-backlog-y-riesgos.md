@@ -62,4 +62,8 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 | R-006 | Solicitudes de la portada sin canal de recepción | Medio | Alta | Definir correo corporativo receptor o persistencia segura en Supabase antes de habilitar el envío | Dirección / Operación |
 | R-007 | Empleado sin identidad de acceso al portal | Medio | Media | Configurar secreto administrativo de Supabase para invitar al correo del empleado y enlazar su ficha laboral con Auth | Operación / Desarrollo |
 | R-008 | Formularios públicos o API abusadas | Medio | Mitigado | Rate limiting implementado en API de contraseñas, confirmación de correos obligatoria y auto_expose deshabilitado | Seguridad / Desarrollo |
-
+<!-- QTE-007 (Terminado, 2026-10-01): navegacion consistente en Cotizaciones. `/quotes` se renderiza en el shell del portal con barra lateral, menu movil y autenticacion SSR. -->
+<!-- QTE-008 (Terminado, 2026-10-01): visibilidad del cierre comercial. Las etapas Trabajo terminado y Pendiente pago son columnas del Kanban, evitando que una cotizacion actualizada parezca ausente. -->
+<!-- QTE-009 (Terminado, 2026-10-01): cobertura completa de estados. Los 12 estados se pueden cambiar desde Lista o Detalle y se muestran como columnas de Kanban. -->
+<!-- QTE-010 (Terminado, 2026-10-01): conversion persistente a Obra. La accion crea una obra con consecutivo oficial, presupuesto cotizado y fechas operativas para que aparezca en Proyectos. -->
+<!-- APU-001 (Terminado, 2026-10-01): modulo de APU operativo con totales por rubro y costo unitario; materiales y equipos se seleccionan desde Inventarios. -->

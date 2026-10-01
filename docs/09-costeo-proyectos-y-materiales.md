@@ -161,3 +161,5 @@ export type ToolLoan = {
 - Buscar artículo presenta coincidencias en vivo por nombre, código, marca, categoría o ubicación.
 - Seleccionar una coincidencia restaura filtros restrictivos para que el resultado se vea en el catálogo.
 - La configuración de categorías y ubicaciones usa formularios alineados, con etiquetas e icono identificador.
+<!-- Registro 2026-10-01: una obra creada desde Cotizaciones recibe el valor estimado de la oferta como presupuesto inicial, estado activo y fechas calculadas desde su plazo de ejecucion. -->
+<!-- Registro 2026-10-01: el APU calcula cada parcial como cantidad x tarifa x rendimiento (materiales usan rendimiento 1), consolida subtotales por rubro y expone costo por unidad de obra. -->

@@ -24,6 +24,7 @@ import {
   isStale,
   slugifyCodePart,
 } from "@/modules/quotes";
+import { getNextProjectCode, type Project } from "@/modules/inventory";
 
 /* ── Helpers de formato ─────────────────────────────────────── */
 
@@ -64,7 +65,15 @@ function uid(): string {
 type ViewMode = "kanban" | "list";
 
 export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
-  const [quotes, setQuotes] = useState<Quote[]>(initialQuotes);
+  const [quotes, setQuotes] = useState<Quote[]>(() => {
+    if (typeof window === "undefined") return initialQuotes;
+    try {
+      const storedQuotes = localStorage.getItem("rfc_quotes");
+      return storedQuotes ? JSON.parse(storedQuotes) as Quote[] : initialQuotes;
+    } catch {
+      return initialQuotes;
+    }
+  });
   const [view, setView] = useState<ViewMode>("kanban");
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -79,6 +88,10 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     const t = setTimeout(() => setActionNotice(null), 4500);
     return () => clearTimeout(t);
   }, [actionNotice]);
+
+  useEffect(() => {
+    localStorage.setItem("rfc_quotes", JSON.stringify(quotes));
+  }, [quotes]);
 
   /* ── Resumen ────────────────────────────────────────────── */
   const summary = useMemo(() => {
@@ -246,11 +259,37 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
 
   /* ── Conversión 1-Click a Obra / Proyecto ────────────────── */
   const handleConvertToProject = useCallback((quote: Quote) => {
-    const now = new Date().toISOString();
-    const dateStr = now.slice(0, 10).replaceAll("-", "");
+    const now = new Date();
+    const createdAt = now.toISOString();
+    const startDate = createdAt.slice(0, 10);
+    const estimatedEnd = new Date(now);
+    estimatedEnd.setDate(estimatedEnd.getDate() + (quote.deliveryTimeWeeks ?? 3) * 7);
+    const estimatedEndDate = estimatedEnd.toISOString().slice(0, 10);
+    const storedProjects = (() => {
+      try {
+        const saved = localStorage.getItem("rfc_inventory_projects");
+        return saved ? JSON.parse(saved) as Project[] : [];
+      } catch {
+        return [] as Project[];
+      }
+    })();
+    const projectId = `prj-${crypto.randomUUID()}`;
+    const generatedProjectCode = getNextProjectCode(storedProjects, "obra", startDate);
+    const newProject: Project = {
+      id: projectId,
+      code: generatedProjectCode,
+      type: "obra",
+      name: quote.title,
+      client: quote.client,
+      location: "Por definir",
+      budget: quote.estimatedValue ?? 0,
+      status: "active",
+      createdAt: startDate,
+      startDate,
+      estimatedEndDate,
+    };
+    localStorage.setItem("rfc_inventory_projects", JSON.stringify([...storedProjects, newProject]));
     // Formato de código de obra
-    const generatedProjectCode = `OBRA-${dateStr}-${Math.floor(10 + Math.random() * 89)}`;
-    const projectId = `prj-${uid()}`;
 
     // Registrar en cotización
     setQuotes((prev) =>
@@ -261,7 +300,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           fromStatus: q.status,
           toStatus: "in_execution",
           changedBy: "Jorge Figueroa",
-          changedAt: now,
+          changedAt: createdAt,
           note: `Cotización convertida a Obra oficial: ${generatedProjectCode}`,
         };
         return {
@@ -269,7 +308,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           projectId,
           projectCode: generatedProjectCode,
           status: "in_execution",
-          updatedAt: now,
+          updatedAt: createdAt,
           history: [...q.history, entry],
         };
       })
@@ -282,7 +321,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         projectId,
         projectCode: generatedProjectCode,
         status: "in_execution",
-        updatedAt: now,
+        updatedAt: createdAt,
       };
     });
 

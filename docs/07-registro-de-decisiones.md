@@ -478,4 +478,8 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 
 
 
-
+<!-- ADR-037 (Aceptada, 2026-10-01): Cotizaciones usa layout propio con requireAuthenticatedUser() y DashboardShell. Consecuencia: conserva navegacion lateral, encabezado, respuesta movil y control de acceso sin duplicar interfaz. -->
+<!-- ADR-038 (Aceptada, 2026-10-01): el Kanban muestra todas las etapas operativas de cierre. Consecuencia: las cotizaciones en Trabajo terminado y Pendiente pago se localizan sin cambiar a la vista de lista ni depender de filtros. -->
+<!-- ADR-039 (Aceptada, 2026-10-01): el arreglo de columnas Kanban se deriva de `quoteStatuses`. Consecuencia: cualquier nuevo estado oficial queda visible en el tablero y no se desincroniza de los selectores. -->
+<!-- ADR-040 (Aceptada, 2026-10-01): la conversion de cotizacion a obra escribe en el repositorio persistente de Proyectos y conserva `projectId` y `projectCode` en la cotizacion. -->
+<!-- ADR-041 (Aceptada, 2026-10-01): APU es un modulo de negocio independiente que consume el contrato publico de Inventarios para cotizar recursos sin duplicar el catalogo. -->

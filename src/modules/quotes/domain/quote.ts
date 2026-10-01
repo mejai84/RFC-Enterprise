@@ -22,16 +22,7 @@ export const quoteStatuses = [
 export type QuoteStatus = (typeof quoteStatuses)[number]["value"];
 
 /** Columnas visibles en el Kanban operativo (las más usadas día a día) */
-export const kanbanColumns: QuoteStatus[] = [
-  "received",
-  "in_review",
-  "estimating",
-  "sent",
-  "awaiting_response",
-  "confirmed",
-  "in_execution",
-  "closed",
-];
+export const kanbanColumns: QuoteStatus[] = quoteStatuses.map((status) => status.value);
 
 export type QuoteHistoryEntry = {
   id: string;

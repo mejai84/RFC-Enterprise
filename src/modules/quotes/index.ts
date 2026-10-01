@@ -25,3 +25,19 @@ export {
 } from "./domain/quote";
 
 export { initialQuotes } from "./fixtures";
+
+export type {
+  OcensaActivityType,
+  OcensaSpecialty,
+  OcensaLaborPosition,
+} from "./domain/ocensa-labor";
+
+export {
+  ocensaLaborPositions,
+  ocensaPropiasScale,
+  ocensaNoPropiasScale,
+  getOcensaLaborPositions,
+  getOcensaPositionsBySpecialty,
+  getOcensaPositionsByLevel,
+  calculateOcensaLaborCost,
+} from "./domain/ocensa-labor";

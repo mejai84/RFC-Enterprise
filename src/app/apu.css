@@ -1,0 +1,11 @@
+.apu-workspace { padding-bottom: 42px; }
+.apu-layout { display:grid; grid-template-columns:minmax(250px,.7fr) minmax(0,2.3fr); gap:20px; align-items:start; }
+.apu-list { display:grid; gap:10px; }
+.apu-row { display:grid; gap:3px; text-align:left; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px; color:var(--ink); cursor:pointer; }
+.apu-row.is-selected { border-color:var(--brand); background:var(--brand-soft); }
+.apu-row span,.apu-row small,.apu-section small { color:var(--muted); }
+.apu-new-form { display:grid; gap:8px; margin-top:6px; }.apu-new-form input,.apu-add select,.apu-table-wrap input { min-width:0; border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; }.apu-new-form div { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.apu-editor { display:grid; gap:18px; }.apu-total { text-align:right; color:var(--brand-dark); font-size:20px; }.apu-total small { display:block; color:var(--muted); font-size:12px; margin-top:4px; }
+.apu-section { border:1px solid var(--line); border-radius:10px; overflow:hidden; }.apu-section header,.apu-section footer { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:12px 14px; background:var(--canvas); }.apu-section h3 { margin:0; font-size:15px; }.apu-section footer { border-top:1px solid var(--line); font-size:13px; }.apu-add { display:flex; gap:6px; flex-wrap:wrap; }.apu-add button { border:0; border-radius:6px; padding:8px 10px; background:var(--brand); color:white; font-weight:700; cursor:pointer; }
+.apu-table-wrap { overflow-x:auto; }.apu-section table { border-collapse:collapse; width:100%; min-width:660px; font-size:13px; }.apu-section th,.apu-section td { border-bottom:1px solid var(--line); padding:9px 10px; text-align:left; }.apu-section th { color:var(--muted); font-size:11px; text-transform:uppercase; }.apu-section td small { display:block; margin-top:2px; }.apu-section td input { width:88px; }.apu-remove { border:0; background:transparent; color:#b91c1c; font-size:20px; cursor:pointer; }
+@media (max-width:900px) { .apu-layout { grid-template-columns:1fr; }.apu-total { text-align:left; } .apu-section header { align-items:flex-start; flex-direction:column; } }

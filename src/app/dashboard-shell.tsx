@@ -106,6 +106,7 @@ function Icon({ name }: { name: IconName }) {
 const navigation = [
   { icon: "grid" as const, label: "Resumen", href: "/dashboard" },
   { icon: "briefcase" as const, label: "Cotizaciones", href: "/quotes" },
+  { icon: "checklist" as const, label: "APU", href: "/apu" },
   { icon: "building" as const, label: "Proyectos & Obras", href: "/projects" },
   { icon: "boxes" as const, label: "Inventarios", href: "/inventory" },
   { icon: "arrows" as const, label: "Movimientos", href: "/movements" },

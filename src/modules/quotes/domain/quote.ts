@@ -42,22 +42,48 @@ export type QuoteHistoryEntry = {
   note?: string;
 };
 
+/** Desglose de pre-costeo por 3 rubros principales + imprevistos/transporte */
+export type QuoteCostBreakdown = {
+  materials: number;   // Insumos y materiales COP
+  labor: number;       // Mano de obra y cuadrilla COP
+  equipment: number;   // Maquinaria, herramientas y equipos COP
+  transport?: number;  // Fletes y logística COP
+  indirects?: number;  // Imprevistos, administración o AIU COP
+};
+
+/** Registro de visita técnica de inspección en campo previa a cotizar */
+export type TechnicalVisit = {
+  required: boolean;
+  scheduledDate?: string; // YYYY-MM-DD
+  responsible?: string;
+  status: "pending" | "completed" | "not_required";
+  findings?: string;     // Observaciones, mediciones o alcance en campo
+};
+
 export type Quote = {
   id: string;
-  code: string;            // COT-AAAA-###
-  title: string;           // Resumen o nombre de la solicitud
+  code: string;            // COT-{seq}-{año}-{cliente}-{obra}
+  revision: number;        // 0 = R0 (original), 1 = R1, 2 = R2...
+  title: string;           // Resumen o nombre de la obra / solicitud
   client: string;
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
   emailOrigin?: string;     // Correo/asunto de donde llegó la solicitud
   status: QuoteStatus;
-  responsible: string;      // Nombre del responsable interno
-  estimatedValue?: number;  // Valor estimado en COP
+  responsible: string;      // Nombre del responsable interno (ej. Jorge Figueroa)
+  estimatedValue?: number;  // Valor total estimado en COP
+  costBreakdown?: QuoteCostBreakdown; // Desglose de costeo
+  validityDays?: number;    // Días de validez comercial (por defecto 30 días)
+  sentAt?: string;          // Fecha en que se envió al cliente ISO (YYYY-MM-DD)
+  deliveryTimeWeeks?: number; // Tiempo de ejecución o entrega en semanas
+  paymentTerms?: string;    // Condiciones de pago (ej. "50% anticipo, 50% contra entrega")
+  technicalVisit?: TechnicalVisit; // Visita técnica de campo previa
+  folderUrl?: string;       // Enlace a expediente en la nube (Drive, OneDrive, SharePoint)
   receivedAt: string;       // Fecha de recepción ISO
   deadline?: string;        // Fecha límite de entrega de cotización ISO
   nextAction?: string;      // Próxima acción pendiente
-  projectId?: string;       // ID del proyecto vinculado (cuando se convierte)
+  projectId?: string;       // ID del proyecto vinculado (cuando se convierte a obra)
   projectCode?: string;     // Código del proyecto vinculado
   notes?: string;           // Observaciones generales
   history: QuoteHistoryEntry[];
@@ -136,4 +162,47 @@ export function isStale(quote: Quote, thresholdDays = 3): boolean {
     .sort((a, b) => b.changedAt.localeCompare(a.changedAt))[0];
   if (!lastChange) return daysSince(quote.updatedAt) >= thresholdDays;
   return daysSince(lastChange.changedAt) >= thresholdDays;
+}
+
+/** Devuelve el código con sufijo de revisión si aplica (ej. COT-001-2026-OCENSA-CHIMENEA-R1) */
+export function getEffectiveQuoteCode(quote: Quote): string {
+  if (quote.revision && quote.revision > 0) {
+    return `${quote.code}-R${quote.revision}`;
+  }
+  return quote.code;
+}
+
+/** Calcula la suma total de los 3 rubros + adicionales del pre-costeo */
+export function calculateTotalCost(breakdown?: Partial<QuoteCostBreakdown>): number {
+  if (!breakdown) return 0;
+  return (
+    (breakdown.materials ?? 0) +
+    (breakdown.labor ?? 0) +
+    (breakdown.equipment ?? 0) +
+    (breakdown.transport ?? 0) +
+    (breakdown.indirects ?? 0)
+  );
+}
+
+/** Semáforo de vigencia comercial de la cotización enviada */
+export function getOfferExpiry(quote: Quote): {
+  daysLeft: number;
+  isExpired: boolean;
+  isExpiringSoon: boolean;
+  expiryDateStr?: string;
+} {
+  const validityDays = quote.validityDays ?? 30;
+  const baseDateStr = quote.sentAt ?? quote.updatedAt.slice(0, 10);
+  const baseTime = new Date(baseDateStr).getTime();
+  const expiryTime = baseTime + validityDays * 24 * 60 * 60 * 1000;
+  const diffMs = expiryTime - Date.now();
+  const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const expiryDate = new Date(expiryTime).toISOString().slice(0, 10);
+
+  return {
+    daysLeft,
+    isExpired: daysLeft <= 0,
+    isExpiringSoon: daysLeft > 0 && daysLeft <= 5,
+    expiryDateStr: expiryDate,
+  };
 }

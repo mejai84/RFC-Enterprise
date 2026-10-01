@@ -45,6 +45,10 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 | SEC-001 | Crítica | Endurecimiento integral de seguridad v1.0 | Terminado | Proxy/Middleware SSR, cookies de sesión, headers HTTP, RLS hardening, política de contraseñas y rate limiting |
 | QTE-001 | Alta | Tablero Kanban y pipeline de cotizaciones v0.1 | Terminado | 12 estados operativos, vista Kanban y lista, filtros, badges de estado, consecutivo `COT-AAAA-###`, modal detallado con historial y notas |
 | QTE-002 | Media | Persistencia Supabase y conversión a Obra/Proyecto | Terminado | Tablas `quotes` y `quote_history` con RLS, enlace con proyectos existentes y cálculo de estancamiento (>3 días) |
+| QTE-003 | Alta | Consecutivo estandarizado RFC y pre-costeo paramétrico | Terminado | Consecutivo `COT-###-AAAA-EMPRESA-OBRA` y desglose de 3 rubros (Materiales, Mano de obra/Cuadrilla, Equipos/Maquinaria + Transporte e Imprevistos) |
+| QTE-004 | Alta | Conversión 1-Click a Obra / Proyecto | Terminado | Botón en cotización confirmada que genera automáticamente el centro de costos en `/projects` con código de obra y presupuesto oficial |
+| QTE-005 | Media | Control de versiones (R1, R2...) y Semáforo de vigencia comercial | Terminado | Generación de revisiones con motivo justificado, alerta visual de días de vigencia restantes y badge de ofertas por vencer/vencidas |
+| QTE-006 | Alta | Visita técnica previa y Propuesta formal imprimible en PDF | Terminado | Pestaña de agendamiento y acta de visita en campo, más hoja membretada formal con desglose, condiciones y firmas (@media print) |
 
 ## Riesgos activos
 

@@ -448,5 +448,34 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 
 **Consecuencia.** La empresa estandariza el flujo comercial desde la recepción del correo hasta el cierre de obra, garantizando cero solicitudes extraviadas, alertas de seguimiento comercial oportunas y enlace directo al módulo de costeo de proyectos.
 
+---
+
+## ADR-036 · Pre-costeo Paramétrico, Trazabilidad de Revisiones (R1/R2), Conversión 1-Click y Propuesta Formal en PDF
+
+**Fecha:** 2026-10-01  
+**Estado:** Aceptada
+
+**Contexto.** El módulo de cotizaciones v0.1 requería capacidades avanzadas para adaptarse a la operativa real de ingeniería y construcción de RFC: desglosar costos preliminares antes de adjudicar, gestionar solicitudes de descuento o cambios de alcance sin perder la oferta previa, alertar sobre ofertas comerciales que expiran por volatilidad de insumos, planificar inspecciones en campo y emitir la oferta formal membretada lista para el cliente.
+
+**Decisión.**
+1. **Pre-costeo Paramétrico de 3 Rubros**:
+   - Modelar `costBreakdown` con: Materiales e insumos, Mano de obra/cuadrillas, Equipos y maquinaria, Transporte/fletes e Imprevistos/AIU.
+   - Cálculo automático del valor estimado total y visualización compacta en tarjetas Kanban.
+2. **Control de Versiones y Revisiones (R0, R1, R2...)**:
+   - Atributo `revision` que añade el sufijo `-R1`, `-R2` al consecutivo base.
+   - Flujo de creación de revisión con captura de motivo justificado para preservar la trazabilidad de negociaciones con clientes.
+3. **Conversión 1-Click a Obra / Proyecto**:
+   - Enlace directo con el módulo `/projects`: botón en cotizaciones confirmadas que genera el código de obra (`OBRA-AAAA-MM-DD-XX`), vincula el identificador y traslada el valor comercial como presupuesto oficial de la obra.
+4. **Semáforo de Vigencia Comercial**:
+   - Parámetro `validityDays` y cálculo de fecha de caducidad.
+   - Etiquetas dinámicas en tarjetas y tabla: *Vigente*, *Vence pronto* (<= 5 días) y *Vencida*.
+5. **Inspección Técnica en Campo Previa**:
+   - Registro de estado de visita (pendiente/realizada), fecha programada, ingeniero inspector y acta de hallazgos.
+6. **Propuesta Comercial Membretada Imprimible en PDF**:
+   - Vista modal membretada con identidad institucional de Representaciones Figueroa Castro S.A.S. (Caucasia, Antioquia), alcance, desglose económico, condiciones comerciales y firmas autorizadas de ambas partes con reglas `@media print`.
+
+**Consecuencia.** La empresa cuenta con una suite integral de estimación, negociación y contratación que conecta las oportunidades comerciales con la ejecución física y el control presupuestal de obras.
+
+
 
 

@@ -1,4 +1,12 @@
 .apu-workspace { padding-bottom: 42px; }
+.apu-quote-context { background:var(--brand-soft); border:1px solid var(--brand); border-radius:8px; color:var(--ink); margin:0 0 18px; padding:12px 14px; }
+.apu-activity-catalog { display:grid; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:10px; margin-bottom:20px; padding:16px; }
+.apu-activity-catalog > div:first-child { display:grid; gap:3px; }.apu-activity-catalog small { color:var(--muted); }
+.apu-activity-catalog input { border:1px solid var(--line); border-radius:6px; font:inherit; min-height:42px; padding:9px 11px; }
+.apu-activity-results { display:grid; gap:6px; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); max-height:192px; overflow:auto; }
+.apu-activity-results button,.apu-custom-activity { background:var(--canvas); border:1px solid var(--line); border-radius:6px; color:var(--ink); cursor:pointer; display:grid; gap:2px; padding:9px 10px; text-align:left; }
+.apu-activity-results button:hover,.apu-activity-results button:focus-visible,.apu-custom-activity:hover,.apu-custom-activity:focus-visible { border-color:var(--brand); outline:2px solid var(--brand-glow); outline-offset:1px; }
+.apu-activity-results span { font-size:13px; font-weight:700; }.apu-activity-results small { font-size:11px; }.apu-custom-activity { color:var(--brand-dark); font-weight:700; justify-self:start; }
 .apu-layout { display:grid; grid-template-columns:minmax(250px,.7fr) minmax(0,2.3fr); gap:20px; align-items:start; }
 .apu-list { display:grid; gap:10px; }
 .apu-row { display:grid; gap:3px; text-align:left; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px; color:var(--ink); cursor:pointer; }

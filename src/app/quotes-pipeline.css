@@ -617,6 +617,9 @@
 .btn-convert { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
 .btn-convert:hover { background: #d1fae5; }
 
+.btn-apu { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+.btn-apu:hover { background: #ffedd5; }
+
 .btn-view-project { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
 .btn-view-project:hover { background: #dbeafe; }
 

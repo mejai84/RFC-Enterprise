@@ -483,3 +483,5 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 <!-- ADR-039 (Aceptada, 2026-10-01): el arreglo de columnas Kanban se deriva de `quoteStatuses`. Consecuencia: cualquier nuevo estado oficial queda visible en el tablero y no se desincroniza de los selectores. -->
 <!-- ADR-040 (Aceptada, 2026-10-01): la conversion de cotizacion a obra escribe en el repositorio persistente de Proyectos y conserva `projectId` y `projectCode` en la cotizacion. -->
 <!-- ADR-041 (Aceptada, 2026-10-01): APU es un modulo de negocio independiente que consume el contrato publico de Inventarios para cotizar recursos sin duplicar el catalogo. -->
+<!-- ADR-042 (Aceptada, 2026-10-01): el flujo principal de APU inicia dentro del detalle de una cotizacion. Consecuencia: los APUs se identifican con quoteId/quoteCode y consolidan automaticamente el pre-costeo de esa oferta. -->
+<!-- ADR-043 (Aceptada, 2026-10-01): APU mantiene un catalogo semilla de actividades reutilizables y permite crear actividades personalizadas. Consecuencia: la operacion no queda limitada a una lista cerrada. -->

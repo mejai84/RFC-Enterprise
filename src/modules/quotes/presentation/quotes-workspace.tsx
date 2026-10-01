@@ -25,6 +25,7 @@ import {
   slugifyCodePart,
 } from "@/modules/quotes";
 import { getNextProjectCode, type Project } from "@/modules/inventory";
+import { apuCostBreakdown, type Apu } from "@/modules/apu";
 
 /* ── Helpers de formato ─────────────────────────────────────── */
 
@@ -92,6 +93,20 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   useEffect(() => {
     localStorage.setItem("rfc_quotes", JSON.stringify(quotes));
   }, [quotes]);
+
+  useEffect(() => {
+    try {
+      const apus = JSON.parse(localStorage.getItem("rfc_apus") || "[]") as Apu[];
+      setQuotes((current) => current.map((quote) => {
+        const linkedApus = apus.filter((apu) => apu.quoteId === quote.id);
+        if (!linkedApus.length) return quote;
+        const directCosts = apuCostBreakdown(linkedApus);
+        const costBreakdown = { ...quote.costBreakdown, ...directCosts, indirects: quote.costBreakdown?.indirects ?? 0 };
+        const estimatedValue = calculateTotalCost(costBreakdown);
+        return { ...quote, costBreakdown, estimatedValue };
+      }));
+    } catch { /* Mantener el pre-costeo existente si no hay APUs válidos. */ }
+  }, []);
 
   /* ── Resumen ────────────────────────────────────────────── */
   const summary = useMemo(() => {
@@ -997,6 +1012,14 @@ function DetailModal({
           >
             🖨️ Imprimir Propuesta / PDF
           </button>
+
+          <Link
+            className="action-pill-btn btn-apu"
+            href={`/apu?quoteId=${encodeURIComponent(quote.id)}&quoteCode=${encodeURIComponent(effectiveCode)}&quoteTitle=${encodeURIComponent(quote.title)}`}
+            title="Crear y editar las actividades APU de esta cotización"
+          >
+            Gestionar APU de esta cotización
+          </Link>
 
           <button
             className="action-pill-btn btn-revision"

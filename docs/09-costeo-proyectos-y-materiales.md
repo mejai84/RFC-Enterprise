@@ -163,3 +163,5 @@ export type ToolLoan = {
 - La configuración de categorías y ubicaciones usa formularios alineados, con etiquetas e icono identificador.
 <!-- Registro 2026-10-01: una obra creada desde Cotizaciones recibe el valor estimado de la oferta como presupuesto inicial, estado activo y fechas calculadas desde su plazo de ejecucion. -->
 <!-- Registro 2026-10-01: el APU calcula cada parcial como cantidad x tarifa x rendimiento (materiales usan rendimiento 1), consolida subtotales por rubro y expone costo por unidad de obra. -->
+<!-- Registro 2026-10-01: un APU creado desde Cotizaciones conserva quoteId y quoteCode; sus actividades actualizan los rubros directos de la cotizacion. -->
+<!-- Registro 2026-10-01: al seleccionar una actividad del catalogo APU, la unidad de medida sugerida se aplica a la nueva actividad; las actividades personalizadas se crean con unidad editable. -->

@@ -3,12 +3,16 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { apuCategoryMeta, apuTotal, lineTotal, type Apu, type ApuCategory, type ApuLine } from "@/modules/apu";
 import type { StockProduct } from "@/modules/inventory";
+import { ApuActivityCatalog } from "./apu-activity-catalog";
+import type { ApuActivity } from "@/modules/apu";
 
 const categories: ApuCategory[] = ["equipment", "materials", "labor", "transport"];
 const formatCOP = (value: number) => value.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const newId = () => crypto.randomUUID();
 
-export function ApuWorkspace() {
+type QuoteContext = { quoteId?: string; quoteCode?: string; quoteTitle?: string };
+
+export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) {
   const [products, setProducts] = useState<StockProduct[]>([]);
   const [apus, setApus] = useState<Apu[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
@@ -19,7 +23,8 @@ export function ApuWorkspace() {
       setProducts(JSON.parse(localStorage.getItem("rfc_inventory_products") || "[]"));
       const saved = JSON.parse(localStorage.getItem("rfc_apus") || "[]") as Apu[];
       setApus(saved);
-      setSelectedId(saved[0]?.id || "");
+      const visible = quoteContext?.quoteId ? saved.filter((apu) => apu.quoteId === quoteContext.quoteId) : saved;
+      setSelectedId(visible[0]?.id || "");
     } catch { /* Se inicia con listas vacías si el almacenamiento no es válido. */ }
   }, []);
   useEffect(() => { localStorage.setItem("rfc_apus", JSON.stringify(apus)); }, [apus]);
@@ -28,8 +33,26 @@ export function ApuWorkspace() {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const now = new Date().toISOString();
-    const apu: Apu = { id: newId(), code: `APU-${String(apus.length + 1).padStart(3, "0")}`, name: String(data.get("name") || "Nuevo APU"), unit: String(data.get("unit") || "und"), workQuantity: Number(data.get("quantity")) || 1, lines: [], createdAt: now, updatedAt: now };
+    const apu: Apu = { id: newId(), code: `APU-${String(apus.length + 1).padStart(3, "0")}`, name: String(data.get("name") || quoteContext?.quoteTitle || "Nuevo APU"), unit: String(data.get("unit") || "und"), workQuantity: Number(data.get("quantity")) || 1, lines: [], quoteId: quoteContext?.quoteId, quoteCode: quoteContext?.quoteCode, createdAt: now, updatedAt: now };
     setApus((current) => [apu, ...current]); setSelectedId(apu.id); event.currentTarget.reset();
+  }
+
+  function createApuFromActivity(activity: ApuActivity) {
+    const now = new Date().toISOString();
+    const apu: Apu = {
+      id: newId(),
+      code: `APU-${String(apus.length + 1).padStart(3, "0")}`,
+      name: activity.name,
+      unit: activity.unit,
+      workQuantity: 1,
+      lines: [],
+      quoteId: quoteContext?.quoteId,
+      quoteCode: quoteContext?.quoteCode,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setApus((current) => [apu, ...current]);
+    setSelectedId(apu.id);
   }
 
   function addLine(category: ApuCategory, product?: StockProduct) {
@@ -44,8 +67,12 @@ export function ApuWorkspace() {
   function removeLine(lineId: string) { if (selected) updateApu({ ...selected, lines: selected.lines.filter((line) => line.id !== lineId) }); }
   function updateApu(apu: Apu) { setApus((current) => current.map((item) => item.id === apu.id ? { ...apu, updatedAt: new Date().toISOString() } : item)); }
 
+  const visibleApus = quoteContext?.quoteId ? apus.filter((apu) => apu.quoteId === quoteContext.quoteId) : apus;
+
   return <main className="dashboard-content apu-workspace" id="main-content">
     <section className="dashboard-heading"><div><p>Costos · RFC Enterprise</p><h1>Análisis de Precios Unitarios</h1><small>Construye APUs por actividad y toma precios unitarios de Inventarios.</small></div></section>
+    {quoteContext?.quoteCode && <p className="apu-quote-context">Estás creando actividades para la cotización <strong>{quoteContext.quoteCode}</strong>. Sus costos actualizarán el pre-costeo al volver a Cotizaciones.</p>}
+    <ApuActivityCatalog onCreate={createApuFromActivity} />
     <section className="apu-layout">
       <aside className="dashboard-panel apu-list"><div className="panel-title"><div><p>APUs</p><h2>{apus.length} análisis</h2></div></div>{apus.map((apu) => <button type="button" key={apu.id} className={`apu-row ${apu.id === selectedId ? "is-selected" : ""}`} onClick={() => setSelectedId(apu.id)}><strong>{apu.code}</strong><span>{apu.name}</span><small>{formatCOP(apuTotal(apu))}</small></button>)}<form className="apu-new-form" onSubmit={createApu}><input name="name" required placeholder="Actividad: trazado y replanteo" /><div><input name="unit" defaultValue="m²" aria-label="Unidad" /><input name="quantity" type="number" min="0.01" step="any" defaultValue="1" aria-label="Cantidad de obra" /></div><button className="inventory-action" type="submit">Nuevo APU</button></form></aside>
       <section className="dashboard-panel apu-editor">{selected ? <><div className="panel-title"><div><p>{selected.code} · {selected.unit}</p><h2>{selected.name}</h2><small>Cantidad de obra: {selected.workQuantity.toLocaleString("es-CO")} {selected.unit}</small></div><strong className="apu-total">{formatCOP(apuTotal(selected))}<small>{formatCOP(apuTotal(selected) / selected.workQuantity)} / {selected.unit}</small></strong></div>

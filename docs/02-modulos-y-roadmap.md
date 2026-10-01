@@ -24,6 +24,9 @@ audiencia: Dirección, Producto y Desarrollo
 | `hr` | Talento humano | Planeado | Sin implementación |
 | `apu` | APU | Planeado | Sin implementación |
 
+<!-- Registro 2026-10-01: APU operativo v0.1 se inicia desde el detalle de cada cotizacion y conserva el catalogo general para reutilizar actividades. -->
+<!-- Registro 2026-10-01: el catalogo base de APU incorpora actividades frecuentes de obra civil, cubiertas, redes, electricidad, metalmecanica, acabados y SST; el usuario puede crear actividades personalizadas. -->
+
 ## Regla de propiedad e integración
 
 - **Inventarios** es dueño de productos, existencias, vales de salida y movimientos.

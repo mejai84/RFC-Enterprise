@@ -18,6 +18,8 @@ export type Apu = {
   unit: string;
   workQuantity: number;
   lines: ApuLine[];
+  quoteId?: string;
+  quoteCode?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -36,4 +38,14 @@ export function lineTotal(line: ApuLine) {
 
 export function apuTotal(apu: Apu) {
   return apu.lines.reduce((total, line) => total + lineTotal(line), 0);
+}
+
+export function apuCostBreakdown(apus: ReadonlyArray<Apu>) {
+  return apus.reduce(
+    (total, apu) => {
+      for (const line of apu.lines) total[line.category] += lineTotal(line);
+      return total;
+    },
+    { materials: 0, equipment: 0, labor: 0, transport: 0 },
+  );
 }

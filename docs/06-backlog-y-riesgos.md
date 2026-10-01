@@ -67,3 +67,5 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 <!-- QTE-009 (Terminado, 2026-10-01): cobertura completa de estados. Los 12 estados se pueden cambiar desde Lista o Detalle y se muestran como columnas de Kanban. -->
 <!-- QTE-010 (Terminado, 2026-10-01): conversion persistente a Obra. La accion crea una obra con consecutivo oficial, presupuesto cotizado y fechas operativas para que aparezca en Proyectos. -->
 <!-- APU-001 (Terminado, 2026-10-01): modulo de APU operativo con totales por rubro y costo unitario; materiales y equipos se seleccionan desde Inventarios. -->
+<!-- APU-002 (Terminado, 2026-10-01): desde el detalle de una cotizacion se abre el APU contextual. Cada actividad queda ligada por quoteId y consolida los costos directos en el pre-costeo. -->
+<!-- APU-003 (Terminado, 2026-10-01): catalogo inicial de actividades APU con buscador y creacion de actividad personalizada cuando no hay coincidencia. -->

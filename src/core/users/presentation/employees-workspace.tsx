@@ -240,60 +240,194 @@ export function EmployeesWorkspace() {
     setIsSaving(false);
   }
 
-  useEffect(() => {
-    const anchor = document.querySelector(".employee-role-select");
-    if (!anchor || !selected) return;
-    const actions = document.createElement("div");
-    actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin:16px 0";
-    actions.innerHTML = '<button class="btn-row-action" type="button">Editar empleado</button><button class="btn-row-action" type="button">Cambiar contraseña</button><button class="btn-row-action" type="button">Enviar recuperación</button>';
-    const [editButton, passwordButton, emailButton] = Array.from(actions.querySelectorAll("button"));
-    editButton?.addEventListener("click", async () => {
-      if (!supabase || !canManage) return;
-      const full_name = window.prompt("Nombre completo", selected.name);
-      const job_title = window.prompt("Cargo", selected.title);
-      const email = window.prompt("Correo electrónico", selected.email);
-      if (!full_name || !job_title || !email) return;
-      const { error } = await supabase.from("employees").update({ full_name: full_name.trim(), job_title: job_title.trim(), email: email.trim().toLowerCase() }).eq("id", selected.id);
-      if (error) setMessage(getErrorMessage(error, "No fue posible actualizar los datos.")); else { await loadEmployees(); setMessage("Datos del empleado actualizados."); }
-    });
-    passwordButton?.addEventListener("click", () => {
-      if (!canManage) return;
-      const modal = document.createElement("div");
-      modal.style.cssText = "position:fixed;inset:0;z-index:1000;background:rgba(5,25,16,.45);display:grid;place-items:center;padding:20px";
-      modal.innerHTML = `<form style="background:#fff;border-radius:16px;box-shadow:0 20px 60px #0004;max-width:420px;padding:26px;width:100%"><h2 style="margin:0 0 8px">Cambiar contraseña</h2><p style="margin:0 0 16px">Nueva contraseña para ${selected.name}</p><input name="password" minlength="8" placeholder="Nueva contraseña" required style="box-sizing:border-box;margin:6px 0;padding:12px;width:100%" type="password" /><input name="confirmation" minlength="8" placeholder="Confirmar contraseña" required style="box-sizing:border-box;margin:6px 0;padding:12px;width:100%" type="password" /><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button type="button" data-cancel="true">Cancelar</button><button type="submit">Guardar contraseña</button></div></form>`;
-      const form = modal.querySelector("form")!;
-      modal.querySelector("[data-cancel]")?.addEventListener("click", () => modal.remove());
-      form.addEventListener("submit", async (event) => { event.preventDefault(); const data = new FormData(form); const password = String(data.get("password")); if (password !== String(data.get("confirmation"))) { window.alert("Las contraseñas no coinciden."); return; } const { data: sessionData } = await supabase!.auth.getSession(); const response = await fetch("/api/employees/password-reset", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token ?? ""}` }, body: JSON.stringify({ employeeId: selected.id, password }) }); const result = await response.json().catch(() => ({})); setMessage(response.ok ? `Contraseña actualizada para ${selected.name}.` : String(result.error || "No fue posible guardar la contraseña.")); if (response.ok) modal.remove(); });
-      document.body.append(modal);
-    });
-    emailButton?.addEventListener("click", () => void sendPasswordReset());
-    anchor.before(actions);
-    return () => actions.remove();
-  }, [canManage, loadEmployees, selected, supabase]);
+  /* ── Modales React (reemplazan los antiguos document.createElement) ── */
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showNewEmployeeModal, setShowNewEmployeeModal] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [modalPassword, setModalPassword] = useState("");
+  const [modalPasswordConfirm, setModalPasswordConfirm] = useState("");
+  const [modalSaving, setModalSaving] = useState(false);
+  const [newEmpName, setNewEmpName] = useState("");
+  const [newEmpEmail, setNewEmpEmail] = useState("");
+  const [newEmpTitle, setNewEmpTitle] = useState("");
+  const [newEmpRole, setNewEmpRole] = useState("");
 
-  useEffect(() => {
-    const form = document.querySelector<HTMLFormElement>(".employee-form");
-    if (!form) return;
-    form.style.display = "none";
-    const formPanel = form.closest(".dashboard-panel");
-    const formTitle = formPanel?.querySelector("h2");
-    if (formTitle) formTitle.textContent = "Administración del directorio";
-    const headingNote = document.querySelector(".employees-page .dashboard-heading small") as HTMLElement | null;
-    if (headingNote) headingNote.style.display = "none";
-    const trigger = document.createElement("button");
-    trigger.type = "button"; trigger.className = "inventory-action"; trigger.textContent = "Nuevo empleado";
-    trigger.addEventListener("click", () => {
-      const modal = document.createElement("div");
-      modal.style.cssText = "position:fixed;inset:0;z-index:1000;background:#001b0d77;display:grid;place-items:center;padding:20px";
-      const roleOptions = roles.map((role) => `<option value="${role.id}">${role.name}</option>`).join("");
-      modal.innerHTML = `<form style="background:#fff;border-radius:16px;max-width:620px;padding:28px;width:100%"><h2>Nuevo empleado</h2><p>Registra su ficha y asigna el rol de acceso.</p><input name="name" placeholder="Nombre completo" required style="box-sizing:border-box;margin:6px 0;padding:12px;width:100%"/><input name="email" placeholder="Correo electrónico" required type="email" style="box-sizing:border-box;margin:6px 0;padding:12px;width:100%"/><input name="title" placeholder="Cargo" required style="box-sizing:border-box;margin:6px 0;padding:12px;width:100%"/><select name="role" required style="box-sizing:border-box;margin:6px 0;padding:12px;width:100%"><option value="">Selecciona un rol</option>${roleOptions}</select><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px"><button type="button" data-cancel="true">Cancelar</button><button type="submit">Guardar empleado</button></div></form>`;
-      modal.querySelector("[data-cancel]")?.addEventListener("click", () => modal.remove());
-      modal.querySelector("form")?.addEventListener("submit", async (event) => { event.preventDefault(); if (!supabase || !companyId) return; const data = new FormData(event.currentTarget as HTMLFormElement); const { data: created, error } = await supabase.from("employees").insert({ company_id: companyId, full_name: String(data.get("name")).trim(), email: String(data.get("email")).trim().toLowerCase(), job_title: String(data.get("title")).trim() }).select("id").single(); if (error || !created) { setMessage(getErrorMessage(error, "No fue posible crear el empleado.")); return; } const { error: roleError } = await supabase.from("employee_roles").insert({ employee_id: created.id, role_id: String(data.get("role")) }); if (roleError) { setMessage(getErrorMessage(roleError, "Empleado creado sin rol.")); return; } modal.remove(); await loadEmployees(); setSelectedId(created.id); setMessage("Empleado creado correctamente."); });
-      document.body.append(modal);
-    });
-    form.before(trigger);
-    return () => { trigger.remove(); form.style.display = ""; };
-  }, [companyId, loadEmployees, roles, supabase]);
+  function openEditModal() {
+    if (!selected || !canManage) return;
+    setEditName(selected.name);
+    setEditEmail(selected.email);
+    setEditTitle(selected.title);
+    setShowEditModal(true);
+  }
 
-  return <main className="dashboard-content employees-page"><section className="dashboard-heading"><div><p>Administración · RFC Enterprise</p><h1>Empleados y permisos</h1><small>Las altas, los roles, los permisos y los estados se guardan directamente en Supabase.</small></div></section><section className="employees-layout"><aside className="employees-list dashboard-panel"><div className="panel-title"><div><p>Directorio</p><h2>{employees.length} empleado{employees.length === 1 ? "" : "s"}</h2></div></div>{isLoading ? <p className="panel-intro">Cargando directorio…</p> : employees.map((employee) => <button className={`employee-row ${employee.id === selected?.id ? "is-selected" : ""}`} key={employee.id} onClick={() => { setSelectedId(employee.id); setMessage(""); }} type="button"><span>{employee.name.split(" ").map((word) => word[0]).slice(0, 2).join("")}</span><strong>{employee.name}<small>{employee.title}</small></strong><i className={employee.active ? "is-active" : ""}>{employee.active ? "Activo" : "Inactivo"}</i></button>)}</aside><div className="employees-main"><section className="dashboard-panel"><div className="panel-title"><div><p>Nuevo empleado</p><h2>Registrar ficha laboral</h2></div></div><form className="employee-form" onSubmit={createEmployee}><label>Nombre completo<input name="name" required minLength={3} disabled={!canManage || isSaving} /></label><label>Correo electrónico<input name="email" type="email" required disabled={!canManage || isSaving} /></label><label>Cargo<input name="title" required minLength={2} disabled={!canManage || isSaving} /></label><label>Rol base<select name="role" defaultValue="" disabled={!canManage || isSaving} required><option value="" disabled>Selecciona un rol</option>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></label><button className="inventory-action" disabled={!canManage || isSaving || !roles.length} type="submit">{isSaving ? "Guardando…" : "Crear empleado"}</button></form>{!isLoading && !canManage ? <p className="employee-message" role="status">Solo una cuenta administradora puede crear empleados o modificar accesos.</p> : null}</section>{selected ? <section className="dashboard-panel employee-permissions"><div className="panel-title"><div><p>Acceso de {selected.name}</p><h2>{selected.active ? "Cuenta activa" : "Cuenta desactivada"}</h2></div><button className="btn-row-action" disabled={!canManage || isSaving} onClick={toggleActive} type="button">{selected.active ? "Desactivar" : "Activar"}</button></div><label className="employee-role-select">Rol base<select value={selected.roleId} disabled={!canManage || isSaving} onChange={(event) => void changeRole(event.target.value)}>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></label><p className="panel-intro">El rol aporta permisos iniciales; las casillas agregan o retiran excepciones específicas y se guardan de inmediato.</p><div className="permission-groups">{groupedPermissions.map(([module, permissions]) => <fieldset key={module}><legend>{module}</legend>{permissions.map((permission) => <label key={permission.code}><input checked={selected.permissions.includes(permission.code)} disabled={!canManage || isSaving} onChange={() => void togglePermission(permission.code)} type="checkbox" /><span><strong>{permission.description}</strong><small>{permission.code}</small></span></label>)}</fieldset>)}</div></section> : <section className="dashboard-panel"><p className="panel-intro">Crea el primer empleado para configurar su acceso.</p></section>}{message ? <p className="employee-message" role="status">{message}</p> : null}</div></section></main>;
+  async function submitEditModal() {
+    if (!supabase || !selected || !editName.trim() || !editEmail.trim() || !editTitle.trim()) return;
+    setModalSaving(true);
+    const { error } = await supabase.from("employees").update({ full_name: editName.trim(), job_title: editTitle.trim(), email: editEmail.trim().toLowerCase() }).eq("id", selected.id);
+    if (error) setMessage(getErrorMessage(error, "No fue posible actualizar los datos."));
+    else { await loadEmployees(); setMessage("Datos del empleado actualizados."); setShowEditModal(false); }
+    setModalSaving(false);
+  }
+
+  async function submitPasswordModal() {
+    if (!supabase || !selected) return;
+    if (modalPassword.length < 10) { setMessage("La contraseña debe tener al menos 10 caracteres."); return; }
+    if (modalPassword !== modalPasswordConfirm) { setMessage("Las contraseñas no coinciden."); return; }
+    setModalSaving(true);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch("/api/employees/password-reset", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token ?? ""}` }, body: JSON.stringify({ employeeId: selected.id, password: modalPassword }) });
+    const result = await response.json().catch(() => ({}));
+    if (response.ok) {
+      setModalPassword(""); setModalPasswordConfirm(""); setShowPasswordModal(false);
+      const extra = result.accountCreated ? " Se creó su cuenta de acceso automáticamente." : "";
+      setMessage(`Contraseña actualizada para ${selected.name}.${extra}`);
+    } else {
+      setMessage(String(result.error || "No fue posible guardar la contraseña."));
+    }
+    setModalSaving(false);
+  }
+
+  async function submitNewEmployee(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!supabase || !companyId || !newEmpName.trim() || !newEmpEmail.trim() || !newEmpTitle.trim() || !newEmpRole) return;
+    setModalSaving(true);
+    const { data: created, error } = await supabase.from("employees").insert({ company_id: companyId, full_name: newEmpName.trim(), email: newEmpEmail.trim().toLowerCase(), job_title: newEmpTitle.trim() }).select("id").single();
+    if (error || !created) { setMessage(getErrorMessage(error, "No fue posible crear el empleado.")); setModalSaving(false); return; }
+    const { error: roleError } = await supabase.from("employee_roles").insert({ employee_id: created.id, role_id: newEmpRole });
+    if (roleError) { setMessage(getErrorMessage(roleError, "Empleado creado sin rol.")); setModalSaving(false); return; }
+    setShowNewEmployeeModal(false);
+    setNewEmpName(""); setNewEmpEmail(""); setNewEmpTitle(""); setNewEmpRole("");
+    await loadEmployees();
+    setSelectedId(created.id);
+    setMessage("Empleado creado y guardado. Asígnale una contraseña para que pueda ingresar.");
+    setModalSaving(false);
+  }
+
+  return (
+    <main className="dashboard-content employees-page" id="main-content">
+      <section className="dashboard-heading">
+        <div><p>Administración · RFC Enterprise</p><h1>Empleados y permisos</h1></div>
+      </section>
+
+      <section className="employees-layout">
+        {/* ── Lista de empleados ── */}
+        <aside className="employees-list dashboard-panel">
+          <div className="panel-title"><div><p>Directorio</p><h2>{employees.length} empleado{employees.length === 1 ? "" : "s"}</h2></div></div>
+          {isLoading ? <p className="panel-intro">Cargando directorio…</p> : employees.map((employee) => (
+            <button className={`employee-row ${employee.id === selected?.id ? "is-selected" : ""}`} key={employee.id} onClick={() => { setSelectedId(employee.id); setMessage(""); }} type="button">
+              <span>{employee.name.split(" ").map((word) => word[0]).slice(0, 2).join("")}</span>
+              <strong>{employee.name}<small>{employee.title}</small></strong>
+              <i className={employee.active ? "is-active" : ""}>{employee.active ? "Activo" : "Inactivo"}</i>
+            </button>
+          ))}
+          <button className="emp-btn emp-btn--primary" disabled={!canManage || isSaving} onClick={() => setShowNewEmployeeModal(true)} type="button">+ Nuevo empleado</button>
+        </aside>
+
+        {/* ── Panel de detalle ── */}
+        <div className="employees-main">
+          {selected ? (
+            <section className="dashboard-panel employee-permissions">
+              <div className="panel-title">
+                <div><p>Acceso de {selected.name}</p><h2>{selected.active ? "Cuenta activa" : "Cuenta desactivada"}</h2></div>
+                <button className="emp-btn emp-btn--outline" disabled={!canManage || isSaving} onClick={toggleActive} type="button">{selected.active ? "Desactivar" : "Activar"}</button>
+              </div>
+
+              {/* ── Acciones de empleado ── */}
+              <div className="emp-actions-row">
+                <button className="emp-btn emp-btn--secondary" onClick={openEditModal} disabled={!canManage || isSaving} type="button">✏️ Editar datos</button>
+                <button className="emp-btn emp-btn--secondary" onClick={() => { setModalPassword(""); setModalPasswordConfirm(""); setShowPasswordModal(true); }} disabled={!canManage || isSaving} type="button">🔑 Cambiar contraseña</button>
+                <button className="emp-btn emp-btn--outline" onClick={() => void sendPasswordReset()} disabled={!canManage || isSaving} type="button">📧 Enviar recuperación</button>
+              </div>
+
+              <label className="employee-role-select">Rol base
+                <select value={selected.roleId} disabled={!canManage || isSaving} onChange={(event) => void changeRole(event.target.value)}>
+                  {roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
+                </select>
+              </label>
+              <p className="panel-intro">El rol aporta permisos iniciales; las casillas agregan o retiran excepciones específicas y se guardan de inmediato.</p>
+              <div className="permission-groups">
+                {groupedPermissions.map(([module, permissions]) => (
+                  <fieldset key={module}>
+                    <legend>{module}</legend>
+                    {permissions.map((permission) => (
+                      <label key={permission.code}>
+                        <input checked={selected.permissions.includes(permission.code)} disabled={!canManage || isSaving} onChange={() => void togglePermission(permission.code)} type="checkbox" />
+                        <span><strong>{permission.description}</strong><small>{permission.code}</small></span>
+                      </label>
+                    ))}
+                  </fieldset>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <section className="dashboard-panel"><p className="panel-intro">Crea el primer empleado para configurar su acceso.</p></section>
+          )}
+          {!isLoading && !canManage ? <p className="employee-message" role="status">Solo una cuenta administradora puede crear empleados o modificar accesos.</p> : null}
+          {message ? <p className="employee-message" role="status" aria-live="polite">{message}</p> : null}
+        </div>
+      </section>
+
+      {/* ── Modal: Editar empleado ── */}
+      {showEditModal && selected ? (
+        <div className="emp-modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="emp-modal" onClick={(event) => event.stopPropagation()}>
+            <h2>Editar empleado</h2>
+            <p>Actualiza los datos de {selected.name}</p>
+            <label className="emp-modal-label"><span>Nombre completo</span><input className="emp-modal-input" value={editName} onChange={(event) => setEditName(event.target.value)} required /></label>
+            <label className="emp-modal-label"><span>Correo electrónico</span><input className="emp-modal-input" value={editEmail} onChange={(event) => setEditEmail(event.target.value)} type="email" required /></label>
+            <label className="emp-modal-label"><span>Cargo</span><input className="emp-modal-input" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} required /></label>
+            <div className="emp-modal-actions">
+              <button className="emp-btn emp-btn--outline" type="button" onClick={() => setShowEditModal(false)}>Cancelar</button>
+              <button className="emp-btn emp-btn--primary" type="button" disabled={modalSaving} onClick={() => void submitEditModal()}>{modalSaving ? "Guardando…" : "Guardar cambios"}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Modal: Cambiar contraseña ── */}
+      {showPasswordModal && selected ? (
+        <div className="emp-modal-overlay" onClick={() => setShowPasswordModal(false)}>
+          <div className="emp-modal" onClick={(event) => event.stopPropagation()}>
+            <h2>🔑 Cambiar contraseña</h2>
+            <p>Nueva contraseña para <strong>{selected.name}</strong></p>
+            <small className="emp-modal-hint">Mínimo 10 caracteres, mayúsculas, minúsculas, números y un símbolo.</small>
+            <label className="emp-modal-label"><span>Nueva contraseña</span><input className="emp-modal-input" value={modalPassword} onChange={(event) => setModalPassword(event.target.value)} type="password" minLength={10} required placeholder="Mínimo 10 caracteres" /></label>
+            <label className="emp-modal-label"><span>Confirmar contraseña</span><input className="emp-modal-input" value={modalPasswordConfirm} onChange={(event) => setModalPasswordConfirm(event.target.value)} type="password" minLength={10} required placeholder="Repite la contraseña" /></label>
+            <div className="emp-modal-actions">
+              <button className="emp-btn emp-btn--outline" type="button" onClick={() => setShowPasswordModal(false)}>Cancelar</button>
+              <button className="emp-btn emp-btn--primary" type="button" disabled={modalSaving} onClick={() => void submitPasswordModal()}>{modalSaving ? "Guardando…" : "Guardar contraseña"}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ── Modal: Nuevo empleado ── */}
+      {showNewEmployeeModal ? (
+        <div className="emp-modal-overlay" onClick={() => setShowNewEmployeeModal(false)}>
+          <form className="emp-modal emp-modal--wide" onClick={(event) => event.stopPropagation()} onSubmit={submitNewEmployee}>
+            <h2>Nuevo empleado</h2>
+            <p>Registra su ficha y asigna el rol de acceso al sistema.</p>
+            <div className="emp-modal-grid">
+              <label className="emp-modal-label"><span>Nombre completo</span><input className="emp-modal-input" value={newEmpName} onChange={(event) => setNewEmpName(event.target.value)} required minLength={3} placeholder="Juan Pérez García" /></label>
+              <label className="emp-modal-label"><span>Correo electrónico</span><input className="emp-modal-input" value={newEmpEmail} onChange={(event) => setNewEmpEmail(event.target.value)} type="email" required placeholder="juan@empresa.com" /></label>
+              <label className="emp-modal-label"><span>Cargo</span><input className="emp-modal-input" value={newEmpTitle} onChange={(event) => setNewEmpTitle(event.target.value)} required minLength={2} placeholder="Ingeniero residente" /></label>
+              <label className="emp-modal-label"><span>Rol base</span>
+                <select className="emp-modal-input" value={newEmpRole} onChange={(event) => setNewEmpRole(event.target.value)} required>
+                  <option value="">Selecciona un rol</option>
+                  {roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="emp-modal-actions">
+              <button className="emp-btn emp-btn--outline" type="button" onClick={() => setShowNewEmployeeModal(false)}>Cancelar</button>
+              <button className="emp-btn emp-btn--primary" type="submit" disabled={modalSaving}>{modalSaving ? "Guardando…" : "Crear empleado"}</button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+    </main>
+  );
 }

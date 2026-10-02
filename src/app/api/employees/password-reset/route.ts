@@ -101,12 +101,9 @@ export async function POST(request: NextRequest) {
   }
 
   if (password) {
-    if (password.length < 10 || !employee.profile_id) {
+    if (password.length < 10) {
       return NextResponse.json(
-        {
-          error:
-            "La contraseña debe tener al menos 10 caracteres y el empleado debe tener una cuenta activa.",
-        },
+        { error: "La contraseña debe tener al menos 10 caracteres." },
         { status: 400 }
       );
     }
@@ -126,7 +123,73 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { error: updateError } = await admin.auth.admin.updateUserById(employee.profile_id, {
+    let profileId = employee.profile_id;
+
+    // Si el empleado no tiene cuenta Auth, crearla automáticamente
+    if (!profileId) {
+      const { data: newUser, error: createUserError } =
+        await admin.auth.admin.createUser({
+          email: employee.email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: employee.email },
+        });
+
+      if (createUserError || !newUser?.user) {
+        return NextResponse.json(
+          {
+            error:
+              createUserError?.message ||
+              "No fue posible crear la cuenta de acceso para el empleado.",
+          },
+          { status: 502 }
+        );
+      }
+
+      profileId = newUser.user.id;
+
+      // Vincular profile_id al empleado
+      await admin
+        .from("employees")
+        .update({ profile_id: profileId })
+        .eq("id", employee.id);
+
+      // Crear user_roles para que el empleado tenga acceso a la empresa
+      const { data: empRole } = await admin
+        .from("employee_roles")
+        .select("role_id")
+        .eq("employee_id", employee.id)
+        .maybeSingle();
+
+      if (empRole?.role_id) {
+        await admin.from("user_roles").upsert(
+          {
+            user_id: profileId,
+            company_id: employee.company_id,
+            role_id: empRole.role_id,
+          },
+          { onConflict: "user_id,company_id" }
+        );
+      }
+
+      // Registrar en auditoría
+      await admin.from("audit_logs").insert({
+        company_id: employee.company_id,
+        actor_id: userData.user.id,
+        entity_type: "employee",
+        entity_id: employee.id,
+        action: "auth_account_created",
+        after_data: {
+          profile_id: profileId,
+          employee_email: employee.email,
+        },
+      });
+
+      return NextResponse.json({ ok: true, direct: true, accountCreated: true });
+    }
+
+    // Si ya tiene profile_id, actualizar la contraseña
+    const { error: updateError } = await admin.auth.admin.updateUserById(profileId, {
       password,
     });
     if (updateError) {

@@ -1542,8 +1542,8 @@ function DetailModal({
 function Field({ label, value }: { label: string; value?: string }) {
   return (
     <div className="quote-field">
-      <span className="quote-field-label">{label}</span>
-      <span className="quote-field-value">{value || "—"}</span>
+      <span className="quote-field-label">{label}:</span>
+      <span className="quote-field-value"> {value || "—"}</span>
     </div>
   );
 }

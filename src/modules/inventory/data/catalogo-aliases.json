@@ -1,0 +1,30 @@
+[
+  {
+    "match": ["gato hidraulico"],
+    "aliases": ["gato", "gato hidráulico", "vástago hidráulico", "elevador hidráulico", "gato de carro"]
+  },
+  {
+    "match": ["esmeriladora"],
+    "aliases": ["pulidora", "esmeril", "amoladora", "pulidora angular"]
+  },
+  {
+    "match": ["ponchadora hidraulica"],
+    "aliases": ["ponchadora", "prensa hidráulica", "crimpadora"]
+  },
+  {
+    "match": ["rotomartillo"],
+    "aliases": ["martillo eléctrico", "taladro de impacto", "martillo perforador"]
+  },
+  {
+    "match": ["taladro demoledor"],
+    "aliases": ["demoledor", "martillo demoledor", "rompepavimento"]
+  },
+  {
+    "match": ["compresor"],
+    "aliases": ["compresor de aire", "compresor neumático"]
+  },
+  {
+    "match": ["carretilla"],
+    "aliases": ["buggy", "carro de mano", "zorra de obra"]
+  }
+]

@@ -89,4 +89,10 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 <!-- UI-006 (Terminado, 2026-10-02): normalización fonética y de tildes (NFD) con ranking de relevancia en buscadores de APU; resuelve búsquedas parciales e insensibles a diacríticos (ej. demolicion/demolición, tuberia/tubería) eliminando falsos positivos de grupo. -->
 <!-- APU-015 (Terminado, 2026-10-02): catálogo maestro de transporte y fletes con CRUD persistente en Supabase y local; líneas APU congelan la tarifa al momento de agregar el ítem para preservar la inmutabilidad de análisis cerrados o anteriores ante variaciones futuras de tarifas. -->
 
-
+<!-- QTE-012 (Terminado, 2026-10-02): ficha comercial legible y responsiva, con datos separados por etiqueta/valor y controles adaptados a móvil/tableta. -->
+<!-- QTE-013 (Acordado, 2026-10-02): expediente técnico inicia al recibir la solicitud; revisión valida documentos/alcance/visita y Cotización en proceso habilita el APU. El cargue binario directo a Storage queda pendiente de la integración de almacenamiento. -->
+<!-- DASH-001 (Terminado, 2026-10-02): dashboard ejecutivo muestra resumen enlazado de Cotizaciones, APUs y Obras, con acceso directo a la oferta que requiere costeo. -->
+<!-- INV-016 (Terminado, 2026-10-02): búsqueda de Inventario y APU reconoce aliases de artículos sin alterar la denominación oficial. Pendiente: administración remota por roles de aliases para cada empresa. -->
+<!-- APU-016 (Terminado, 2026-10-02): confirmación visible de guardado APU con estado de progreso y fuente de persistencia (base de datos, local o error). -->
+<!-- DASH-002 (Terminado, 2026-10-02): alertas operativas priorizadas y accionables: las críticas/advertencias muestran origen y pulso visual discreto; se respeta prefers-reduced-motion. -->
+<!-- UI-007 (Terminado, 2026-10-02): modales de impresión APU/Cotización no ocultan su encabezado ni su salida; scroll contenido, cierre superior/inferior y adaptación táctil. -->

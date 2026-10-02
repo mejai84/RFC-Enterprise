@@ -11,6 +11,7 @@ export {
   sampleInitialMovements,
   getProductUnitCost,
   getInventoryItemKind,
+  withDefaultInventoryAliases,
   type StockProduct,
   type InventoryGroup,
   type InventoryItemKind,
@@ -18,6 +19,7 @@ export {
 
 export type { InventoryMovement, MovementType } from "./domain/movement";
 export type { Product } from "./domain/product";
+export { inventorySearchText, matchesInventorySearch, normalizeInventorySearch } from "./domain/search";
 export { inventoryUnits, type UnitOfMeasure } from "./domain/unit-of-measure";
 export { getNextProjectCode, initialProjects, projectTypeOptions, type AssignedProjectEmployee, type Project, type ProjectType } from "./domain/project";
 export type { MaterialRequisition, RequisitionItem, RequisitionStatus } from "./domain/requisition";

@@ -18,10 +18,10 @@ export function ApuPrintModal({ apu, onClose }: { apu: Apu; onClose: () => void 
   }
 
   return (
-    <div className="apu-print-overlay" role="dialog" aria-label="Imprimir APU">
+    <div className="apu-print-overlay" role="dialog" aria-modal="true" aria-label="Vista previa para imprimir APU">
       <div className="apu-print-controls no-print">
         <button type="button" className="inventory-action" onClick={handlePrint}>🖨️ Imprimir / PDF</button>
-        <button type="button" className="apu-delete-apu" onClick={onClose}>Cerrar</button>
+        <button type="button" className="apu-delete-apu" onClick={onClose}>Cerrar vista previa</button>
       </div>
       <div className="apu-print-sheet" id="apu-print-sheet">
         {/* ─── Encabezado institucional ─── */}
@@ -117,6 +117,9 @@ export function ApuPrintModal({ apu, onClose }: { apu: Apu; onClose: () => void 
             <div className="apu-print-signature-line" />
             <p>Aprobó</p>
           </div>
+        </footer>
+        <footer className="apu-print-bottom-actions no-print">
+          <button type="button" className="apu-delete-apu" onClick={onClose}>Cerrar vista previa</button>
         </footer>
       </div>
     </div>

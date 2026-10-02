@@ -13,9 +13,12 @@ import {
   type Project,
   type StockProduct,
   type ToolLoan,
+  withDefaultInventoryAliases,
 } from "../index";
 import { PrintableDispatchVoucher } from "./printable-dispatch-voucher";
 import { SearchableProductPicker } from "./searchable-product-picker";
+import { daysSince, initialQuotes, isStale, type Quote } from "@/modules/quotes";
+import { type Apu } from "@/modules/apu";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -25,6 +28,22 @@ const currencyFormatter = new Intl.NumberFormat("es-CO", {
 
 const numberFormatter = new Intl.NumberFormat("es-CO");
 const spanishCollator = new Intl.Collator("es-CO", { numeric: true, sensitivity: "base" });
+
+type AlertSeverity = "critical" | "warning" | "info";
+type OperationalAlert = { id: string; severity: AlertSeverity; source: string; title: string; detail: string; href: string };
+
+function AlertSourceIcon({ source }: { source: string }) {
+  const path = source === "Cotizaciones" ? <><path d="M4 4h16v16H4z" /><path d="m4 7 8 5 8-5M8 15h8" /></>
+    : source === "APU" ? <><path d="M4 4h16v16H4z" /><path d="M8 8h8M8 12h8M8 16h5" /></>
+    : source === "Inventario" ? <><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" /><path d="m4 7.5 8 4.5 8-4.5M12 12v9" /></>
+    : <><path d="M4 21V5h16v16M8 9h.01M12 9h.01M16 9h.01M8 13h.01M12 13h.01M16 13h.01" /></>;
+  return <svg className="operational-alert-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{path}</svg>;
+}
+
+function daysUntil(isoDate: string) {
+  const target = new Date(`${isoDate}T23:59:59`).getTime();
+  return Math.ceil((target - Date.now()) / 86_400_000);
+}
 
 function formatDateTime() {
   const date = new Date();
@@ -42,7 +61,7 @@ export function DashboardExecutiveWorkspace() {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("rfc_inventory_products");
       if (saved) {
-        try { return JSON.parse(saved); } catch {}
+        try { return withDefaultInventoryAliases(JSON.parse(saved)); } catch {}
       }
     }
     return [...inventoryProducts];
@@ -88,6 +107,26 @@ export function DashboardExecutiveWorkspace() {
     return [...inventoryToolLoans];
   });
 
+  const [quotes, setQuotes] = useState<Quote[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("rfc_quotes");
+      if (saved) {
+        try { return JSON.parse(saved); } catch { /* Use the operational examples below. */ }
+      }
+    }
+    return [...initialQuotes];
+  });
+
+  const [apus, setApus] = useState<Apu[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("rfc_apus");
+      if (saved) {
+        try { return JSON.parse(saved); } catch { /* No saved APUs yet. */ }
+      }
+    }
+    return [];
+  });
+
   // Persistir cambios en localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -118,6 +157,26 @@ export function DashboardExecutiveWorkspace() {
       localStorage.setItem("rfc_inventory_tool_loans", JSON.stringify(toolLoans));
     }
   }, [toolLoans]);
+
+  useEffect(() => {
+    const syncCommercialModules = () => {
+      try {
+        const storedQuotes = localStorage.getItem("rfc_quotes");
+        if (storedQuotes) setQuotes(JSON.parse(storedQuotes));
+        const storedApus = localStorage.getItem("rfc_apus");
+        setApus(storedApus ? JSON.parse(storedApus) : []);
+      } catch {
+        // Mantener el último resumen válido si el almacenamiento no está disponible.
+      }
+    };
+    syncCommercialModules();
+    window.addEventListener("focus", syncCommercialModules);
+    window.addEventListener("storage", syncCommercialModules);
+    return () => {
+      window.removeEventListener("focus", syncCommercialModules);
+      window.removeEventListener("storage", syncCommercialModules);
+    };
+  }, []);
 
   // Cálculos Financieros y Estadísticas Globales por Obra
   const projectStats = useMemo(() => {
@@ -198,6 +257,44 @@ export function DashboardExecutiveWorkspace() {
     totalEntries: movements.filter((m) => m.type === "entry").length,
     activeTools: toolLoans.filter((t) => t.status === "active").length,
   }), [movements, toolLoans]);
+
+  const commercialSummary = useMemo(() => {
+    const inProgress = quotes.filter((quote) => quote.status === "estimating" || quote.status === "revision_requested");
+    const pendingReview = quotes.filter((quote) => quote.status === "received" || quote.status === "in_review");
+    const confirmed = quotes.filter((quote) => quote.status === "confirmed" || quote.status === "in_execution");
+    const linkedApus = apus.filter((apu) => Boolean(apu.quoteId));
+    const uncostedQuotes = inProgress.filter((quote) => !linkedApus.some((apu) => apu.quoteId === quote.id));
+    return {
+      inProgress,
+      pendingReview,
+      confirmed,
+      linkedApus,
+      uncostedQuotes,
+      confirmedValue: confirmed.reduce((total, quote) => total + (quote.estimatedValue ?? 0), 0),
+    };
+  }, [quotes, apus]);
+
+  const operationalAlerts = useMemo<OperationalAlert[]>(() => {
+    const alerts: OperationalAlert[] = [];
+    const closedStatuses = new Set(["closed", "lost", "work_completed"]);
+    for (const quote of quotes) {
+      if (isStale(quote)) {
+        const days = daysSince(quote.history.filter((item) => item.toStatus === "awaiting_response").sort((a, b) => b.changedAt.localeCompare(a.changedAt))[0]?.changedAt ?? quote.updatedAt);
+        alerts.push({ id: `stale-${quote.id}`, severity: days >= 7 ? "critical" : "warning", source: "Cotizaciones", title: `${quote.code} sin respuesta`, detail: `Lleva ${days} días esperando respuesta del cliente.`, href: "/quotes" });
+      }
+      if (quote.deadline && !closedStatuses.has(quote.status)) {
+        const remaining = daysUntil(quote.deadline);
+        if (remaining < 0) alerts.push({ id: `overdue-${quote.id}`, severity: "critical", source: "Cotizaciones", title: `${quote.code} vencida`, detail: `La fecha límite venció hace ${Math.abs(remaining)} días.`, href: "/quotes" });
+        else if (remaining <= 2) alerts.push({ id: `due-${quote.id}`, severity: "warning", source: "Cotizaciones", title: `${quote.code} vence pronto`, detail: remaining === 0 ? "La entrega vence hoy." : `La entrega vence en ${remaining} día${remaining === 1 ? "" : "s"}.`, href: "/quotes" });
+      }
+    }
+    for (const quote of commercialSummary.uncostedQuotes) alerts.push({ id: `apu-${quote.id}`, severity: "warning", source: "APU", title: `${quote.code} requiere APU`, detail: "Está en proceso de cotización y aún no tiene análisis de precios.", href: `/apu?quoteId=${encodeURIComponent(quote.id)}&quoteCode=${encodeURIComponent(quote.code)}&quoteTitle=${encodeURIComponent(quote.title)}` });
+    for (const item of criticalItems.slice(0, 3)) alerts.push({ id: `stock-${item.id}`, severity: item.available <= 0 ? "critical" : "warning", source: "Inventario", title: `${item.name} bajo mínimo`, detail: item.available <= 0 ? "No hay existencias disponibles." : `Faltan ${item.deficit} ${item.unit} para el mínimo.`, href: "/inventory?tab=low-stock" });
+    for (const project of projectStats.filter((item) => item.progressPercent >= 80)) alerts.push({ id: `project-${project.id}`, severity: project.progressPercent >= 100 ? "critical" : "warning", source: "Obras", title: `${project.code} ${project.progressPercent >= 100 ? "supera" : "alcanza"} presupuesto`, detail: `${project.progressPercent}% del presupuesto de materiales comprometido.`, href: "/projects" });
+    for (const requisition of requisitions.filter((item) => item.status === "pending").slice(0, 2)) alerts.push({ id: `req-${requisition.id}`, severity: "info", source: "Inventario", title: `${requisition.code} pendiente`, detail: `Requisición para ${requisition.projectName} esperando despacho.`, href: "/inventory?tab=movements" });
+    const weight: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 };
+    return alerts.sort((a, b) => weight[a.severity] - weight[b.severity]).slice(0, 8);
+  }, [quotes, commercialSummary.uncostedQuotes, criticalItems, projectStats, requisitions]);
 
   // Modales
   const [activeModal, setActiveModal] = useState<"dispatch" | "project" | "requisition" | "return" | "tool" | null>(null);
@@ -461,6 +558,38 @@ export function DashboardExecutiveWorkspace() {
             {globalFinancials.criticalStockCount} ítems bajo mínimo · {globalFinancials.pendingReqsCount} requisiciones pendientes
           </small>
         </article>
+      </section>
+
+      <section className="operational-alerts" aria-labelledby="operational-alerts-title">
+        <div className="operational-alerts-heading"><div><p>Centro de atención</p><h2 id="operational-alerts-title">Alertas operativas</h2></div><span role="status" aria-atomic="true">{operationalAlerts.length} alerta{operationalAlerts.length === 1 ? "" : "s"} activa{operationalAlerts.length === 1 ? "" : "s"}</span></div>
+        {operationalAlerts.length ? <div className="operational-alert-list">{operationalAlerts.map((alert) => <Link key={alert.id} href={alert.href} className={`operational-alert is-${alert.severity}`}><span className="operational-alert-origin"><AlertSourceIcon source={alert.source} /><span>{alert.source}</span></span><span className="operational-alert-copy"><strong>{alert.title}</strong><small>{alert.detail}</small></span><span className="operational-alert-action">Ver <span aria-hidden="true">→</span></span></Link>)}</div> : <div className="operational-alert-empty"><span aria-hidden="true">✓</span><div><strong>Sin alertas críticas ni pendientes operativos.</strong><small>La operación se encuentra al día.</small></div></div>}
+      </section>
+
+      <section className="dashboard-module-overview" aria-label="Resumen de cotizaciones, APU y obras">
+        <div className="module-overview-heading">
+          <div><p>Resumen integral</p><h2>Comercial, costos y ejecución</h2></div>
+          <small>Actualizado al abrir el dashboard</small>
+        </div>
+        <div className="module-overview-grid">
+          <article className="module-overview-card is-quotes">
+            <div><span className="module-overview-kicker">Cotizaciones</span><strong>{commercialSummary.inProgress.length}</strong><p>en proceso de costeo</p></div>
+            <small>{commercialSummary.pendingReview.length} por revisar · {commercialSummary.uncostedQuotes.length} sin APU</small>
+            <Link href="/quotes">Abrir cotizaciones →</Link>
+          </article>
+          <article className="module-overview-card is-apu">
+            <div><span className="module-overview-kicker">APU</span><strong>{apus.length}</strong><p>análisis registrados</p></div>
+            <small>{commercialSummary.linkedApus.length} vinculados a cotizaciones</small>
+            <Link href="/apu">Gestionar APUs →</Link>
+          </article>
+          <article className="module-overview-card is-projects">
+            <div><span className="module-overview-kicker">Obras</span><strong>{globalFinancials.activeProjectsCount}</strong><p>frentes activos</p></div>
+            <small>{commercialSummary.confirmed.length} cotizaciones confirmadas · {currencyFormatter.format(commercialSummary.confirmedValue)}</small>
+            <Link href="/projects">Ver obras →</Link>
+          </article>
+        </div>
+        {commercialSummary.uncostedQuotes.length > 0 ? (
+          <div className="module-overview-action"><span>Atención: <strong>{commercialSummary.uncostedQuotes[0].code}</strong> está en cotización en proceso y aún no tiene APU.</span><Link href={`/apu?quoteId=${encodeURIComponent(commercialSummary.uncostedQuotes[0].id)}&quoteCode=${encodeURIComponent(commercialSummary.uncostedQuotes[0].code)}&quoteTitle=${encodeURIComponent(commercialSummary.uncostedQuotes[0].title)}`}>Crear APU →</Link></div>
+        ) : null}
       </section>
 
       {/* Action Toolbar */}

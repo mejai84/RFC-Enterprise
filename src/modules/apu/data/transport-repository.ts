@@ -136,7 +136,7 @@ export async function getTransportCatalog(): Promise<TransportCatalog> {
  */
 export async function persistTransportItem(
   companyId: string | null,
-  item: Omit<TransportItem, "createdAt" | "updatedAt"> & { id?: string }
+  item: Omit<TransportItem, "id" | "createdAt" | "updatedAt"> & { id?: string }
 ): Promise<TransportItem> {
   const now = new Date().toISOString();
   const id = item.id || crypto.randomUUID();

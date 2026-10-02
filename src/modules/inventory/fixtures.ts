@@ -1,4 +1,5 @@
 import importedCatalog from "./data/catalogo-inicial.json";
+import importedAliases from "./data/catalogo-aliases.json";
 import type { InventoryMovement } from "./domain/movement";
 import type { Product } from "./domain/product";
 import { initialProjects, type Project } from "./domain/project";
@@ -16,6 +17,8 @@ export type StockProduct = Product & {
   category: string;
   brand: string;
   notes: string | null;
+  /** Nombres comunes, comerciales o regionales que dirigen al artículo técnico. */
+  aliases?: string[];
   inventoryGroup: InventoryGroup;
   inventoryGroupName: string;
   unitCost?: number; // Costo unitario promedio en COP
@@ -54,8 +57,26 @@ export function getProductUnitCost(product: { category?: string; name?: string; 
 /** Catálogo inicial normalizado desde Inventario_Basico.xlsx con costo estimado */
 export const inventoryProducts = (importedCatalog as StockProduct[]).map((product) => ({
   ...product,
+  aliases: getDefaultAliases(product.name),
   unitCost: getProductUnitCost(product),
 }));
+
+/** Completa aliases semilla en catálogos guardados antes de incorporar esta capacidad. */
+export function withDefaultInventoryAliases(products: StockProduct[]): StockProduct[] {
+  return products.map((product) => ({
+    ...product,
+    aliases: [...new Set([...(product.aliases ?? []), ...getDefaultAliases(product.name)])],
+  }));
+}
+
+type CatalogAlias = { match: string[]; aliases: string[] };
+
+function getDefaultAliases(name: string): string[] {
+  const normalizedName = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CO");
+  return (importedAliases as CatalogAlias[])
+    .filter((entry) => entry.match.some((term) => normalizedName.includes(term.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CO"))))
+    .flatMap((entry) => entry.aliases);
+}
 
 export const sampleInitialMovements: InventoryMovement[] = [
   {

@@ -50,6 +50,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   const [transportCatalog, setTransportCatalog] = useState<TransportCatalog>({ items: defaultTransportCatalog, source: "fallback" });
   const [isTransportLoading, setIsTransportLoading] = useState(true);
   const [saveMessage, setSaveMessage] = useState("");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "database" | "local" | "error">("idle");
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ApuProject[]>([]);
   const [boqItems, setBoqItems] = useState<ProjectBoqItem[]>([]);
@@ -235,7 +236,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     updateApu({ ...selected, lines: [...selected.lines, line] });
   }
 
-  async function handleSaveTransportItem(item: Omit<TransportItem, "createdAt" | "updatedAt"> & { id?: string }) {
+  async function handleSaveTransportItem(item: Omit<TransportItem, "id" | "createdAt" | "updatedAt"> & { id?: string }) {
     const saved = await persistTransportItem(companyId, item);
     setTransportCatalog((prev) => {
       const idx = prev.items.findIndex((i) => i.id === saved.id);
@@ -263,18 +264,24 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
 
   async function saveSelectedApu() {
     if (!selected) return;
+    setSaveState("saving");
+    setSaveMessage(`Guardando ${selected.code}…`);
     try {
       if (companyId) {
         const saved = await saveApuAnalysis(companyId, selected);
         const next = { ...selected, versionId: saved.versionId, revision: saved.revision, updatedAt: new Date().toISOString() };
-        setApus((current) => current.map((apu) => apu.id === next.id ? next : apu));
-        localStorage.setItem("rfc_apus", JSON.stringify(apus.map((apu) => apu.id === next.id ? next : apu)));
+        const nextApus = apus.map((apu) => apu.id === next.id ? next : apu);
+        setApus(nextApus);
+        localStorage.setItem("rfc_apus", JSON.stringify(nextApus));
+        setSaveState("database");
         setSaveMessage(`${selected.code} guardado como versión ${saved.revision} en la base de datos.`);
       } else {
         localStorage.setItem("rfc_apus", JSON.stringify(apus));
+        setSaveState("local");
         setSaveMessage(`${selected.code} guardado localmente. Inicia sesión para crear versiones en la base de datos.`);
       }
     } catch (error) {
+      setSaveState("error");
       setSaveMessage(error instanceof Error ? error.message : "No fue posible guardar el APU.");
     }
   }
@@ -370,7 +377,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 <label><span>Cantidad de obra</span><input type="number" min="0.01" step="any" value={selected.workQuantity} onChange={(event) => updateApu({ ...selected, workQuantity: Number(event.target.value) || 1 })} /></label>
                 <div className="apu-selected-actions"><button type="button" className="inventory-action" onClick={() => void saveSelectedApu()}>Guardar APU</button><button type="button" className="apu-print-btn" onClick={() => setPrintingApu(selected)}>🖨️ Imprimir APU</button><button type="button" className="apu-delete-apu" onClick={() => void deleteSelectedApu()}>Eliminar este APU</button></div>
               </div>
-              {saveMessage ? <p className="apu-save-message" role="status">{saveMessage}</p> : null}
+              {saveMessage ? <p className={`apu-save-message is-${saveState}`} role="status" aria-live="polite">{saveMessage}</p> : null}
               <section className="apu-budget-control" aria-label="Presupuesto de obra">
                 <div><p>Presupuesto BOQ y control de obra</p><h3>Vincular este APU al presupuesto</h3><small>{companyId ? "Guarda una versión y selecciónala como línea presupuestal de una obra." : "Modo local: selecciona una obra para vincular este APU."}</small></div>
                 <div className="apu-budget-link"><select value={projectToLink} onChange={(event) => setProjectToLink(event.target.value)} aria-label="Obra destino"><option value="">Seleccione obra activa…</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}</select><button type="button" onClick={() => void sendSelectedToBoq()} disabled={(!selected.versionId && !!companyId) || !projectToLink}>Enviar a presupuesto</button></div>

@@ -12,6 +12,8 @@ import {
   type InventoryMovement,
   type MovementType,
   inventoryUnits,
+  matchesInventorySearch,
+  withDefaultInventoryAliases,
 } from "../index";
 import { InlineCatalogCombobox } from "./inline-catalog-combobox";
 import { CurrencyInput } from "@/shared/components/currency-input";
@@ -24,10 +26,6 @@ const currencyFormatter = new Intl.NumberFormat("es-CO", {
 
 const numberFormatter = new Intl.NumberFormat("es-CO");
 const spanishCollator = new Intl.Collator("es-CO", { numeric: true, sensitivity: "base" });
-
-function normalizeForSearch(value: string) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
 
 const movementLabels: Record<MovementType, string> = {
   entry: "Entrada a Bodega",
@@ -72,7 +70,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       const saved = localStorage.getItem("rfc_inventory_products");
       if (saved) {
         try {
-          return JSON.parse(saved);
+          return withDefaultInventoryAliases(JSON.parse(saved));
         } catch {
           /* ignore */
         }
@@ -152,7 +150,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const [notesInput, setNotesInput] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isNewItemModalOpen, setIsNewItemModalOpen] = useState(false);
-  const [newItem, setNewItem] = useState({ name: "", sku: "", category: "", brand: "", unit: "", purchaseUnit: "", unitsPerPurchase: "", location: "", warehouse: "", aisle: "", shelf: "", level: "", bin: "", group: "bodega" as StockProduct["inventoryGroup"], quantity: "", cost: "", minimum: "" });
+  const [newItem, setNewItem] = useState({ name: "", sku: "", aliases: "", category: "", brand: "", unit: "", purchaseUnit: "", unitsPerPurchase: "", location: "", warehouse: "", aisle: "", shelf: "", level: "", bin: "", group: "bodega" as StockProduct["inventoryGroup"], quantity: "", cost: "", minimum: "" });
 
   // Estado del modal de nueva obra / proyecto
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -192,17 +190,15 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const brandOptions = useMemo(() => [...new Set(["Sin marca", ...customBrands, ...products.map((product) => product.brand)])], [customBrands, products]);
   const locationOptions = useMemo(() => [...new Set([...customLocations, ...products.map((product) => product.location)])], [customLocations, products]);
   const catalogSearchResults = useMemo(() => {
-    const search = normalizeForSearch(query.trim());
-    if (!search) return [];
+    if (!query.trim()) return [];
     return products
-      .filter((product) => normalizeForSearch(`${product.name} ${product.sku} ${product.category} ${product.brand} ${product.location}`).includes(search))
+      .filter((product) => matchesInventorySearch(product, query))
       .sort((a, b) => spanishCollator.compare(a.name, b.name))
       .slice(0, 8);
   }, [products, query]);
 
   // Filtrado de productos del catálogo
   const filteredProducts = useMemo(() => {
-    const q = query.trim().toLowerCase();
     return products.filter((p) => {
       if (groupFilter !== "all" && p.inventoryGroup !== groupFilter) return false;
       if (itemKindFilter !== "all" && getInventoryItemKind(p) !== itemKindFilter) return false;
@@ -211,9 +207,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       if (stockFilter === "low" && (p.minimum === null || p.available > p.minimum)) return false;
       if (stockFilter === "out" && p.available > 0) return false;
       if (stockFilter === "available" && p.available <= 0) return false;
-      if (!q) return true;
-      const haystack = `${p.name} ${p.sku} ${p.category} ${p.brand} ${p.location}`.toLowerCase();
-      return haystack.includes(q);
+      return matchesInventorySearch(p, query);
     }).sort((a, b) => spanishCollator.compare(a.name, b.name));
   }, [products, query, groupFilter, itemKindFilter, stockFilter, locationFilter, categoryFilter]);
 
@@ -433,9 +427,10 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     const unitCost = purchaseUnitCost / unitsPerPurchase;
     const id = `new-${Date.now()}`;
     const location = newItem.location.trim();
-    const product: StockProduct = { id, sku: newItem.sku.trim() || `SKU-${Date.now()}`, name: newItem.name.trim(), category: newItem.category, brand: newItem.brand.trim() || "Sin marca", unit: newItem.unit.trim(), purchaseUnit: newItem.purchaseUnit.trim(), unitsPerPurchase, purchaseUnitCost, location, inventoryGroup: newItem.group, inventoryGroupName: newItem.group === "bodega" ? "Bodega" : newItem.group === "dotacion" ? "Dotación" : "Herramientas de trabajadores", available: quantity, minimum: newItem.minimum === "" ? null : Number(newItem.minimum), notes: null, active: true, unitCost, sourceRow: 0 };
+    const aliases = [...new Set(newItem.aliases.split(",").map((alias) => alias.trim()).filter(Boolean))];
+    const product: StockProduct = { id, sku: newItem.sku.trim() || `SKU-${Date.now()}`, name: newItem.name.trim(), aliases, category: newItem.category, brand: newItem.brand.trim() || "Sin marca", unit: newItem.unit.trim(), purchaseUnit: newItem.purchaseUnit.trim(), unitsPerPurchase, purchaseUnitCost, location, inventoryGroup: newItem.group, inventoryGroupName: newItem.group === "bodega" ? "Bodega" : newItem.group === "dotacion" ? "Dotación" : "Herramientas de trabajadores", available: quantity, minimum: newItem.minimum === "" ? null : Number(newItem.minimum), notes: null, active: true, unitCost, sourceRow: 0 };
     const movement: InventoryMovement = { id: `mov-${Date.now()}`, productId: id, productName: product.name, type: "entry", quantity, unit: product.unit, unitCost, totalCost: quantity * unitCost, occurredAt: formatDateTime(), reference: `ING-${new Date().getFullYear()}-${String(movements.length + 1).padStart(3, "0")}`, notes: "Entrada inicial al crear artículo" };
-    setProducts(current => [product, ...current]); setMovements(current => [movement, ...current]); setIsNewItemModalOpen(false); setNewItem({ name: "", sku: "", category: "", brand: "", unit: "", purchaseUnit: "", unitsPerPurchase: "", location: "", warehouse: "", aisle: "", shelf: "", level: "", bin: "", group: "bodega", quantity: "", cost: "", minimum: "" }); showToast(`Artículo "${product.name}" creado: ${quantity} ${product.unit} disponibles.`);
+    setProducts(current => [product, ...current]); setMovements(current => [movement, ...current]); setIsNewItemModalOpen(false); setNewItem({ name: "", sku: "", aliases: "", category: "", brand: "", unit: "", purchaseUnit: "", unitsPerPurchase: "", location: "", warehouse: "", aisle: "", shelf: "", level: "", bin: "", group: "bodega", quantity: "", cost: "", minimum: "" }); showToast(`Artículo "${product.name}" creado: ${quantity} ${product.unit} disponibles.`);
   }
 
   function relocateProduct(product: StockProduct) {
@@ -1228,7 +1223,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                   {showAutocomplete && (
                     <div className="autocomplete-results">
                       {[...products]
-                        .filter((p) => normalizeForSearch(`${p.name} ${p.sku} ${p.category}`).includes(normalizeForSearch(modalSearch)))
+                        .filter((p) => matchesInventorySearch(p, modalSearch))
                         .sort((a, b) => spanishCollator.compare(a.name, b.name))
                         .slice(0, 8)
                         .map((p) => (

@@ -2,12 +2,9 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { StockProduct } from "../index";
+import { matchesInventorySearch } from "../index";
 
 const spanishCollator = new Intl.Collator("es-CO", { numeric: true, sensitivity: "base" });
-
-function normalize(value: string) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-}
 
 type Props = {
   products: StockProduct[];
@@ -46,9 +43,8 @@ export function SearchableProductPicker({
   }, []);
 
   const results = useMemo(() => {
-    const search = normalize(query.trim());
     return [...products]
-      .filter((product) => !search || normalize(`${product.name} ${product.sku} ${product.category}`).includes(search))
+      .filter((product) => matchesInventorySearch(product, query))
       .sort((a, b) => spanishCollator.compare(a.name, b.name))
       .slice(0, 8);
   }, [products, query]);

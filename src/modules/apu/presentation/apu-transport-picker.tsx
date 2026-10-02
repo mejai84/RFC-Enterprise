@@ -18,7 +18,7 @@ type Props = {
   isLoading: boolean;
   onAdd: (item: TransportItem) => void;
   onAddManual: () => void;
-  onSaveItem: (item: Omit<TransportItem, "createdAt" | "updatedAt"> & { id?: string }) => Promise<void>;
+  onSaveItem: (item: Omit<TransportItem, "id" | "createdAt" | "updatedAt"> & { id?: string }) => Promise<void>;
   onDeleteItem: (itemId: string) => Promise<void>;
 };
 

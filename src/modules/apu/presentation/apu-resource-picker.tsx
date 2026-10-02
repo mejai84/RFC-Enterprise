@@ -3,6 +3,7 @@
 import { useId, useMemo, useState } from "react";
 import type { ApuCategory } from "@/modules/apu";
 import type { StockProduct } from "@/modules/inventory";
+import { inventorySearchText } from "@/modules/inventory";
 import { rankItems } from "../domain/search-utils";
 
 const formatCOP = (value: number) => value.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
@@ -24,7 +25,7 @@ export function ApuResourcePicker({ category, products, onAdd }: Props) {
       products,
       query,
       (p) => p.name,
-      (p) => `${p.sku || ""} ${p.category || ""} ${p.brand || ""}`
+      (p) => inventorySearchText(p)
     ).slice(0, 8);
   }, [products, query]);
 

@@ -986,6 +986,7 @@ function DetailModal({
   const meta = getStatusMeta(quote.status);
   const effectiveCode = getEffectiveQuoteCode(quote);
   const currentCostSum = materials + labor + equipment + transport + indirects;
+  const canManageApu = quote.status === "estimating" || quote.status === "revision_requested";
 
   return (
     <div
@@ -1022,13 +1023,15 @@ function DetailModal({
             🖨️ Imprimir Propuesta / PDF
           </button>
 
-          <Link
-            className="action-pill-btn btn-apu"
-            href={`/apu?quoteId=${encodeURIComponent(quote.id)}&quoteCode=${encodeURIComponent(effectiveCode)}&quoteTitle=${encodeURIComponent(quote.title)}`}
-            title="Crear y editar las actividades APU de esta cotización"
-          >
-            Gestionar APU de esta cotización
-          </Link>
+          {canManageApu ? (
+            <Link
+              className="action-pill-btn btn-apu"
+              href={`/apu?quoteId=${encodeURIComponent(quote.id)}&quoteCode=${encodeURIComponent(effectiveCode)}&quoteTitle=${encodeURIComponent(quote.title)}`}
+              title="Crear y editar las actividades APU de esta cotización"
+            >
+              Gestionar APU de esta cotización
+            </Link>
+          ) : <span className="quote-apu-guidance">El APU se habilita al pasar a Cotización en proceso.</span>}
 
           <button
             className="action-pill-btn btn-revision"
@@ -1838,6 +1841,9 @@ function FormalProposalModal({
               <p>Nombre, Cargo y Firma Autorizada</p>
             </div>
           </div>
+          <footer className="print-bottom-actions no-print">
+            <button className="quotes-cancel-btn" type="button" onClick={onClose}>Cerrar vista previa</button>
+          </footer>
         </div>
       </div>
     </div>

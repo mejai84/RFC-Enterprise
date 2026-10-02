@@ -23,7 +23,6 @@ import {
   getOfferExpiry,
   calculateTotalCost,
   isStale,
-  slugifyCodePart,
 } from "@/modules/quotes";
 import { getNextProjectCode, type Project } from "@/modules/inventory";
 import { apuCostBreakdown, type Apu } from "@/modules/apu";
@@ -71,7 +70,17 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     if (typeof window === "undefined") return initialQuotes;
     try {
       const storedQuotes = localStorage.getItem("rfc_quotes");
-      return storedQuotes ? JSON.parse(storedQuotes) as Quote[] : initialQuotes;
+      const baseQuotes = storedQuotes ? (JSON.parse(storedQuotes) as Quote[]) : initialQuotes;
+      const apus = JSON.parse(localStorage.getItem("rfc_apus") || "[]") as Apu[];
+      if (!apus.length) return baseQuotes;
+      return baseQuotes.map((quote) => {
+        const linkedApus = apus.filter((apu) => apu.quoteId === quote.id);
+        if (!linkedApus.length) return quote;
+        const directCosts = apuCostBreakdown(linkedApus);
+        const costBreakdown = { ...quote.costBreakdown, ...directCosts, indirects: quote.costBreakdown?.indirects ?? 0 };
+        const estimatedValue = calculateTotalCost(costBreakdown);
+        return { ...quote, costBreakdown, estimatedValue };
+      });
     } catch {
       return initialQuotes;
     }
@@ -94,20 +103,6 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   useEffect(() => {
     localStorage.setItem("rfc_quotes", JSON.stringify(quotes));
   }, [quotes]);
-
-  useEffect(() => {
-    try {
-      const apus = JSON.parse(localStorage.getItem("rfc_apus") || "[]") as Apu[];
-      setQuotes((current) => current.map((quote) => {
-        const linkedApus = apus.filter((apu) => apu.quoteId === quote.id);
-        if (!linkedApus.length) return quote;
-        const directCosts = apuCostBreakdown(linkedApus);
-        const costBreakdown = { ...quote.costBreakdown, ...directCosts, indirects: quote.costBreakdown?.indirects ?? 0 };
-        const estimatedValue = calculateTotalCost(costBreakdown);
-        return { ...quote, costBreakdown, estimatedValue };
-      }));
-    } catch { /* Mantener el pre-costeo existente si no hay APUs válidos. */ }
-  }, []);
 
   /* ── Resumen ────────────────────────────────────────────── */
   const summary = useMemo(() => {
@@ -690,7 +685,20 @@ function KanbanCard({
             <span className="badge-revision">R{quote.revision}</span>
           )}
         </div>
-        {stale && <span className="kanban-stale-badge" title="Más de 3 días esperando respuesta">⚠️</span>}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <button
+            type="button"
+            className="btn-table-print"
+            title="Imprimir Propuesta / PDF"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPrint();
+            }}
+          >
+            🖨️
+          </button>
+          {stale && <span className="kanban-stale-badge" title="Más de 3 días esperando respuesta">⚠️</span>}
+        </div>
       </div>
 
       <h4 className="kanban-card-title">{quote.title}</h4>
@@ -1308,7 +1316,7 @@ function DetailModal({
                     Estado de la visita
                     <select
                       value={visitStatus}
-                      onChange={(e) => setVisitStatus(e.target.value as any)}
+                      onChange={(e) => setVisitStatus(e.target.value as NonNullable<TechnicalVisit["status"]>)}
                       className="status-select"
                       style={{ padding: "10px" }}
                     >

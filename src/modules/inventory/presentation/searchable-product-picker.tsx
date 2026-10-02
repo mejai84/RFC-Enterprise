@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { StockProduct } from "../index";
 
 const spanishCollator = new Intl.Collator("es-CO", { numeric: true, sensitivity: "base" });
@@ -25,14 +25,17 @@ export function SearchableProductPicker({
   placeholder = "Escribe para buscar por nombre o SKU…",
   formatDetail = (product) => `${product.inventoryGroupName} · ${product.location}`,
 }: Props) {
-  const [query, setQuery] = useState("");
+  const listboxId = useId();
+  const selectedProduct = products.find((product) => product.id === value);
+  const [prevValue, setPrevValue] = useState(value);
+  const [query, setQuery] = useState(selectedProduct?.name ?? "");
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const selectedProduct = products.find((product) => product.id === value);
 
-  useEffect(() => {
+  if (prevValue !== value) {
+    setPrevValue(value);
     setQuery(selectedProduct?.name ?? "");
-  }, [selectedProduct?.name, value]);
+  }
 
   useEffect(() => {
     function closeWhenClickingOutside(event: PointerEvent) {
@@ -54,6 +57,7 @@ export function SearchableProductPicker({
     <div ref={rootRef} style={{ position: "relative" }}>
       <input
         aria-autocomplete="list"
+        aria-controls={listboxId}
         aria-expanded={isOpen}
         autoComplete="off"
         onChange={(event) => {
@@ -67,9 +71,10 @@ export function SearchableProductPicker({
         value={query}
       />
       {isOpen && (
-        <div className="autocomplete-results" role="listbox">
+        <div className="autocomplete-results" id={listboxId} role="listbox">
           {results.length > 0 ? results.map((product) => (
             <button
+              aria-selected={product.id === value}
               className="autocomplete-item"
               key={product.id}
               onMouseDown={(event) => event.preventDefault()}

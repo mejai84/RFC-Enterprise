@@ -8,6 +8,10 @@ export type ApuLine = {
   yieldPerDay: number;
   dailyRate: number;
   inventoryProductId?: string;
+  laborPositionId?: string;
+  laborCode?: string;
+  laborLevel?: number;
+  laborActivityType?: "propias" | "no_propias";
   unit?: string;
 };
 

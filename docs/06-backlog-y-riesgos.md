@@ -69,3 +69,9 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 <!-- APU-001 (Terminado, 2026-10-01): modulo de APU operativo con totales por rubro y costo unitario; materiales y equipos se seleccionan desde Inventarios. -->
 <!-- APU-002 (Terminado, 2026-10-01): desde el detalle de una cotizacion se abre el APU contextual. Cada actividad queda ligada por quoteId y consolida los costos directos en el pre-costeo. -->
 <!-- APU-003 (Terminado, 2026-10-01): catalogo inicial de actividades APU con buscador y creacion de actividad personalizada cuando no hay coincidencia. -->
+<!-- APU-004 (Acordado, 2026-10-02): consulta y modificacion de APUs con autorizacion por permisos; definir matriz de roles en una fase posterior. -->
+<!-- APU-005 (Pendiente de muestras, 2026-10-02): exportacion XLSX basada en el formato original, conservando dimensiones, celdas, formulas, estilos y configuracion de impresion; validar ademas las muestras PDF comerciales antes de implementar. -->
+<!-- QTE-011 (Terminado, 2026-10-02): propuesta comercial imprimible redisenada desde cuatro muestras reales; conserva identidad RFC, franja verde, estructura tabular, IVA, condiciones y firma del representante legal. -->
+<!-- APU-006 (Terminado, 2026-10-02): selector de mano de obra respaldado por `apu_labor_positions` en Supabase, con 68 cargos iniciales, búsqueda, filtros, vigencia, tarifa diaria completa, RLS multiempresa y fallback local. -->
+<!-- APU-007 (Terminado, 2026-10-02): guardado explícito y confirmable del APU seleccionado, edición de nombre/unidad/cantidad y eliminación exclusiva del análisis abierto. -->
+<!-- Riesgo APU-R01 (Mitigado, 2026-10-02): si la migración del catálogo salarial no se ha desplegado o no hay conexión, la interfaz identifica el respaldo local y permite continuar; la fuente visible indica si los datos provienen de base de datos. -->

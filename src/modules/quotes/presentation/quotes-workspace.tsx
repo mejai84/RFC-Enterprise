@@ -8,6 +8,7 @@
 
 import { useState, useMemo, useCallback, useEffect, type FormEvent } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   type Quote,
   type QuoteStatus,
@@ -1606,6 +1607,55 @@ function NewQuoteModal({
  * MODAL DE PROPUESTA COMERCIAL MEMBRETADA IMPRIMIBLE (PDF)
  * ═══════════════════════════════════════════════════════════════ */
 
+function PremiumProposalSheet({ quote }: { quote: Quote }) {
+  const effectiveCode = getEffectiveQuoteCode(quote);
+  const subtotal = quote.estimatedValue ?? (quote.costBreakdown ? calculateTotalCost(quote.costBreakdown) : 0);
+  const vat = Math.round(subtotal * 0.19);
+  const total = subtotal + vat;
+  const costRows: Array<[string, number]> = quote.costBreakdown
+    ? [
+        ["Materiales e insumos", quote.costBreakdown.materials],
+        ["Mano de obra y cuadrillas técnicas", quote.costBreakdown.labor],
+        ["Equipos, maquinaria y herramientas", quote.costBreakdown.equipment],
+        ["Transporte, fletes y logística", quote.costBreakdown.transport ?? 0],
+        ["Administración, imprevistos y utilidad", quote.costBreakdown.indirects ?? 0],
+      ]
+    : [[quote.title, subtotal]];
+  const rows = costRows.filter(([, value]) => value > 0);
+
+  return <article className="formal-proposal-sheet premium-proposal-sheet">
+    <header className="premium-quote-header">
+      <Image src="/rfc-logo.svg" alt="Representaciones Figueroa Castro" width={76} height={58} priority />
+      <div><h1>REPRESENTACIONES FIGUEROA CASTRO S.A.S.</h1><strong>NIT: 900.708.094-7</strong></div>
+    </header>
+    <section className="premium-recipient">
+      <div><strong>SEÑORES</strong><span>{quote.client.toUpperCase()}{quote.contactName ? ` / ${quote.contactName.toUpperCase()}` : ""}</span></div>
+      <div><strong>CONTACTO</strong><span>{quote.contactEmail || quote.contactPhone || "Por confirmar"}</span><b>{effectiveCode}</b></div>
+    </section>
+    <h2 className="premium-object">{quote.title.toUpperCase()}</h2>
+    <table className="premium-quote-table">
+      <thead><tr><th>ÍTEM</th><th>DESCRIPCIÓN</th><th>UNIDAD</th><th>CANTIDAD</th><th>VALOR UNITARIO</th><th>VALOR PARCIAL</th></tr></thead>
+      <tbody>{rows.map(([label, value], index) => <tr key={label}><td>{index + 1}</td><td>{label}</td><td>GLOBAL</td><td>1</td><td>{formatCOP(value)}</td><td>{formatCOP(value)}</td></tr>)}</tbody>
+      <tfoot>
+        <tr><td colSpan={5}>SUBTOTAL</td><td>{formatCOP(subtotal)}</td></tr>
+        <tr><td colSpan={5}>IVA 19%</td><td>{formatCOP(vat)}</td></tr>
+        <tr className="premium-grand-total"><td colSpan={5}>TOTAL</td><td>{formatCOP(total)}</td></tr>
+      </tfoot>
+    </table>
+    <section className="premium-conditions">
+      <p><strong>VALOR A PAGAR:</strong> {formatCOP(total)} PESOS M/L.</p>
+      {quote.notes && <p><strong>ALCANCE:</strong> {quote.notes}</p>}
+      <p><strong>TIEMPO DE ENTREGA:</strong> {quote.deliveryTimeWeeks ?? 3} SEMANAS CALENDARIO</p>
+      <p><strong>FORMA DE PAGO:</strong> {(quote.paymentTerms || "30 días calendario después de radicada la factura").toUpperCase()}</p>
+      <p><strong>COTIZACIÓN VÁLIDA POR:</strong> {quote.validityDays ?? 30} DÍAS CALENDARIO</p>
+    </section>
+    <footer className="premium-signature-row">
+      <div className="premium-signature"><Image src="/rfc-signature.png" alt="Firma de Jorge Figueroa Castro" width={190} height={55} /><strong>Jorge Figueroa Castro</strong><span>Representante Legal</span></div>
+      <strong>{formatDate(quote.sentAt || quote.updatedAt).toUpperCase()}</strong>
+    </footer>
+  </article>;
+}
+
 function FormalProposalModal({
   quote,
   onClose,
@@ -1639,7 +1689,8 @@ function FormalProposalModal({
         </div>
 
         {/* ── Documento Membretado RFC ── */}
-        <div className="formal-proposal-sheet">
+        <PremiumProposalSheet quote={quote} />
+        <div className="formal-proposal-sheet proposal-legacy">
           <header className="proposal-header">
             <div className="proposal-brand">
               <h1 className="company-name">REPRESENTACIONES FIGUEROA CASTRO S.A.S.</h1>

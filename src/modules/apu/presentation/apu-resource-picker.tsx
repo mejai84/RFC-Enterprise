@@ -3,6 +3,7 @@
 import { useId, useMemo, useState } from "react";
 import type { ApuCategory } from "@/modules/apu";
 import type { StockProduct } from "@/modules/inventory";
+import { rankItems } from "../domain/search-utils";
 
 const formatCOP = (value: number) => value.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
@@ -18,11 +19,13 @@ export function ApuResourcePicker({ category, products, onAdd }: Props) {
   const listId = useId();
   const resourceLabel = category === "materials" ? "material" : "equipo o herramienta";
   const matches = useMemo(() => {
-    const term = query.trim().toLocaleLowerCase("es-CO");
-    if (!term) return [];
-    return products
-      .filter((product) => [product.name, product.sku, product.category, product.brand].filter(Boolean).some((value) => String(value).toLocaleLowerCase("es-CO").includes(term)))
-      .slice(0, 6);
+    if (!query.trim()) return [];
+    return rankItems(
+      products,
+      query,
+      (p) => p.name,
+      (p) => `${p.sku || ""} ${p.category || ""} ${p.brand || ""}`
+    ).slice(0, 8);
   }, [products, query]);
 
   function addProduct(product: StockProduct) {

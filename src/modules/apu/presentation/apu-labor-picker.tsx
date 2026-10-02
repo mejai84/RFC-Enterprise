@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { LaborActivityType, LaborPosition, LaborPositionCatalog } from "@/modules/apu";
+import { rankItems } from "../domain/search-utils";
 
 const formatCOP = (value: number) => value.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
@@ -18,13 +19,18 @@ export function ApuLaborPicker({ catalog, isLoading, onAdd, onAddManual }: Props
   const [selectedId, setSelectedId] = useState("");
 
   const matches = useMemo(() => {
-    const term = query.trim().toLocaleLowerCase("es-CO");
-    return catalog.positions.filter((position) => {
-      if (activityType !== "all" && position.activityType !== activityType) return false;
-      if (!term) return true;
-      return [position.code, position.name, position.specialtyLabel, position.summary]
-        .some((value) => value.toLocaleLowerCase("es-CO").includes(term));
-    });
+    let pool = catalog.positions;
+    if (activityType !== "all") {
+      pool = pool.filter((position) => position.activityType === activityType);
+    }
+    if (!query.trim()) return pool;
+
+    return rankItems(
+      pool,
+      query,
+      (pos) => pos.name,
+      (pos) => `${pos.specialtyLabel} ${pos.code} ${pos.summary}`
+    );
   }, [activityType, catalog.positions, query]);
 
   const visibleMatches = matches.slice(0, 80);

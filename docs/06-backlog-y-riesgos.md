@@ -86,3 +86,5 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 <!-- DB-001 (Terminado, 2026-10-02): aplicada `quotes_pipeline`; creadas `quotes` y `quote_history` con RLS y políticas por empresa. Se reconcilió el historial de migraciones ya existentes para evitar su reejecución. -->
 <!-- APU-014 (Terminado, 2026-10-02): catálogo laboral robustecido por empresa y estado visible de contingencia; recursos no catalogados se pueden presupuestar manualmente sin afectar Inventarios. -->
 <!-- UI-005 (Terminado, 2026-10-02): selector de recursos APU rediseñado como combobox buscable, limitado y táctil; elimina el desborde de listas nativas con catálogos extensos. -->
+<!-- UI-006 (Terminado, 2026-10-02): normalización fonética y de tildes (NFD) con ranking de relevancia en buscadores de APU; resuelve búsquedas parciales e insensibles a diacríticos (ej. demolicion/demolición, tuberia/tubería) eliminando falsos positivos de grupo. -->
+

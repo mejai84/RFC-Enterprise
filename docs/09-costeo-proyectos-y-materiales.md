@@ -177,3 +177,5 @@ export type ToolLoan = {
 <!-- Registro 2026-10-02: la persistencia de cotizaciones está desplegada en Supabase y queda disponible para enlazar versiones APU/BOQ a la oferta comercial sin depender solo del almacenamiento local. -->
 <!-- Registro 2026-10-02: los recursos no registrados se incluyen como líneas manuales en una versión APU y quedan auditables por nombre, unidad, cantidad, rendimiento y tarifa, sin generar saldo de existencias. -->
 <!-- Registro 2026-10-02: la selección de recursos de inventario en APU se realiza por búsqueda de nombre, SKU, categoría o marca y presenta seis resultados como máximo; todos los demás siguen disponibles mediante refinamiento de búsqueda. -->
+<!-- Registro 2026-10-02: los catálogos de actividades, cargos de mano de obra y recursos en APU operan bajo búsqueda normalizada insensible a tildes (NFD) y tokenizada; el ordenamiento prioriza coincidencias en el nombre del ítem frente a su categoría o resumen descriptivo. -->
+

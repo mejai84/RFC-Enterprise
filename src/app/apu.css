@@ -91,3 +91,51 @@
   .apu-selected-toolbar,.apu-labor-controls { grid-template-columns:1fr; }.apu-selected-toolbar label:first-child,.apu-selected-actions,.apu-labor-position-select { grid-column:auto; }.apu-selected-actions { display:grid; }.apu-labor-controls button { width:100%; }
   .apu-budget-link,.apu-boq-entry { display:grid; grid-template-columns:1fr; }.apu-budget-link select,.apu-budget-link button,.apu-boq-entry select,.apu-boq-entry input,.apu-boq-entry button { width:100%; }.apu-boq-status dl { grid-template-columns:1fr; }
 }
+
+/* ── Botón Imprimir APU ── */
+.apu-print-btn { border:1px solid var(--brand); background:var(--brand-soft); color:var(--brand-dark); font-weight:800; transition:background .15s ease,color .15s ease; }
+.apu-print-btn:hover,.apu-print-btn:focus-visible { background:var(--brand); color:#fff; outline:2px solid var(--brand-glow); outline-offset:2px; }
+
+/* ── Modal de impresión ── */
+.apu-print-overlay { position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.55); display:flex; flex-direction:column; align-items:center; overflow-y:auto; padding:24px; }
+.apu-print-controls { display:flex; gap:10px; margin-bottom:16px; }
+.apu-print-controls button { min-height:42px; border-radius:8px; padding:10px 18px; font-size:14px; font-weight:800; cursor:pointer; }
+
+/* ── Hoja A4 ── */
+.apu-print-sheet { background:#fff; color:#111; width:100%; max-width:794px; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,.25); padding:40px 36px; font-family:'Inter','Segoe UI',system-ui,sans-serif; font-size:12px; line-height:1.5; }
+.apu-print-header { display:flex; align-items:center; gap:20px; border-bottom:2px solid #111; padding-bottom:14px; margin-bottom:18px; }
+.apu-print-logo { height:60px; width:auto; object-fit:contain; }
+.apu-print-header-info h1 { margin:0; font-size:18px; font-weight:800; }
+.apu-print-header-info p { margin:2px 0 0; font-size:12px; color:#444; }
+.apu-print-date { color:#888; font-size:11px; }
+.apu-print-meta { margin-bottom:20px; }
+.apu-print-meta dl { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:6px 18px; margin:0; }
+.apu-print-meta dt { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:#666; margin:0; }
+.apu-print-meta dd { margin:0 0 6px; font-size:13px; font-weight:600; }
+.apu-print-category { margin-bottom:16px; }
+.apu-print-category h2 { font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:#333; border-bottom:1px solid #ddd; padding-bottom:5px; margin:0 0 6px; }
+.apu-print-category table { width:100%; border-collapse:collapse; font-size:11px; }
+.apu-print-category th { background:#f4f4f4; padding:6px 8px; text-align:left; font-size:10px; font-weight:800; text-transform:uppercase; border-bottom:1px solid #ccc; }
+.apu-print-category td { padding:5px 8px; border-bottom:1px solid #eee; }
+.apu-print-category td small { color:#888; font-size:10px; }
+.apu-print-category tfoot td { border-top:2px solid #333; font-weight:800; font-size:12px; padding-top:6px; }
+.apu-print-number { text-align:right; font-variant-numeric:tabular-nums; }
+.apu-print-empty { color:#999; font-style:italic; text-align:center; }
+.apu-print-summary { margin:20px 0 24px; }
+.apu-print-summary table { width:100%; max-width:380px; margin-left:auto; border-collapse:collapse; font-size:13px; }
+.apu-print-summary td { padding:6px 10px; border-bottom:1px solid #eee; }
+.apu-print-unit-row { background:#f0fdf4; }
+.apu-print-unit-row td { font-size:14px; }
+.apu-print-signatures { display:grid; grid-template-columns:repeat(3,1fr); gap:32px; margin-top:40px; text-align:center; }
+.apu-print-signature-line { border-bottom:1px solid #333; margin-bottom:6px; height:48px; }
+.apu-print-signatures p { margin:0; font-size:11px; font-weight:700; color:#444; }
+
+/* ── @media print ── */
+@media print {
+  body * { visibility:hidden !important; }
+  .apu-print-sheet,.apu-print-sheet * { visibility:visible !important; }
+  .apu-print-sheet { position:fixed; left:0; top:0; width:100%; max-width:none; margin:0; padding:20mm 15mm; box-shadow:none; border-radius:0; }
+  .apu-print-overlay { position:static; background:transparent; padding:0; }
+  .no-print,.dashboard-sidebar,.dashboard-header,.apu-layout,.apu-workspace>.dashboard-heading,.apu-quote-context,.apu-activity-catalog { display:none !important; }
+  @page { size:A4; margin:10mm; }
+}

@@ -25,6 +25,8 @@ El alquiler rápido usa una tarifa diaria y garantía sin crear proyecto ni coti
 
 Los informes financieros consolidan el costo de inventario, gasto por proyecto, APU y alquileres; los operativos muestran kardex, stock crítico y custodia. Esta separación permite revisar el costo estimado y la operación sin mezclar controles de naturaleza diferente.
 
+El flujo de alquiler rápido se accede dentro del mismo dashboard operativo para conservar los accesos a Inventarios, Proyectos, Informes y demás controles relacionados.
+
 ## Unidad de compra vs. unidad de consumo
 
 Las entradas pueden recibirse en una presentación comercial y consumirse en una unidad menor. Cada nuevo artículo guarda la presentación, su equivalencia y su costo; el inventario valoriza y descuenta en la unidad de consumo. Ejemplo: una caja de 100 tornillos a COP 50.000 ingresa 100 unidades a COP 500 cada una.

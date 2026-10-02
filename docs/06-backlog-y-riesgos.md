@@ -19,6 +19,7 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 - **ALQ-003 · Alta · Pendiente:** persistencia empresarial, adjuntos de cédula/fotos/firma y facturación para alquiler rápido.
 - **REP-001 · Terminado:** centro de informes por nivel gerencial, operativo y financiero, con reportes de pipeline, APU y alquileres rápidos.
 - **REP-002 · Alta · Pendiente:** filtros por período, indicadores de rentabilidad real y permisos por rol para exportaciones sensibles.
+- **NAV-002 · Terminado:** Alquiler rápido se integra al Dashboard Shell; regla de composición obligatoria para módulos internos nuevos.
 
 ## Backlog priorizado
 

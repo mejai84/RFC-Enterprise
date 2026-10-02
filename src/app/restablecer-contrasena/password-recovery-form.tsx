@@ -38,7 +38,16 @@ export function PasswordRecoveryForm() {
     const password = String(data.get("password") ?? "");
     const confirmation = String(data.get("confirmation") ?? "");
     const currentPassword = String(data.get("currentPassword") ?? "");
-    if (password.length < 8) { setError("La nueva contraseña debe tener al menos 8 caracteres."); return; }
+    
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasDigit = /[0-9]/.test(password);
+    const hasSymbol = /[^A-Za-z0-9]/.test(password);
+
+    if (password.length < 10 || !hasUpper || !hasLower || !hasDigit || !hasSymbol) { 
+      setError("La nueva contraseña debe tener mínimo 10 caracteres, incluyendo letras mayúsculas, minúsculas, números y caracteres especiales."); 
+      return; 
+    }
     if (password !== confirmation) { setError("La confirmación no coincide con la nueva contraseña."); return; }
     if (mode === "change" && !currentPassword) { setError("Ingresa tu contraseña actual."); return; }
     setPending(true); setError(null); setMessage(null);
@@ -60,8 +69,8 @@ export function PasswordRecoveryForm() {
     <p>{isChange ? "Confirma tu clave actual y define una nueva contraseña." : "Define una nueva contraseña para recuperar el acceso."}</p>
     <form onSubmit={updatePassword}>
       {isChange ? <label className="form-field">Contraseña actual<input name="currentPassword" type="password" autoComplete="current-password" required /></label> : null}
-      <label className="form-field">Nueva contraseña<input name="password" type="password" autoComplete="new-password" minLength={8} required /></label>
-      <label className="form-field">Confirmar nueva contraseña<input name="confirmation" type="password" autoComplete="new-password" minLength={8} required /></label>
+      <label className="form-field">Nueva contraseña<input name="password" type="password" autoComplete="new-password" minLength={10} required /></label>
+      <label className="form-field">Confirmar nueva contraseña<input name="confirmation" type="password" autoComplete="new-password" minLength={10} required /></label>
       <button className="primary-button" disabled={pending} type="submit">{pending ? "Guardando…" : "Actualizar contraseña"}</button>
     </form>
     {message ? <p className="auth-success" role="status">{message}</p> : null}{error ? <p className="auth-error" role="alert">{error}</p> : null}

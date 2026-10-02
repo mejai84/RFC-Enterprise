@@ -16,12 +16,21 @@ type Props = {
 export function ApuLaborPicker({ catalog, isLoading, onAdd, onAddManual }: Props) {
   const [query, setQuery] = useState("");
   const [activityType, setActivityType] = useState<"all" | LaborActivityType>("all");
+  const [vigencia, setVigencia] = useState<string>("all");
   const [selectedId, setSelectedId] = useState("");
+
+  const vigencias = useMemo(() => {
+    const years = catalog.positions.map((p) => p.validTo.substring(0, 4));
+    return Array.from(new Set(years)).sort().reverse();
+  }, [catalog.positions]);
 
   const matches = useMemo(() => {
     let pool = catalog.positions;
     if (activityType !== "all") {
       pool = pool.filter((position) => position.activityType === activityType);
+    }
+    if (vigencia !== "all") {
+      pool = pool.filter((position) => position.validTo.startsWith(vigencia));
     }
     if (!query.trim()) return pool;
 
@@ -31,7 +40,7 @@ export function ApuLaborPicker({ catalog, isLoading, onAdd, onAddManual }: Props
       (pos) => pos.name,
       (pos) => `${pos.specialtyLabel} ${pos.code} ${pos.summary}`
     );
-  }, [activityType, catalog.positions, query]);
+  }, [activityType, vigencia, catalog.positions, query]);
 
   const visibleMatches = matches.slice(0, 80);
   const selected = catalog.positions.find((position) => position.id === selectedId);
@@ -47,6 +56,13 @@ export function ApuLaborPicker({ catalog, isLoading, onAdd, onAddManual }: Props
             onChange={(event) => { setQuery(event.target.value); setSelectedId(""); }}
             placeholder="Ej. oficial, soldador, HSE…"
           />
+        </label>
+        <label>
+          <span>Vigencia</span>
+          <select value={vigencia} onChange={(event) => { setVigencia(event.target.value); setSelectedId(""); }}>
+            <option value="all">Todos los años</option>
+            {vigencias.map((year) => <option key={year} value={year}>{year}</option>)}
+          </select>
         </label>
         <label>
           <span>Tipo de actividad</span>

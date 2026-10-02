@@ -77,6 +77,7 @@ export type Quote = {
   projectId?: string;       // ID del proyecto vinculado (cuando se convierte a obra)
   projectCode?: string;     // Código del proyecto vinculado
   notes?: string;           // Observaciones generales
+  laborScale?: "rfc_standard" | "ocensa"; // Escala salarial aplicada a los APUs de esta cotización
   history: QuoteHistoryEntry[];
   createdAt: string;
   updatedAt: string;

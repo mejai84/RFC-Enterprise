@@ -443,6 +443,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     const reqVisit = fd.get("reqVisit") === "on";
     const deadline = String(fd.get("deadline") ?? "").trim();
     const notes = String(fd.get("notes") ?? "").trim();
+    const laborScale = String(fd.get("laborScale") ?? "rfc_standard") as "rfc_standard" | "ocensa";
 
     // Valores de pre-costeo preliminares
     const matVal = Number(String(fd.get("matValue") ?? "").replace(/\D/g, "")) || 0;
@@ -475,6 +476,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
               equipment: eqVal,
             }
           : undefined,
+      laborScale,
       validityDays,
       deliveryTimeWeeks,
       paymentTerms,
@@ -1675,6 +1677,16 @@ function NewQuoteModal({
             <label className="form-field">
               Condiciones de pago
               <input name="paymentTerms" type="text" defaultValue="50% anticipo, 50% contra entrega" />
+            </label>
+          </div>
+
+          <div className="new-quote-row">
+            <label className="form-field">
+              Escala salarial para mano de obra (APUs)
+              <select name="laborScale" defaultValue="rfc_standard">
+                <option value="rfc_standard">Estándar RFC (General)</option>
+                <option value="ocensa">Tabla Salarial Sectorial (Ej: OCENSA)</option>
+              </select>
             </label>
           </div>
 

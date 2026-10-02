@@ -108,17 +108,16 @@ export function EmployeesWorkspace() {
       values.push(item);
       overridesByEmployee.set(item.employee_id, values);
     }
-    const directory = (employeeRows ?? []).flatMap((employee) => {
-      const roleId = roleByEmployee.get(employee.id);
-      if (!roleId || !roleById.has(roleId)) return [];
-      const effectivePermissions = new Set(basePermissionsByRole.get(roleId) ?? []);
+    const directory = (employeeRows ?? []).map((employee) => {
+      const roleId = roleByEmployee.get(employee.id) ?? "";
+      const effectivePermissions = new Set(roleId ? (basePermissionsByRole.get(roleId) ?? []) : []);
       for (const override of overridesByEmployee.get(employee.id) ?? []) {
         const code = permissionCodeById.get(override.permission_id);
         if (!code) continue;
         if (override.mode === "grant") effectivePermissions.add(code);
         else effectivePermissions.delete(code);
       }
-      return [{ id: employee.id, name: employee.full_name, email: employee.email, title: employee.job_title, roleId, active: employee.is_active, permissions: [...effectivePermissions] }];
+      return { id: employee.id, name: employee.full_name, email: employee.email, title: employee.job_title, roleId, active: employee.is_active, permissions: [...effectivePermissions] };
     });
 
     const administratorRoleIds = new Set(roleRows.filter((role) => role.code === "administrator").map((role) => role.id));
@@ -177,9 +176,13 @@ export function EmployeesWorkspace() {
   }
 
   async function changeRole(roleId: string) {
-    if (!supabase || !selected || !canManage || roleId === selected.roleId) return;
+    if (!supabase || !selected || !canManage || !roleId || roleId === selected.roleId) return;
     setIsSaving(true);
-    const { error } = await supabase.from("employee_roles").update({ role_id: roleId }).eq("employee_id", selected.id);
+    // The PK is (employee_id, role_id) so we must delete the old row first
+    if (selected.roleId) {
+      await supabase.from("employee_roles").delete().eq("employee_id", selected.id);
+    }
+    const { error } = await supabase.from("employee_roles").insert({ employee_id: selected.id, role_id: roleId });
     if (error) { setMessage(getErrorMessage(error, "No fue posible cambiar el rol.")); setIsSaving(false); return; }
     await loadEmployees();
     setMessage("Rol actualizado y guardado.");
@@ -274,25 +277,48 @@ export function EmployeesWorkspace() {
 
   async function submitPasswordModal() {
     if (!supabase || !selected) return;
-    if (modalPassword.length < 10) { setMessage("La contraseña debe tener al menos 10 caracteres."); return; }
-    if (modalPassword !== modalPasswordConfirm) { setMessage("Las contraseñas no coinciden."); return; }
-    setModalSaving(true);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const response = await fetch("/api/employees/password-reset", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token ?? ""}` }, body: JSON.stringify({ employeeId: selected.id, password: modalPassword }) });
-    const result = await response.json().catch(() => ({}));
-    if (response.ok) {
-      setModalPassword(""); setModalPasswordConfirm(""); setShowPasswordModal(false);
-      const extra = result.accountCreated ? " Se creó su cuenta de acceso automáticamente." : "";
-      setMessage(`Contraseña actualizada para ${selected.name}.${extra}`);
-    } else {
-      setMessage(String(result.error || "No fue posible guardar la contraseña."));
+    
+    const hasUpper = /[A-Z]/.test(modalPassword);
+    const hasLower = /[a-z]/.test(modalPassword);
+    const hasDigit = /[0-9]/.test(modalPassword);
+    const hasSymbol = /[^A-Za-z0-9]/.test(modalPassword);
+
+    if (modalPassword.length < 10 || !hasUpper || !hasLower || !hasDigit || !hasSymbol) { 
+      window.alert("La contraseña debe tener mínimo 10 caracteres, incluyendo letras mayúsculas, minúsculas, números y caracteres especiales."); 
+      return; 
     }
-    setModalSaving(false);
+    
+    if (modalPassword !== modalPasswordConfirm) { window.alert("Las contraseñas no coinciden."); return; }
+    
+    setModalSaving(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const response = await fetch("/api/employees/password-reset", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token ?? ""}` }, body: JSON.stringify({ employeeId: selected.id, password: modalPassword }) });
+      const result = await response.json().catch(() => ({}));
+      if (response.ok) {
+        setModalPassword(""); setModalPasswordConfirm(""); setShowPasswordModal(false);
+        const extra = result.accountCreated ? " Se creó su cuenta de acceso automáticamente." : "";
+        setMessage(`Contraseña actualizada para ${selected.name}.${extra}`);
+      } else {
+        window.alert(String(result.error || "No fue posible guardar la contraseña."));
+      }
+    } catch (error) {
+      window.alert("Error de red o conexión al intentar comunicarse con el servidor.");
+    } finally {
+      setModalSaving(false);
+    }
   }
 
   async function submitNewEmployee(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!supabase || !companyId || !newEmpName.trim() || !newEmpEmail.trim() || !newEmpTitle.trim() || !newEmpRole) return;
+    if (!supabase || !companyId) {
+      window.alert("Error de conexión: No se pudo identificar la empresa o base de datos.");
+      return;
+    }
+    if (!newEmpName.trim() || !newEmpEmail.trim() || !newEmpTitle.trim() || !newEmpRole) {
+      window.alert("Por favor completa todos los campos del formulario, incluyendo el rol.");
+      return;
+    }
     setModalSaving(true);
     const { data: created, error } = await supabase.from("employees").insert({ company_id: companyId, full_name: newEmpName.trim(), email: newEmpEmail.trim().toLowerCase(), job_title: newEmpTitle.trim() }).select("id").single();
     if (error || !created) { setMessage(getErrorMessage(error, "No fue posible crear el empleado.")); setModalSaving(false); return; }
@@ -320,7 +346,11 @@ export function EmployeesWorkspace() {
             <button className={`employee-row ${employee.id === selected?.id ? "is-selected" : ""}`} key={employee.id} onClick={() => { setSelectedId(employee.id); setMessage(""); }} type="button">
               <span>{employee.name.split(" ").map((word) => word[0]).slice(0, 2).join("")}</span>
               <strong>{employee.name}<small>{employee.title}</small></strong>
-              <i className={employee.active ? "is-active" : ""}>{employee.active ? "Activo" : "Inactivo"}</i>
+              {!employee.roleId ? (
+                <i style={{ color: "#b91c1c", fontWeight: 700 }}>⚠ Sin rol</i>
+              ) : (
+                <i className={employee.active ? "is-active" : ""}>{employee.active ? "Activo" : "Inactivo"}</i>
+              )}
             </button>
           ))}
           <button className="emp-btn emp-btn--primary" disabled={!canManage || isSaving} onClick={() => setShowNewEmployeeModal(true)} type="button">+ Nuevo empleado</button>
@@ -342,8 +372,12 @@ export function EmployeesWorkspace() {
                 <button className="emp-btn emp-btn--outline" onClick={() => void sendPasswordReset()} disabled={!canManage || isSaving} type="button">📧 Enviar recuperación</button>
               </div>
 
+              {!selected.roleId && (
+                <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#991b1b", padding: "12px 16px", borderRadius: "8px", marginBottom: "12px", fontWeight: 600 }}>⚠ Este empleado no tiene rol asignado. Selecciona uno a continuación para habilitarlo en el sistema.</div>
+              )}
               <label className="employee-role-select">Rol base
                 <select value={selected.roleId} disabled={!canManage || isSaving} onChange={(event) => void changeRole(event.target.value)}>
+                  {!selected.roleId && <option value="">— Selecciona un rol —</option>}
                   {roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
                 </select>
               </label>

@@ -31,6 +31,8 @@ Como vía alternativa para clientes particulares se incorpora `Alquiler rápido`
 
 El módulo de Informes se organiza en vistas Gerenciales, Operativas y Financieras. Consolida cotizaciones, inventario, kardex, proyectos, APU y alquileres rápidos, con filtros, exportación CSV e impresión.
 
+Todo módulo interno, incluido Alquiler rápido, se compone dentro de `DashboardShell` para conservar navegación lateral, barra superior, sesión y comportamiento responsive de forma uniforme.
+
 ## Módulos de la plataforma
 
 | Código | Módulo | Estado | Alcance actual |

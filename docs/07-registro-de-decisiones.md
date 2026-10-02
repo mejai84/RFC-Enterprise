@@ -48,6 +48,13 @@ El alquiler de corta duración no exige cotización ni APU. Se registra mediante
 
 Los informes se clasifican en Gerenciales, Operativos y Financieros para que cada usuario encuentre el indicador requerido sin conocer la estructura técnica de los módulos. La versión inicial consulta datos locales y deja para la fase de permisos el control de acceso y exportación.
 
+## ADR-078 · Navegación uniforme para módulos internos
+
+**Fecha:** 2026-10-02
+**Estado:** Aceptada
+
+Las rutas de módulos internos se renderizan dentro de `DashboardShell`. Ningún módulo operativo puede abrir como página aislada, pues debe preservar navegación, sesión, alertas y diseño adaptable del portal.
+
 Este registro conserva decisiones que afectan el rumbo del producto. Una decisión no se elimina: si cambia, se agrega una nueva entrada que indique cuál reemplaza.
 
 ## ADR-001 · Monolito modular

@@ -87,4 +87,6 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 <!-- APU-014 (Terminado, 2026-10-02): catálogo laboral robustecido por empresa y estado visible de contingencia; recursos no catalogados se pueden presupuestar manualmente sin afectar Inventarios. -->
 <!-- UI-005 (Terminado, 2026-10-02): selector de recursos APU rediseñado como combobox buscable, limitado y táctil; elimina el desborde de listas nativas con catálogos extensos. -->
 <!-- UI-006 (Terminado, 2026-10-02): normalización fonética y de tildes (NFD) con ranking de relevancia en buscadores de APU; resuelve búsquedas parciales e insensibles a diacríticos (ej. demolicion/demolición, tuberia/tubería) eliminando falsos positivos de grupo. -->
+<!-- APU-015 (Terminado, 2026-10-02): catálogo maestro de transporte y fletes con CRUD persistente en Supabase y local; líneas APU congelan la tarifa al momento de agregar el ítem para preservar la inmutabilidad de análisis cerrados o anteriores ante variaciones futuras de tarifas. -->
+
 

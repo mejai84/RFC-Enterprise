@@ -36,13 +36,13 @@ export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
   for (const row of versionRows ?? []) if (!currentVersionByAnalysis.has(row.apu_analysis_id)) currentVersionByAnalysis.set(row.apu_analysis_id, row);
   const versionIds = Array.from(currentVersionByAnalysis.values()).map((row) => row.id);
   const [{ data: lineRows }, { data: costRows }] = await Promise.all([
-    versionIds.length ? supabase.from("apu_version_lines").select("id, apu_version_id, category, name, quantity, yield_per_day, daily_rate, inventory_product_id, labor_position_id, labor_code, labor_level, labor_activity_type, unit").in("apu_version_id", versionIds) : Promise.resolve({ data: [] }),
+    versionIds.length ? supabase.from("apu_version_lines").select("id, apu_version_id, category, name, quantity, yield_per_day, daily_rate, inventory_product_id, labor_position_id, labor_code, labor_level, labor_activity_type, transport_item_id, transport_code, unit").in("apu_version_id", versionIds) : Promise.resolve({ data: [] }),
     (boqRows ?? []).length ? supabase.from("project_boq_cost_entries").select("id, boq_item_id, cost_type, amount, reference, occurred_at").in("boq_item_id", (boqRows ?? []).map((row) => row.id)) : Promise.resolve({ data: [] }),
   ]);
   const linesByVersion = new Map<string, ApuLine[]>();
   for (const row of lineRows ?? []) {
     const lines = linesByVersion.get(row.apu_version_id) ?? [];
-    lines.push({ id: row.id, category: row.category as ApuLine["category"], name: row.name, quantity: num(row.quantity), yieldPerDay: num(row.yield_per_day), dailyRate: num(row.daily_rate), inventoryProductId: row.inventory_product_id || undefined, laborPositionId: row.labor_position_id || undefined, laborCode: row.labor_code || undefined, laborLevel: row.labor_level || undefined, laborActivityType: row.labor_activity_type || undefined, unit: row.unit || undefined });
+    lines.push({ id: row.id, category: row.category as ApuLine["category"], name: row.name, quantity: num(row.quantity), yieldPerDay: num(row.yield_per_day), dailyRate: num(row.daily_rate), inventoryProductId: row.inventory_product_id || undefined, laborPositionId: row.labor_position_id || undefined, laborCode: row.labor_code || undefined, laborLevel: row.labor_level || undefined, laborActivityType: row.labor_activity_type || undefined, transportItemId: row.transport_item_id || undefined, transportCode: row.transport_code || undefined, unit: row.unit || undefined });
     linesByVersion.set(row.apu_version_id, lines);
   }
   return {
@@ -68,7 +68,7 @@ export async function saveApuAnalysis(companyId: string, apu: Apu) {
   const { data: version, error: versionError } = await supabase.from("apu_versions").insert({ apu_analysis_id: apu.id, company_id: companyId, version_number: versionNumber, status: apu.status === "approved" ? "approved" : "draft", direct_cost: directCost, total_cost: directCost, change_note: `Guardado desde APU ${apu.code}` }).select("id").single();
   if (versionError || !version) throw versionError || new Error("No fue posible crear la versión del APU.");
   if (apu.lines.length) {
-    const { error: linesError } = await supabase.from("apu_version_lines").insert(apu.lines.map((line) => ({ apu_version_id: version.id, company_id: companyId, category: line.category, name: line.name, quantity: line.quantity, yield_per_day: line.yieldPerDay, daily_rate: line.dailyRate, line_total: lineTotal(line), inventory_product_id: uuid(line.inventoryProductId) ? line.inventoryProductId : null, labor_position_id: uuid(line.laborPositionId) ? line.laborPositionId : null, labor_code: line.laborCode || null, labor_level: line.laborLevel || null, labor_activity_type: line.laborActivityType || null, unit: line.unit || null })));
+    const { error: linesError } = await supabase.from("apu_version_lines").insert(apu.lines.map((line) => ({ apu_version_id: version.id, company_id: companyId, category: line.category, name: line.name, quantity: line.quantity, yield_per_day: line.yieldPerDay, daily_rate: line.dailyRate, line_total: lineTotal(line), inventory_product_id: uuid(line.inventoryProductId) ? line.inventoryProductId : null, labor_position_id: uuid(line.laborPositionId) ? line.laborPositionId : null, labor_code: line.laborCode || null, labor_level: line.laborLevel || null, labor_activity_type: line.laborActivityType || null, transport_item_id: uuid(line.transportItemId) ? line.transportItemId : null, transport_code: line.transportCode || null, unit: line.unit || null })));
     if (linesError) throw linesError;
   }
   const { error: updateError } = await supabase.from("apu_analyses").update({ current_version: versionNumber, status: apu.status === "approved" ? "approved" : "draft" }).eq("id", apu.id);

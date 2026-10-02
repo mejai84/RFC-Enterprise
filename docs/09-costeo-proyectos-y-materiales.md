@@ -178,4 +178,6 @@ export type ToolLoan = {
 <!-- Registro 2026-10-02: los recursos no registrados se incluyen como líneas manuales en una versión APU y quedan auditables por nombre, unidad, cantidad, rendimiento y tarifa, sin generar saldo de existencias. -->
 <!-- Registro 2026-10-02: la selección de recursos de inventario en APU se realiza por búsqueda de nombre, SKU, categoría o marca y presenta seis resultados como máximo; todos los demás siguen disponibles mediante refinamiento de búsqueda. -->
 <!-- Registro 2026-10-02: los catálogos de actividades, cargos de mano de obra y recursos en APU operan bajo búsqueda normalizada insensible a tildes (NFD) y tokenizada; el ordenamiento prioriza coincidencias en el nombre del ítem frente a su categoría o resumen descriptivo. -->
+<!-- Registro 2026-10-02: el rubro de Transporte cuenta con un catálogo editable clasificado en carga pesada (cama baja 30T/50T, cama alta planchón), volquetas (sencilla 7m³, dobletroque 15m³), transporte de personal (buseta 28p, van 15p), livianos 4x4 (camioneta platón, camión 3.5T) y logística fluvial/carrotanques. Al incorporar un transporte a un APU, la línea almacena su tarifa congelada (`daily_rate`) y unidad; la actualización de precios en el maestro nunca recalcula ni distorsiona costos de APUs completados o cerrados en el historial. -->
+
 

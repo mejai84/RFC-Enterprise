@@ -20,11 +20,18 @@ import {
   type ApuProject,
   type ProjectBoqCost,
   type ProjectBoqItem,
+  defaultTransportCatalog,
+  getTransportCatalog,
+  persistTransportItem,
+  removeTransportItem,
+  type TransportCatalog,
+  type TransportItem,
 } from "@/modules/apu";
 import type { StockProduct } from "@/modules/inventory";
 import { ApuActivityCatalog } from "./apu-activity-catalog";
 import { ApuLaborPicker } from "./apu-labor-picker";
 import { ApuResourcePicker } from "./apu-resource-picker";
+import { ApuTransportPicker } from "./apu-transport-picker";
 
 const categories: ApuCategory[] = ["equipment", "materials", "labor", "transport"];
 const emptyLaborCatalog: LaborPositionCatalog = { positions: [], source: "fallback" };
@@ -39,6 +46,8 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   const [selectedId, setSelectedId] = useState("");
   const [laborCatalog, setLaborCatalog] = useState<LaborPositionCatalog>(emptyLaborCatalog);
   const [isLaborLoading, setIsLaborLoading] = useState(true);
+  const [transportCatalog, setTransportCatalog] = useState<TransportCatalog>({ items: defaultTransportCatalog, source: "fallback" });
+  const [isTransportLoading, setIsTransportLoading] = useState(true);
   const [saveMessage, setSaveMessage] = useState("");
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [projects, setProjects] = useState<ApuProject[]>([]);
@@ -93,6 +102,17 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
         if (active) setLaborCatalog({ positions: [], source: "fallback", warning: "No fue posible cargar el catálogo de cargos. Intenta actualizar la página." });
       })
       .finally(() => { if (active) setIsLaborLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    getTransportCatalog()
+      .then((catalog) => { if (active) setTransportCatalog(catalog); })
+      .catch(() => {
+        if (active) setTransportCatalog({ items: defaultTransportCatalog, source: "fallback", warning: "Usando catálogo local de transporte." });
+      })
+      .finally(() => { if (active) setIsTransportLoading(false); });
     return () => { active = false; };
   }, []);
 
@@ -175,6 +195,39 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
       unit: "día",
     };
     updateApu({ ...selected, lines: [...selected.lines, line] });
+  }
+
+  function addTransportItem(item: TransportItem) {
+    if (!selected) return;
+    const line: ApuLine = {
+      id: newId(),
+      category: "transport",
+      name: item.name,
+      quantity: 1,
+      yieldPerDay: 1,
+      dailyRate: item.defaultRate, // Instantánea de costo congelada e inmutable
+      transportItemId: item.id,
+      transportCode: item.code,
+      unit: item.unit,
+    };
+    updateApu({ ...selected, lines: [...selected.lines, line] });
+  }
+
+  async function handleSaveTransportItem(item: Omit<TransportItem, "createdAt" | "updatedAt"> & { id?: string }) {
+    const saved = await persistTransportItem(companyId, item);
+    setTransportCatalog((prev) => {
+      const idx = prev.items.findIndex((i) => i.id === saved.id);
+      const next = idx >= 0 ? prev.items.map((i) => (i.id === saved.id ? saved : i)) : [saved, ...prev.items];
+      return { ...prev, items: next };
+    });
+  }
+
+  async function handleDeleteTransportItem(itemId: string) {
+    await removeTransportItem(companyId, itemId);
+    setTransportCatalog((prev) => ({
+      ...prev,
+      items: prev.items.filter((i) => i.id !== itemId),
+    }));
   }
 
   function updateLine(lineId: string, field: keyof ApuLine, value: string | number) {
@@ -300,7 +353,14 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                           onAdd={(product) => addLine(category, product)}
                         />
                       ) : (
-                        <div className="apu-add"><button type="button" onClick={() => addLine(category)}>Agregar transporte</button></div>
+                        <ApuTransportPicker
+                          catalog={transportCatalog}
+                          isLoading={isTransportLoading}
+                          onAdd={addTransportItem}
+                          onAddManual={() => addLine("transport")}
+                          onSaveItem={handleSaveTransportItem}
+                          onDeleteItem={handleDeleteTransportItem}
+                        />
                       )}
                     </header>
                     {(category === "materials" || category === "equipment") && !inventoryChoices.length ? (
@@ -312,7 +372,12 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                         <tbody>
                           {lines.length ? lines.map((line) => (
                             <tr key={line.id}>
-                              <td><strong>{line.name}</strong>{line.inventoryProductId ? <small>Inventario · {line.unit || "unidad"}</small> : null}{line.laborPositionId ? <small>{line.laborCode} · Nivel {line.laborLevel} · {line.laborActivityType === "propias" ? "Actividad propia" : "Actividad no propia"}</small> : null}</td>
+                              <td>
+                                <strong>{line.name}</strong>
+                                {line.inventoryProductId ? <small>Inventario · {line.unit || "unidad"}</small> : null}
+                                {line.laborPositionId ? <small>{line.laborCode} · Nivel {line.laborLevel} · {line.laborActivityType === "propias" ? "Actividad propia" : "Actividad no propia"}</small> : null}
+                                {line.transportItemId ? <small>Transporte · {line.transportCode || "Flete"} · {line.unit || "viaje"}</small> : null}
+                              </td>
                               <td><input type="number" min="0" step="any" value={line.quantity} onChange={(event) => updateLine(line.id, "quantity", Number(event.target.value))} /></td>
                               <td><input type="number" min="0" step="any" value={line.yieldPerDay} onChange={(event) => updateLine(line.id, "yieldPerDay", Number(event.target.value))} /></td>
                               <td><input type="number" min="0" step="any" value={line.dailyRate} onChange={(event) => updateLine(line.id, "dailyRate", Number(event.target.value))} /></td>

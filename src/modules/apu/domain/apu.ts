@@ -12,6 +12,8 @@ export type ApuLine = {
   laborCode?: string;
   laborLevel?: number;
   laborActivityType?: "propias" | "no_propias";
+  transportItemId?: string;
+  transportCode?: string;
   unit?: string;
 };
 

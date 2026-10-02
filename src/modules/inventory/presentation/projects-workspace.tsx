@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   inventoryProducts,
@@ -23,6 +24,7 @@ import {
 import { PrintableDispatchVoucher } from "./printable-dispatch-voucher";
 import { CurrencyInput } from "@/shared/components/currency-input";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import { getEffectiveQuoteCode, initialQuotes, type Quote } from "@/modules/quotes";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -54,7 +56,17 @@ function ProjectTabIcon({ name }: { name: ProjectTabIconName }) {
   return <svg aria-hidden="true" className="project-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths}</svg>;
 }
 
+function ProjectHelp({ text, label = "Ayuda" }: { text: string; label?: string }) {
+  return (
+    <span className="project-help">
+      <button type="button" className="project-help-trigger" aria-label={label}>?</button>
+      <span className="project-help-popover" role="tooltip">{text}</span>
+    </span>
+  );
+}
+
 export function ProjectsWorkspace({ responsibleName }: { responsibleName: string }) {
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => isSupabaseConfigured && supabaseUrl && supabasePublishableKey ? createBrowserClient(supabaseUrl, supabasePublishableKey) : null, []);
   // Sincronización con localStorage
   const [products, setProducts] = useState<StockProduct[]>(() => {
@@ -81,10 +93,26 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("rfc_inventory_projects");
       if (saved) {
-        try { return JSON.parse(saved); } catch {}
+        try {
+          const storedProjects = JSON.parse(saved) as Project[];
+          const requestedProjectId = searchParams.get("projectId");
+          const requestedInitialProject = inventoryProjects.find((project) => project.id === requestedProjectId);
+          return requestedInitialProject && !storedProjects.some((project) => project.id === requestedInitialProject.id)
+            ? [...storedProjects, requestedInitialProject]
+            : storedProjects;
+        } catch {}
       }
     }
     return [...inventoryProjects];
+  });
+  const [quotes] = useState<Quote[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("rfc_quotes");
+        if (saved) return JSON.parse(saved) as Quote[];
+      } catch { /* Use catalogue examples when offline. */ }
+    }
+    return [...initialQuotes];
   });
 
   const [requisitions, setRequisitions] = useState<MaterialRequisition[]>(() => {
@@ -108,7 +136,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
   });
 
   // Selected Project State
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(() => searchParams.get("projectId") ?? "");
   const [activeTab, setActiveTab] = useState<"materials" | "tools" | "requisitions" | "budget" | "team">("materials");
   const [projectStatusFilter, setProjectStatusFilter] = useState<"all" | Project["status"]>("all");
 
@@ -195,6 +223,12 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
   const selectedProject = useMemo(() => {
     return projects.find((p) => p.id === selectedProjectId);
   }, [projects, selectedProjectId]);
+  const sourceQuote = useMemo(() => {
+    if (!selectedProject) return undefined;
+    return quotes.find((quote) => quote.id === selectedProject.sourceQuoteId || quote.projectId === selectedProject.id || quote.projectCode === selectedProject.code);
+  }, [quotes, selectedProject]);
+  const sourceQuoteCode = sourceQuote ? getEffectiveQuoteCode(sourceQuote) : selectedProject?.sourceQuoteCode;
+  const sourceQuoteId = sourceQuote?.id ?? selectedProject?.sourceQuoteId;
   const newPrjCode = useMemo(
     () => getNextProjectCode(projects, newPrjType, newPrjStartDate),
     [newPrjStartDate, newPrjType, projects],
@@ -411,19 +445,19 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
       <section className="dashboard-heading">
         <div>
           <p>Módulo de Obras & Frente de Trabajo</p>
-          <h1>Centro de Costos de Proyectos</h1>
+          <div className="project-heading-with-help"><h1>Centro de Costos de Proyectos</h1><ProjectHelp label="Ayuda del módulo de Obras y Proyectos" text="Aquí administra cada obra: revise presupuesto y gastos, despache recursos, asigne personal y consulte la cotización que originó el trabajo." /></div>
           <small>Consulta detallada del consumo de materiales, insumos gastados y herramientas en custodia por obra.</small>
         </div>
         <div className="dash-quick-btns">
-          <button className="inventory-action btn-edit-project" onClick={() => setIsProjectPickerOpen(true)}>
+          <button className="inventory-action btn-edit-project" title="Modifique fechas, estado, cliente y datos de la obra seleccionada." onClick={() => setIsProjectPickerOpen(true)}>
             Editar proyecto
           </button>
-          {selectedProject?.status === "completed" && <button className="inventory-action btn-secondary-action" onClick={reopenProject}>Reabrir proyecto</button>}
-          <button className="inventory-action btn-budget-adjustment" onClick={() => setIsBudgetAdjustmentOpen(true)}>Ajustar presupuesto</button>
-          <button className="inventory-action btn-primary-action" onClick={openDispatchModal}>
+          {selectedProject?.status === "completed" && <button className="inventory-action btn-secondary-action" title="Vuelve la obra a activa; requiere motivo y nueva fecha estimada." onClick={reopenProject}>Reabrir proyecto</button>}
+          <button className="inventory-action btn-budget-adjustment" title="Registra una adición o reducción presupuestal, con motivo y responsable." onClick={() => setIsBudgetAdjustmentOpen(true)}>Ajustar presupuesto</button>
+          <button className="inventory-action btn-primary-action" title="Registra la salida de materiales o insumos a la obra seleccionada." onClick={openDispatchModal}>
             📤 Despachar a esta Obra
           </button>
-          <button className="inventory-action btn-new-project" onClick={() => setIsNewProjectModalOpen(true)}>
+          <button className="inventory-action btn-new-project" title="Crea una obra o proyecto independiente. Para una cotización aprobada, use Convertir a Obra desde Cotizaciones." onClick={() => setIsNewProjectModalOpen(true)}>
             ➕ Nueva Obra / Proyecto
           </button>
         </div>
@@ -431,13 +465,14 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
 
       {/* Projects Navigation Selector */}
       <section className="projects-selector-bar">
-        <span className="selector-label">Seleccionar Obra:</span>
-        <label className="project-status-filter">Estado <select value={projectStatusFilter} onChange={(event) => { setProjectStatusFilter(event.target.value as "all" | Project["status"]); setSelectedProjectId(""); }}><option value="all">Todas</option><option value="pending">Pendientes</option><option value="active">Activas</option><option value="on_hold">En pausa</option><option value="completed">Finalizadas</option></select></label>
+        <span className="selector-label">Seleccionar Obra: <ProjectHelp label="Ayuda para seleccionar una obra" text="Elija una obra para abrir su ficha. El filtro Estado reduce la lista sin eliminar información." /></span>
+        <label className="project-status-filter">Estado <select aria-label="Filtrar obras por estado" value={projectStatusFilter} onChange={(event) => { setProjectStatusFilter(event.target.value as "all" | Project["status"]); setSelectedProjectId(""); }}><option value="all">Todas</option><option value="pending">Pendientes</option><option value="active">Activas</option><option value="on_hold">En pausa</option><option value="completed">Finalizadas</option></select></label>
         <div className="selector-pills">
           {visibleProjects.map((prj) => (
             <button
               key={prj.id}
               className={`prj-pill status-${prj.status} ${prj.id === selectedProjectId ? "is-selected" : ""}`}
+              title={`Abrir ficha de ${prj.code}`}
               onClick={() => setSelectedProjectId(prj.id)}
             >
               <span className="pill-code">{prj.code}</span>
@@ -460,6 +495,13 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
                 <span className="prj-code-badge">{selectedProject.code}</span>
                 <h2>{selectedProject.name}</h2>
                 {selectedProject.actualEndDate ? <p>Entrega real: <strong>{selectedProject.actualEndDate}</strong></p> : null}
+                {sourceQuoteId && sourceQuoteCode ? (
+                  <Link className="project-source-quote" href={`/quotes?quoteId=${encodeURIComponent(sourceQuoteId)}`}>
+                    <span className="project-source-quote-label">Cotización de origen</span>
+                    <strong>{sourceQuoteCode}</strong>
+                    <span className="project-source-quote-action">Abrir cotización →</span>
+                  </Link>
+                ) : null}
                 <p>Cliente: <strong>{selectedProject.client}</strong> · Ubicación: <strong>{selectedProject.location}</strong></p>
                 {selectedProject.assignedEmployees?.length ? <p>Personal asignado: <strong>{selectedProject.assignedEmployees.map((employee) => employee.name).join(", ")}</strong></p> : null}
               </div>
@@ -500,14 +542,16 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
           {/* Detailed Tab Navigation */}
           <div className="project-tabs-header">
           <button
+            title="Consulta las salidas de materiales e insumos y su costo acumulado."
             className={`tab-btn ${activeTab === "materials" ? "is-active" : ""}`}
               style={{ order: 1 }}
               onClick={() => setActiveTab("materials")}
             >
-              <ProjectTabIcon name="materials" />Materiales e insumos gastados ({projectMovements.length})
+              <ProjectTabIcon name="materials" />Materiales e insumos gastados ({projectMovements.length}) <span className="sr-only">: consulta las salidas registradas y sus costos.</span>
           </button>
-          <button style={{ order: 5 }} className={`tab-btn ${activeTab === "budget" ? "is-active" : ""}`} onClick={() => setActiveTab("budget")}><ProjectTabIcon name="budget" />Ajustes de presupuesto ({selectedProject.budgetAdjustments?.length || 0})</button>
+          <button title="Consulta las adiciones y reducciones autorizadas al presupuesto." style={{ order: 5 }} className={`tab-btn ${activeTab === "budget" ? "is-active" : ""}`} onClick={() => setActiveTab("budget")}><ProjectTabIcon name="budget" />Ajustes de presupuesto ({selectedProject.budgetAdjustments?.length || 0})</button>
           <button
+            title="Controle préstamos, responsables y devoluciones de herramientas de esta obra."
             className={`tab-btn ${activeTab === "tools" ? "is-active" : ""}`}
               style={{ order: 2 }}
               onClick={() => setActiveTab("tools")}
@@ -515,13 +559,14 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
               <ProjectTabIcon name="tools" />Herramientas en custodia ({projectTools.length})
             </button>
             <button
+              title="Consulte las solicitudes de materiales pendientes, aprobadas o atendidas."
               className={`tab-btn ${activeTab === "requisitions" ? "is-active" : ""}`}
               style={{ order: 4 }}
               onClick={() => setActiveTab("requisitions")}
             >
               <ProjectTabIcon name="requisitions" />Requisiciones ({projectRequisitions.length})
             </button>
-            <button style={{ order: 3 }} className={`tab-btn ${activeTab === "team" ? "is-active" : ""}`} onClick={() => void openTeamTab()}><ProjectTabIcon name="team" />Personal de obra ({selectedProject.assignedEmployees?.length || 0})</button>
+            <button title="Asigne o retire empleados responsables de la obra." style={{ order: 3 }} className={`tab-btn ${activeTab === "team" ? "is-active" : ""}`} onClick={() => void openTeamTab()}><ProjectTabIcon name="team" />Personal de obra ({selectedProject.assignedEmployees?.length || 0})</button>
           </div>
 
           {/* TAB 1: Materiales e Insumos Gastados */}

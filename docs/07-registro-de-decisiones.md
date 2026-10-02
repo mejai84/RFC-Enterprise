@@ -7,6 +7,33 @@ audiencia: Dirección, Desarrollo y Operación
 
 # Registro de decisiones arquitectónicas y de producto
 
+## ADR-073 · Identidad legible de la obra de origen comercial
+
+**Fecha:** 2026-10-02
+**Estado:** Aceptada
+
+El consecutivo de obra conserva el formato operativo `OBRA-AAAAMMDD-##`. Cuando nace de una cotización, el nombre de la obra inicia con el código efectivo de la cotización (incluida la revisión), mientras se guardan `sourceQuoteId` y `sourceQuoteCode` para un enlace seguro y navegable.
+
+El enlace comercial hacia Obras utiliza `projectId` en la URL para abrir la ficha concreta; el retorno utiliza `sourceQuoteId`. La referencia se muestra como control de navegación, no como texto informativo secundario.
+
+Para compatibilidad de datos existentes, una obra también resuelve su cotización de origen al encontrar una cotización cuyo `projectId` o `projectCode` coincide con ella.
+
+Las acciones operativas de Obras y Proyectos disponen de ayuda contextual breve y visible mediante foco, cursor o toque, sin ocultar las etiquetas funcionales.
+
+## ADR-074 · APU persistente con edición por estado comercial
+
+**Fecha:** 2026-10-02
+**Estado:** Aceptada
+
+El APU es evidencia de la estimación y nunca se oculta por un cambio de pipeline. Solo los estados `estimating` y `revision_requested` permiten crear, editar, guardar o eliminar APUs. En estados posteriores se abre en consulta para preservar la propuesta enviada; una nueva revisión restablece la edición.
+
+## ADR-075 · Proyecto como entidad general; alquiler como tipo
+
+**Fecha:** 2026-10-02
+**Estado:** Aceptada
+
+`Proyecto` es la entidad transversal creada al adjudicar una cotización. `Obra`, `Mantenimiento` y `Alquiler` son tipos de proyecto. El alquiler tendrá consecutivo `ALQ`, control de periodo, equipo en custodia y cargos adicionales antes de facturar.
+
 Este registro conserva decisiones que afectan el rumbo del producto. Una decisión no se elimina: si cambia, se agrega una nueva entrada que indique cuál reemplaza.
 
 ## ADR-001 · Monolito modular
@@ -508,3 +535,10 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 <!-- ADR-063 (Aceptada, 2026-10-02): las acciones de persistencia APU deben comunicar explícitamente el resultado y su destino. No se presenta un guardado local como si fuera una confirmación de base de datos. -->
 <!-- ADR-064 (Aceptada, 2026-10-02): las alertas del Dashboard se derivan de los datos de sus módulos y no duplican estados. Cada alerta expresa origen, causa, prioridad y un enlace para atenderla; solo las alertas críticas o de advertencia usan animación, compatible con reducción de movimiento. -->
 <!-- ADR-065 (Aceptada, 2026-10-02): una vista previa extensa debe desplazar su propio contenido y conservar una salida disponible arriba y abajo. Los controles se excluyen de la impresión final. -->
+<!-- ADR-066 (Aceptada, 2026-10-02): las ayudas contextuales exponen la regla operativa junto al control que la requiere. En Cotizaciones son accesibles por cursor, foco de teclado y toque; no dependen exclusivamente del hover. -->
+<!-- ADR-067 (Aceptada, 2026-10-02): cada estado oficial del pipeline comercial posee una explicación contextual propia en su columna Kanban. La ayuda indica la acción esperada, no solo una definición nominal. -->
+<!-- ADR-068 (Aceptada, 2026-10-02): toda propuesta comercial impresa debe incluir el valor en cifra y en letras en mayúsculas con la leyenda PESOS COLOMBIANOS M/L; la leyenda se calcula del total presentado en esa versión. -->
+<!-- ADR-069 (Aceptada, 2026-10-02): para evitar redundancia visual, la línea VALOR A PAGAR muestra únicamente el valor en letras. Las notas comerciales se administran en la ficha de la cotización y se ubican debajo de esa leyenda al imprimir. -->
+<!-- ADR-070 (Aceptada, 2026-10-02): las notas comerciales usan saltos de línea como delimitador de filas de impresión. La interfaz lo indica junto al campo para que el usuario controle el resultado documental. -->
+<!-- ADR-071 (Aceptada, 2026-10-02): la conversión de Cotización a Obra persiste identificador y código de oferta de origen en la obra. La ficha resuelve también enlaces históricos por projectId/projectCode y retorna al detalle de Cotizaciones mediante parámetro quoteId. -->
+<!-- ADR-072 (Aceptada, 2026-10-02): la trazabilidad de cotizaciones se representa como línea de tiempo; cada evento conserva responsable, fecha, transición y nota como unidades visuales separadas. -->

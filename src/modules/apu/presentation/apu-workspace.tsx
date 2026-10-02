@@ -39,9 +39,10 @@ const emptyLaborCatalog: LaborPositionCatalog = { positions: [], source: "fallba
 const formatCOP = (value: number) => value.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const newId = () => crypto.randomUUID();
 
-type QuoteContext = { quoteId?: string; quoteCode?: string; quoteTitle?: string };
+type QuoteContext = { quoteId?: string; quoteCode?: string; quoteTitle?: string; quoteStatus?: string };
 
 export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) {
+  const isQuoteApuReadOnly = Boolean(quoteContext?.quoteId && !["estimating", "revision_requested"].includes(quoteContext.quoteStatus ?? "estimating"));
   const [products, setProducts] = useState<StockProduct[]>([]);
   const [apus, setApus] = useState<Apu[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -63,7 +64,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   const selected = useMemo(() => apus.find((apu) => apu.id === selectedId), [apus, selectedId]);
   const visibleApus = useMemo(
     () => quoteContext?.quoteId ? apus.filter((apu) => apu.quoteId === quoteContext.quoteId) : apus,
-    [apus, quoteContext?.quoteId],
+    [apus, quoteContext],
   );
 
   useEffect(() => {
@@ -141,6 +142,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
 
   function createApu(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isQuoteApuReadOnly) { setSaveState("error"); setSaveMessage("Este APU se conserva en consulta porque la cotización ya no está en proceso o por modificar."); return; }
     const data = new FormData(event.currentTarget);
     const now = new Date().toISOString();
     const apu: Apu = {
@@ -162,6 +164,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   }
 
   function createApuFromActivity(activity: ApuActivity) {
+    if (isQuoteApuReadOnly) { setSaveState("error"); setSaveMessage("Este APU está en consulta. Solicite una revisión de cotización para editarlo."); return; }
     const now = new Date().toISOString();
     const apu: Apu = {
       id: newId(),
@@ -181,6 +184,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   }
 
   function updateApu(apu: Apu) {
+    if (isQuoteApuReadOnly) { setSaveState("error"); setSaveMessage("El APU está bloqueado para edición en el estado actual de la cotización."); return; }
     setApus((current) => current.map((item) => item.id === apu.id ? { ...apu, updatedAt: new Date().toISOString() } : item));
     setSaveMessage("Hay cambios pendientes de guardar.");
   }
@@ -237,6 +241,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   }
 
   async function handleSaveTransportItem(item: Omit<TransportItem, "id" | "createdAt" | "updatedAt"> & { id?: string }) {
+    if (isQuoteApuReadOnly) return;
     const saved = await persistTransportItem(companyId, item);
     setTransportCatalog((prev) => {
       const idx = prev.items.findIndex((i) => i.id === saved.id);
@@ -246,6 +251,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   }
 
   async function handleDeleteTransportItem(itemId: string) {
+    if (isQuoteApuReadOnly) return;
     await removeTransportItem(companyId, itemId);
     setTransportCatalog((prev) => ({
       ...prev,
@@ -264,6 +270,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
 
   async function saveSelectedApu() {
     if (!selected) return;
+    if (isQuoteApuReadOnly) { setSaveState("error"); setSaveMessage("El APU está en consulta y no puede guardarse con cambios. Cree una revisión para habilitar edición."); return; }
     setSaveState("saving");
     setSaveMessage(`Guardando ${selected.code}…`);
     try {
@@ -288,6 +295,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
 
   async function deleteSelectedApu() {
     if (!selected || !window.confirm(`¿Eliminar únicamente ${selected.code} · ${selected.name}?`)) return;
+    if (isQuoteApuReadOnly) { setSaveState("error"); setSaveMessage("El APU está en consulta y no puede eliminarse en el estado actual."); return; }
     try { if (companyId) await archiveApuAnalysis(selected.id); } catch (error) { setSaveMessage(error instanceof Error ? error.message : "No fue posible archivar el APU."); return; }
     const nextApus = apus.filter((apu) => apu.id !== selected.id);
     const nextVisible = quoteContext?.quoteId ? nextApus.filter((apu) => apu.quoteId === quoteContext.quoteId) : nextApus;
@@ -299,6 +307,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
 
   async function sendSelectedToBoq() {
     if (!selected || !projectToLink) return;
+    if (isQuoteApuReadOnly) { setSaveState("error"); setSaveMessage("El APU está en consulta. El presupuesto de la obra se controla desde Obras y Proyectos."); return; }
     if (companyId) {
       try {
         await publishApuToBoq(companyId, selected, projectToLink);
@@ -332,6 +341,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
 
   async function addBoqCost(boqItemId: string) {
     if (!companyId || !costAmount || Number(costAmount) <= 0) return;
+    if (isQuoteApuReadOnly) return;
     try {
       await registerBoqCost(companyId, boqItemId, costType, Number(costAmount), costReference);
       const remote = await loadApuWorkspaceData();
@@ -342,12 +352,12 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   }
 
   return (
-    <main className="dashboard-content apu-workspace" id="main-content">
+    <main className={`dashboard-content apu-workspace ${isQuoteApuReadOnly ? "apu-workspace--readonly" : ""}`} id="main-content">
       <section className="dashboard-heading">
         <div><p>Costos · RFC Enterprise</p><h1>Análisis de Precios Unitarios</h1><small>Construye APUs por actividad y toma precios unitarios de Inventarios.</small></div>
       </section>
       {quoteContext?.quoteCode ? (
-        <p className="apu-quote-context">Estás creando actividades para la cotización <strong>{quoteContext.quoteCode}</strong>. Guarda cada APU antes de volver a Cotizaciones.</p>
+        <p className={`apu-quote-context ${isQuoteApuReadOnly ? "is-read-only" : ""}`}>{isQuoteApuReadOnly ? <>Estás consultando el APU de <strong>{quoteContext.quoteCode}</strong>. Se conserva como historial de la oferta; para modificarlo, crea una revisión de cotización.</> : <>Estás creando actividades para la cotización <strong>{quoteContext.quoteCode}</strong>. Guarda cada APU antes de volver a Cotizaciones.</>}</p>
       ) : null}
       <ApuActivityCatalog onCreate={createApuFromActivity} />
       <section className="apu-layout">

@@ -7,6 +7,24 @@ audiencia: Dirección, Producto y Desarrollo
 
 # Módulos y roadmap
 
+## Enlace de prueba cotización → obra
+
+La cotización `COT-004-2026-ALCALDIA-ESTRUCTURA_GIM-R1` queda convertida en la obra `OBRA-20261002-01`. El código de obra permanece consecutivo y operativo; su nombre inicia con el código efectivo de cotización para conservar la trazabilidad visual en ambos módulos.
+
+Al navegar desde la cotización, la obra indicada por el enlace se selecciona y abre directamente en su ficha. La ficha de obra muestra una tarjeta clicable con la cotización de origen para el retorno inmediato al pipeline.
+
+La referencia de origen se resuelve tanto desde los campos nuevos de la obra como desde vínculos ya existentes en la cotización, para no perder la navegación en obras creadas anteriormente.
+
+El módulo de Obras y Proyectos incorpora ayudas contextuales y descripciones de las acciones principales para orientar a usuarios operativos.
+
+## Ciclo de vida del APU en cotizaciones
+
+Un APU creado permanece disponible durante todo el pipeline. Se puede crear y editar únicamente en `Cotización en proceso` y `Por modificar`; en los demás estados se consulta como registro histórico. Para cambiar una oferta enviada o adjudicada se debe crear una revisión.
+
+## Proyecto de alquiler de equipos
+
+Proyecto es el concepto general y `Obra`, `Mantenimiento` o `Alquiler` son sus tipos. El flujo de alquiler se planifica desde Cotizaciones: tarifa/APU, periodo, transporte, operador y condiciones; al confirmarse genera un proyecto `ALQ-AAAAMMDD-##`, enlazado con la custodia de equipos y con los cargos para facturación.
+
 ## Módulos de la plataforma
 
 | Código | Módulo | Estado | Alcance actual |
@@ -106,3 +124,10 @@ audiencia: Dirección, Producto y Desarrollo
 <!-- Registro 2026-10-02: Guardar APU comunica su resultado de forma verificable: durante la operación indica guardando; al finalizar diferencia persistencia correcta en base de datos, guardado solo local y error. -->
 <!-- Registro 2026-10-02: el Dashboard presenta un Centro de Atención con alertas enlazadas a Cotizaciones, APU, Inventario y Obras. Incluye vencimiento, estancamiento, falta de APU, stock mínimo, presupuesto crítico y requisiciones pendientes. -->
 <!-- Registro 2026-10-02: las vistas previas imprimibles de APU y Cotizaciones usan desplazamiento interno, barra de controles superior fija y botones de cierre al inicio y al final del documento. -->
+<!-- Registro 2026-10-02: Cotizaciones incorpora ayuda contextual sobre el flujo de estados en la cabecera y en el cambio de estado; explica registro/revisión, elaboración APU, envío, confirmación/obra, ejecución y retorno Por modificar. -->
+<!-- Registro 2026-10-02: cada columna del Kanban de Cotizaciones incorpora ayuda contextual específica para su estado, con la acción operativa esperada desde Recibido hasta Cerrado o No adjudicado. -->
+<!-- Registro 2026-10-02: el formato comercial imprimible de Cotizaciones expresa el valor total en letras, en mayúsculas y con la terminación PESOS COLOMBIANOS M/L, además de la cifra numérica. -->
+<!-- Registro 2026-10-02: la propuesta muestra solo el valor en letras bajo VALOR A PAGAR, pues el total numérico ya se presenta en la tabla. Las Notas para la propuesta se editan en Datos Generales y se imprimen inmediatamente debajo del valor en letras. -->
+<!-- Registro 2026-10-02: Notas para la propuesta admite múltiples líneas; cada renglón guardado se imprime como una fila independiente debajo del valor en letras. -->
+<!-- Registro 2026-10-02: la relación Cotización-Obra es bidireccional: una cotización adjudicada abre su obra y la ficha de obra muestra su Cotización de origen con retorno directo al detalle comercial. -->
+<!-- Registro 2026-10-02: el historial de una cotización se presenta como línea de tiempo con eventos separados: responsable, fecha, transición de estado y nota en bloques legibles; el control de actualización se adapta a móvil. -->

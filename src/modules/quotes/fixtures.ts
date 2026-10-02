@@ -134,7 +134,7 @@ export const initialQuotes: Quote[] = [
     contactEmail: "mperez@caucasia.gov.co",
     contactPhone: "+57 314 556 1234",
     emailOrigin: "mperez@caucasia.gov.co – Invitación pública municipal",
-    status: "confirmed",
+    status: "in_execution",
     responsible: "Jorge Figueroa",
     estimatedValue: 45000000,
     costBreakdown: {
@@ -157,7 +157,8 @@ export const initialQuotes: Quote[] = [
     receivedAt: "2026-09-10",
     deadline: "2026-09-20",
     nextAction: "Crear obra formal en módulo de Proyectos y programar inicio de taller",
-    projectId: undefined,
+    projectId: "prj-04",
+    projectCode: "OBRA-20261002-01",
     history: [
       { id: "h010", fromStatus: null, toStatus: "received", changedBy: "Sistema", changedAt: "2026-09-10T09:00:00Z" },
       { id: "h011", fromStatus: "received", toStatus: "in_review", changedBy: "Jorge Figueroa", changedAt: "2026-09-10T14:00:00Z" },
@@ -165,9 +166,10 @@ export const initialQuotes: Quote[] = [
       { id: "h013", fromStatus: "estimating", toStatus: "sent", changedBy: "Jorge Figueroa", changedAt: "2026-09-16T17:00:00Z", note: "Propuesta económica formal enviada" },
       { id: "h014", fromStatus: "sent", toStatus: "awaiting_response", changedBy: "Jorge Figueroa", changedAt: "2026-09-16T17:05:00Z" },
       { id: "h015", fromStatus: "awaiting_response", toStatus: "confirmed", changedBy: "Jorge Figueroa", changedAt: "2026-09-28T10:30:00Z", note: "Aprobada por la Secretaría de Obras. Orden de servicio #OS-2026-187" },
+      { id: "h016", fromStatus: "confirmed", toStatus: "in_execution", changedBy: "Jorge Figueroa", changedAt: "2026-10-02T09:00:00Z", note: "Cotización convertida a Obra oficial: OBRA-20261002-01" },
     ],
     createdAt: "2026-09-10T09:00:00Z",
-    updatedAt: "2026-09-28T10:30:00Z",
+    updatedAt: "2026-10-02T09:00:00Z",
   },
   {
     id: "cot-005",

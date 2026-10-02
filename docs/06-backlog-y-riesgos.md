@@ -7,6 +7,15 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 
 # Backlog y riesgos
 
+## Validación de integración
+
+- **QUO-OBRA-004 · Terminado:** caso de prueba `COT-004-2026-ALCALDIA-ESTRUCTURA_GIM-R1` enlazado con `OBRA-20261002-01`, con referencia bidireccional y cambio de estado a ejecución.
+- **QUO-OBRA-005 · Terminado:** enlaces profundos seleccionan la ficha de obra destino y exponen el código efectivo de cotización como retorno visible.
+- **QUO-OBRA-007 · Terminado:** compatibilidad de enlaces con obras históricas que guardaban el vínculo únicamente en la cotización.
+- **PRJ-UX-006 · Terminado:** ayudas accesibles para acciones, selector, filtros y pestañas principales de Obras y Proyectos.
+- **APU-006 · Terminado:** conservación y consulta del APU fuera de los estados editables, con bloqueo visible de edición y ruta de revisión.
+- **ALQ-001 · Alta · Pendiente:** tipo de proyecto Alquiler, consecutivo `ALQ`, periodo de entrega/devolución, asignación de equipo, cargos por extensión/daños y enlace a facturación.
+
 ## Backlog priorizado
 
 | ID | Prioridad | Entrega | Estado | Criterio de aceptación resumido |
@@ -96,3 +105,10 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 <!-- APU-016 (Terminado, 2026-10-02): confirmación visible de guardado APU con estado de progreso y fuente de persistencia (base de datos, local o error). -->
 <!-- DASH-002 (Terminado, 2026-10-02): alertas operativas priorizadas y accionables: las críticas/advertencias muestran origen y pulso visual discreto; se respeta prefers-reduced-motion. -->
 <!-- UI-007 (Terminado, 2026-10-02): modales de impresión APU/Cotización no ocultan su encabezado ni su salida; scroll contenido, cierre superior/inferior y adaptación táctil. -->
+<!-- QTE-014 (Terminado, 2026-10-02): iconos de ayuda contextuales en Cotizaciones explican el ciclo de estados sin sacar al usuario de la operación. -->
+<!-- QTE-015 (Terminado, 2026-10-02): ayuda contextual por cada título de estado del Kanban, para reducir movimientos erróneos y orientar la siguiente acción. -->
+<!-- QTE-016 (Terminado, 2026-10-02): propuesta comercial muestra valor total numérico y en letras en pesos colombianos M/L, reduciendo ambigüedad contractual. -->
+<!-- QTE-017 (Terminado, 2026-10-02): se separan las notas comerciales de la cotización y se pueden editar en Datos Generales; se imprimen debajo del valor en letras. -->
+<!-- QTE-018 (Terminado, 2026-10-02): notas comerciales multirenglón se preservan y se presentan como filas separadas en la propuesta, evitando agrupación ilegible. -->
+<!-- QTE-019 (Terminado, 2026-10-02): trazabilidad bidireccional Cotización ↔ Obra; se evita perder el contexto comercial al entrar a la ejecución. -->
+<!-- UI-008 (Terminado, 2026-10-02): historial comercial rediseñado como timeline responsivo; evita acumulación visual de fechas, responsables, cambios y notas. -->

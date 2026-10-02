@@ -9,6 +9,7 @@
 import { useState, useMemo, useCallback, useEffect, type FormEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import {
   type Quote,
   type QuoteStatus,
@@ -57,8 +58,79 @@ function formatDateTime(iso: string): string {
   return d.toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
+/** Convierte valores enteros COP a la leyenda comercial exigida en la propuesta. */
+function amountInColombianPesos(value: number): string {
+  const units = ["", "UNO", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"];
+  const teens = ["DIEZ", "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISÉIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE"];
+  const tens = ["", "", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"];
+  const hundreds = ["", "CIENTO", "DOSCIENTOS", "TRESCIENTOS", "CUATROCIENTOS", "QUINIENTOS", "SEISCIENTOS", "SETECIENTOS", "OCHOCIENTOS", "NOVECIENTOS"];
+  const underThousand = (number: number): string => {
+    if (number === 0) return "";
+    if (number === 100) return "CIEN";
+    const hundred = Math.floor(number / 100);
+    const rest = number % 100;
+    const result = hundred ? hundreds[hundred] : "";
+    if (rest < 10) return [result, units[rest]].filter(Boolean).join(" ");
+    if (rest < 20) return [result, teens[rest - 10]].filter(Boolean).join(" ");
+    if (rest < 30) return [result, rest === 20 ? "VEINTE" : `VEINTI${units[rest - 20].toLowerCase()}`.toUpperCase()].filter(Boolean).join(" ");
+    const ten = tens[Math.floor(rest / 10)];
+    return [result, rest % 10 ? `${ten} Y ${units[rest % 10]}` : ten].filter(Boolean).join(" ");
+  };
+  const amount = Math.max(0, Math.round(value));
+  if (amount === 0) return "CERO PESOS COLOMBIANOS M/L";
+  const groups = ["", "MIL", "MILLÓN", "MIL MILLONES", "BILLÓN"];
+  let remaining = amount;
+  let index = 0;
+  const parts: string[] = [];
+  while (remaining > 0) {
+    const group = remaining % 1000;
+    if (group) {
+      let words = underThousand(group);
+      if (index === 1) words = group === 1 ? "MIL" : `${words} MIL`;
+      else if (index === 2) words = group === 1 ? "UN MILLÓN" : `${words.replace(/UNO$/, "UN")} MILLONES`;
+      else if (index > 2) words = group === 1 ? `UN ${groups[index]}` : `${words.replace(/UNO$/, "UN")} ${groups[index]}`;
+      parts.unshift(words);
+    }
+    remaining = Math.floor(remaining / 1000);
+    index += 1;
+  }
+  return `${parts.join(" ")} PESOS COLOMBIANOS M/L`;
+}
+
+function proposalNoteLines(notes: string | undefined): string[] {
+  return (notes ?? "").split(/\r?\n/).map((note) => note.trim()).filter(Boolean);
+}
+
 function uid(): string {
   return Math.random().toString(36).slice(2, 10);
+}
+
+/** Ayuda contextual: visible con cursor, foco de teclado o toque. */
+const statusHelp: Record<QuoteStatus, string> = {
+  received: "Radica la solicitud, el contacto y los documentos o planos recibidos.",
+  in_review: "Valida alcance, requisitos, documentación y si se necesita visita técnica.",
+  estimating: "Elabora o ajusta el APU y prepara la propuesta económica.",
+  sent: "La propuesta ya fue enviada al cliente; verifica vigencia y seguimiento.",
+  awaiting_response: "Esperando decisión del cliente. Haz seguimiento si supera 3 días.",
+  revision_requested: "El cliente pidió cambios: ajusta APU, alcance o propuesta antes de reenviar.",
+  confirmed: "Oferta aceptada. Convierte la cotización en Obra para iniciar la ejecución.",
+  in_execution: "La obra está activa: registra avances, costos y consumo de recursos.",
+  work_completed: "Trabajo terminado: valida entrega, acta y soportes para facturación.",
+  billing_pending: "Pendiente de facturación o cobro según las condiciones acordadas.",
+  closed: "Ciclo comercial y de cobro finalizado. Se conserva para consulta y trazabilidad.",
+  lost: "No adjudicada. Registra el motivo para análisis comercial futuro.",
+};
+
+function QuoteStatusHelp({ compact = false, status }: { compact?: boolean; status?: QuoteStatus }) {
+  return (
+    <span className={`quote-help ${compact ? "is-compact" : ""}`}>
+      <button type="button" className="quote-help-trigger" aria-label="Ayuda sobre los estados de cotización">?</button>
+      <span className="quote-help-popover" role="tooltip">
+        <strong>{status ? `${getStatusMeta(status).label}: qué hacer` : "Flujo de cotización"}</strong>
+        {status ? <span>{statusHelp[status]}</span> : <><span><b>1. Recibido / En revisión:</b> registra solicitud, planos, alcance y visita.</span><span><b>2. Cotización en proceso:</b> crea o modifica el APU y la propuesta.</span><span><b>3. Enviada / Esperando respuesta:</b> seguimiento comercial al cliente.</span><span><b>4. Confirmada:</b> conviértela en Obra; luego continúa Ejecución, Terminada y Pago.</span><span><b>Por modificar:</b> habilita ajustar el APU tras comentarios del cliente.</span></>}
+      </span>
+    </span>
+  );
 }
 
 /* ── Componente principal ────────────────────────────────────── */
@@ -66,6 +138,7 @@ function uid(): string {
 type ViewMode = "kanban" | "list";
 
 export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
+  const searchParams = useSearchParams();
   const [quotes, setQuotes] = useState<Quote[]>(() => {
     if (typeof window === "undefined") return initialQuotes;
     try {
@@ -85,8 +158,12 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       return initialQuotes;
     }
   });
+
   const [view, setView] = useState<ViewMode>("kanban");
-  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(() => {
+    const quoteId = searchParams.get("quoteId");
+    return quoteId ? quotes.find((quote) => quote.id === quoteId) ?? null : null;
+  });
   const [showNewForm, setShowNewForm] = useState(false);
   const [quoteToPrint, setQuoteToPrint] = useState<Quote | null>(null);
   const [filterStatus, setFilterStatus] = useState<QuoteStatus | "all">("all");
@@ -206,6 +283,14 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     setActionNotice("Pre-costeo de 3 rubros actualizado con éxito.");
   }, []);
 
+  const handleSaveProposalNotes = useCallback((quoteId: string, notes: string) => {
+    const updatedAt = new Date().toISOString();
+    const nextNotes = notes.trim() || undefined;
+    setQuotes((previous) => previous.map((quote) => quote.id === quoteId ? { ...quote, notes: nextNotes, updatedAt } : quote));
+    setSelectedQuote((previous) => previous?.id === quoteId ? { ...previous, notes: nextNotes, updatedAt } : previous);
+    setActionNotice(nextNotes ? "Notas para la propuesta guardadas." : "Notas para la propuesta eliminadas.");
+  }, []);
+
   /* ── Guardar actualización de Visita Técnica ─────────────── */
   const handleSaveTechnicalVisit = useCallback((quoteId: string, visit: TechnicalVisit) => {
     const now = new Date().toISOString();
@@ -290,10 +375,12 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       id: projectId,
       code: generatedProjectCode,
       type: "obra",
-      name: quote.title,
+      name: `${getEffectiveQuoteCode(quote)} · ${quote.title}`,
       client: quote.client,
       location: "Por definir",
       budget: quote.estimatedValue ?? 0,
+      sourceQuoteId: quote.id,
+      sourceQuoteCode: getEffectiveQuoteCode(quote),
       status: "active",
       createdAt: startDate,
       startDate,
@@ -436,7 +523,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       {/* ── Header ────────────────────────────────────────────── */}
       <header className="quotes-header">
         <div className="quotes-header-left">
-          <h1>Cotizaciones & Pipeline Comercial</h1>
+          <div className="quotes-title-with-help"><h1>Cotizaciones & Pipeline Comercial</h1><QuoteStatusHelp /></div>
           <p className="quotes-subtitle">
             Flujo comercial continuo: desde la recepción de la solicitud hasta la adjudicación y obra en ejecución.
           </p>
@@ -568,6 +655,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           onClose={() => setSelectedQuote(null)}
           onStatusChange={changeStatus}
           onSaveCostBreakdown={handleSaveCostBreakdown}
+          onSaveProposalNotes={handleSaveProposalNotes}
           onSaveTechnicalVisit={handleSaveTechnicalVisit}
           onCreateRevision={handleCreateRevision}
           onConvertToProject={handleConvertToProject}
@@ -625,7 +713,7 @@ function KanbanView({
               style={{ "--col-color": meta.color } as React.CSSProperties}
             >
               <span className="kanban-col-icon">{meta.icon}</span>
-              <span className="kanban-col-label">{meta.label}</span>
+              <span className="kanban-col-label">{meta.label}</span><QuoteStatusHelp compact status={colStatus} />
               <span className="kanban-col-count">{colQuotes.length}</span>
             </div>
 
@@ -948,6 +1036,7 @@ function DetailModal({
   onClose,
   onStatusChange,
   onSaveCostBreakdown,
+  onSaveProposalNotes,
   onSaveTechnicalVisit,
   onCreateRevision,
   onConvertToProject,
@@ -957,6 +1046,7 @@ function DetailModal({
   onClose: () => void;
   onStatusChange: (id: string, status: QuoteStatus, note?: string) => void;
   onSaveCostBreakdown: (id: string, breakdown: QuoteCostBreakdown) => void;
+  onSaveProposalNotes: (id: string, notes: string) => void;
   onSaveTechnicalVisit: (id: string, visit: TechnicalVisit) => void;
   onCreateRevision: (id: string, reason: string) => void;
   onConvertToProject: (quote: Quote) => void;
@@ -973,6 +1063,7 @@ function DetailModal({
   const [equipment, setEquipment] = useState(quote.costBreakdown?.equipment ?? 0);
   const [transport, setTransport] = useState(quote.costBreakdown?.transport ?? 0);
   const [indirects, setIndirects] = useState(quote.costBreakdown?.indirects ?? 0);
+  const [proposalNotes, setProposalNotes] = useState(quote.notes ?? "");
 
   // Estado local para edición de Visita Técnica
   const [visitReq, setVisitReq] = useState(quote.technicalVisit?.required ?? false);
@@ -987,6 +1078,11 @@ function DetailModal({
   const effectiveCode = getEffectiveQuoteCode(quote);
   const currentCostSum = materials + labor + equipment + transport + indirects;
   const canManageApu = quote.status === "estimating" || quote.status === "revision_requested";
+  const [hasExistingApu] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return (JSON.parse(localStorage.getItem("rfc_apus") || "[]") as Apu[]).some((apu) => apu.quoteId === quote.id); } catch { return false; }
+  });
+  const apuHref = `/apu?quoteId=${encodeURIComponent(quote.id)}&quoteCode=${encodeURIComponent(effectiveCode)}&quoteTitle=${encodeURIComponent(quote.title)}&quoteStatus=${encodeURIComponent(quote.status)}`;
 
   return (
     <div
@@ -1026,12 +1122,14 @@ function DetailModal({
           {canManageApu ? (
             <Link
               className="action-pill-btn btn-apu"
-              href={`/apu?quoteId=${encodeURIComponent(quote.id)}&quoteCode=${encodeURIComponent(effectiveCode)}&quoteTitle=${encodeURIComponent(quote.title)}`}
+              href={apuHref}
               title="Crear y editar las actividades APU de esta cotización"
             >
               Gestionar APU de esta cotización
             </Link>
-          ) : <span className="quote-apu-guidance">El APU se habilita al pasar a Cotización en proceso.</span>}
+          ) : hasExistingApu ? (
+            <Link className="action-pill-btn btn-apu btn-apu-readonly" href={apuHref} title="Consultar el APU histórico; solo se habilita edición al crear una revisión.">Consultar APU (solo lectura)</Link>
+          ) : <span className="quote-apu-guidance">No hay APU creado. Solo se puede crear o editar durante Cotización en proceso o Por modificar.</span>}
 
           <button
             className="action-pill-btn btn-revision"
@@ -1053,7 +1151,7 @@ function DetailModal({
           )}
 
           {quote.projectCode && (
-            <Link href="/projects" className="action-pill-btn btn-view-project">
+            <Link href={`/projects?projectId=${encodeURIComponent(quote.projectId ?? "")}`} className="action-pill-btn btn-view-project">
               ✓ Ver Obra: {quote.projectCode} →
             </Link>
           )}
@@ -1155,11 +1253,11 @@ function DetailModal({
               </div>
             )}
 
-            {quote.notes && (
-              <div className="quote-modal-notes">
-                <strong>Observaciones técnicas y alcance:</strong> {quote.notes}
-              </div>
-            )}
+            <div className="quote-proposal-notes-editor">
+              <label htmlFor="quote-proposal-notes"><strong>Notas para la propuesta</strong><small>Escribe una nota por renglón; cada una se imprimirá en su propia fila debajo del valor en letras.</small></label>
+              <textarea id="quote-proposal-notes" rows={4} value={proposalNotes} onChange={(event) => setProposalNotes(event.target.value)} placeholder={"Ej. valor incluye transporte\nEj. no incluye IVA\nEj. vigencia según oferta"} />
+              <button type="button" className="quotes-new-btn" onClick={() => onSaveProposalNotes(quote.id, proposalNotes)}>Guardar notas</button>
+            </div>
           </div>
         )}
 
@@ -1366,7 +1464,7 @@ function DetailModal({
           <div className="quote-tab-content">
             {/* Cambiar estado */}
             <div className="quote-modal-status-change">
-              <label className="quote-modal-label">Actualizar estado del pipeline</label>
+              <label className="quote-modal-label">Actualizar estado del pipeline <QuoteStatusHelp compact /></label>
               <div className="quote-modal-status-row">
                 <select
                   className="status-select"
@@ -1596,8 +1694,8 @@ function NewQuoteModal({
           </label>
 
           <label className="form-field">
-            Alcance preliminar y observaciones
-            <textarea name="notes" rows={2} placeholder="Detalles de requisitos, normas técnicas aplicables..." />
+            Notas para la propuesta (aparecen debajo del valor en letras)
+            <textarea name="notes" rows={3} placeholder={"Ej. valor incluye transporte\nEj. no incluye IVA\nEj. vigencia según oferta"} />
           </label>
 
           <div className="new-quote-actions">
@@ -1623,6 +1721,8 @@ function PremiumProposalSheet({ quote }: { quote: Quote }) {
   const subtotal = quote.estimatedValue ?? (quote.costBreakdown ? calculateTotalCost(quote.costBreakdown) : 0);
   const vat = Math.round(subtotal * 0.19);
   const total = subtotal + vat;
+  const totalInWords = amountInColombianPesos(total);
+  const notes = proposalNoteLines(quote.notes);
   const costRows: Array<[string, number]> = quote.costBreakdown
     ? [
         ["Materiales e insumos", quote.costBreakdown.materials],
@@ -1654,8 +1754,8 @@ function PremiumProposalSheet({ quote }: { quote: Quote }) {
       </tfoot>
     </table>
     <section className="premium-conditions">
-      <p><strong>VALOR A PAGAR:</strong> {formatCOP(total)} PESOS M/L.</p>
-      {quote.notes && <p><strong>ALCANCE:</strong> {quote.notes}</p>}
+      <p><strong>VALOR A PAGAR:</strong> {totalInWords}.</p>
+      {notes.map((note, index) => <p key={`${note}-${index}`}><strong>{index === 0 ? "NOTAS:" : ""}</strong> {note}</p>)}
       <p><strong>TIEMPO DE ENTREGA:</strong> {quote.deliveryTimeWeeks ?? 3} SEMANAS CALENDARIO</p>
       <p><strong>FORMA DE PAGO:</strong> {(quote.paymentTerms || "30 días calendario después de radicada la factura").toUpperCase()}</p>
       <p><strong>COTIZACIÓN VÁLIDA POR:</strong> {quote.validityDays ?? 30} DÍAS CALENDARIO</p>
@@ -1676,6 +1776,8 @@ function FormalProposalModal({
 }) {
   const effectiveCode = getEffectiveQuoteCode(quote);
   const total = quote.estimatedValue ?? (quote.costBreakdown ? calculateTotalCost(quote.costBreakdown) : 0);
+  const totalInWords = amountInColombianPesos(total);
+  const notes = proposalNoteLines(quote.notes);
   const validityDays = quote.validityDays ?? 30;
   const deliveryWeeks = quote.deliveryTimeWeeks ?? 3;
   const paymentTerms = quote.paymentTerms ?? "50% de anticipo y 50% contra acta de entrega final a satisfacción.";
@@ -1744,10 +1846,10 @@ function FormalProposalModal({
             <p className="proposal-description">
               Representaciones Figueroa Castro S.A.S. se complace en someter a su consideración la propuesta técnico-económica para la ejecución de: <strong>{quote.title}</strong>, de conformidad con las especificaciones técnicas suministradas y las normas de ingeniería aplicables.
             </p>
-            {quote.notes && (
+            {notes.length > 0 && (
               <div className="proposal-scope-notes">
-                <p><strong>Detalle del alcance y especificaciones:</strong></p>
-                <p>{quote.notes}</p>
+                <p><strong>Notas para la propuesta:</strong></p>
+                {notes.map((note, index) => <p key={`${note}-${index}`}>{note}</p>)}
               </div>
             )}
           </div>
@@ -1813,6 +1915,7 @@ function FormalProposalModal({
                 </tr>
               </tbody>
             </table>
+            <p className="proposal-value-in-words"><strong>VALOR EN LETRAS:</strong> {totalInWords}.</p>
           </div>
 
           {/* Condiciones comerciales */}

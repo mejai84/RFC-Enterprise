@@ -27,6 +27,9 @@ export type Project = {
   actualEndDate?: string; // Fecha real de entrega o finalización
   assignedEmployees?: AssignedProjectEmployee[];
   budgetAdjustments?: Array<{ id: string; amount: number; reason: string; responsible: string; occurredAt: string }>;
+  /** Cotización de origen cuando la obra fue adjudicada desde el pipeline comercial. */
+  sourceQuoteId?: string;
+  sourceQuoteCode?: string;
 };
 
 export function getNextProjectCode(
@@ -86,5 +89,20 @@ export const initialProjects: Project[] = [
     createdAt: "2026-02-20",
     startDate: "2026-02-20",
     estimatedEndDate: "2026-04-30",
+  },
+  {
+    id: "prj-04",
+    code: "OBRA-20261002-01",
+    type: "obra",
+    name: "COT-004-2026-ALCALDIA-ESTRUCTURA_GIM-R1 · Fabricación e instalación estructura metálica gimnasio",
+    client: "Alcaldía de Caucasia",
+    location: "Caucasia, Antioquia",
+    budget: 45000000,
+    sourceQuoteId: "cot-004",
+    sourceQuoteCode: "COT-004-2026-ALCALDIA-ESTRUCTURA_GIM-R1",
+    status: "active",
+    createdAt: "2026-10-02",
+    startDate: "2026-10-02",
+    estimatedEndDate: "2026-11-13",
   },
 ];

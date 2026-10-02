@@ -7,6 +7,20 @@ audiencia: Dirección, Operaciones, Almacén, Contabilidad y Desarrollo
 
 # Ficha de Módulo: Costeo de Materiales por Obra y Control de Inventarios
 
+## Trazabilidad cotización–obra
+
+Cada obra creada desde una cotización conserva el identificador y código de cotización de origen. El consecutivo propio de la obra permite su operación y costeo; el nombre incorpora el código comercial para que el equipo reconozca inmediatamente el expediente que la originó.
+
+La ficha de obra conserva una acción visible de regreso a la cotización de origen. Esto permite consultar el alcance comercial antes de registrar consumos, costos o avances de obra.
+
+Las obras creadas antes del vínculo bidireccional conservan el acceso cuando la cotización ya contiene su código o identificador de obra.
+
+Las ayudas del módulo explican el propósito de despacho, ajustes presupuestales, selección de obra y consulta por pestañas, reduciendo errores de operación durante el costeo.
+
+El APU de una cotización enviada, confirmada o en ejecución se conserva como línea base consultable. Los costos reales y ajustes posteriores se registran en la obra/BOQ; cualquier cambio de la oferta comercial exige una nueva revisión de cotización.
+
+Para alquileres, el APU o tarifa cubre equipo, tiempo de uso, transporte, operador y otros conceptos pactados. El proyecto de tipo Alquiler deberá relacionar el equipo con su entrega/devolución y registrar días, horas, daños o extensiones como cargos facturables.
+
 ## Unidad de compra vs. unidad de consumo
 
 Las entradas pueden recibirse en una presentación comercial y consumirse en una unidad menor. Cada nuevo artículo guarda la presentación, su equivalencia y su costo; el inventario valoriza y descuenta en la unidad de consumo. Ejemplo: una caja de 100 tornillos a COP 50.000 ingresa 100 unidades a COP 500 cada una.
@@ -186,3 +200,10 @@ export type ToolLoan = {
 <!-- Registro 2026-10-02: un APU guarda con retroalimentación de estado: progreso mientras se crea la versión, confirmación verde cuando la base acepta la versión y aviso diferenciado cuando la persistencia es solo local. -->
 <!-- Registro 2026-10-02: el control de costeo se vigila desde el Centro de Atención: cotizaciones vencidas/estancadas o sin APU, recursos bajo mínimo, requisiciones sin despacho y obras en 80% o sobre el 100% de presupuesto se priorizan para actuación. -->
 <!-- Registro 2026-10-02: la previsualización imprimible del APU conserva acceso continuo a imprimir/cerrar y añade cierre al pie; el documento completo puede revisarse mediante scroll antes de exportar a PDF. -->
+<!-- Registro 2026-10-02: la ayuda de estados informa que el APU se construye o modifica en Cotización en proceso y Por modificar, luego la confirmación convierte la oferta a la fase de Obra. -->
+<!-- Registro 2026-10-02: las columnas del pipeline indican su acción de control: en proceso elabora APU, por modificar ajusta análisis, confirmada convierte a Obra y ejecución registra costos/recursos. -->
+<!-- Registro 2026-10-02: al exportar/imprimir la propuesta, el total económico se representa simultáneamente como COP numérico y como valor en letras en mayúsculas terminado en PESOS COLOMBIANOS M/L. -->
+<!-- Registro 2026-10-02: el total numérico se mantiene en la tabla económica; la leyenda inferior expresa solo el valor en letras. Notas comerciales editables se imprimen debajo de dicha leyenda. -->
+<!-- Registro 2026-10-02: notas debajo del valor en letras se separan por renglón: cada salto de línea registrado se convierte en una fila imprimible individual. -->
+<!-- Registro 2026-10-02: cada obra adjudicada mantiene referencia a su cotización fuente; desde la ejecución se retorna al detalle comercial para consultar alcance, propuesta, valor y condiciones que originaron el presupuesto. -->
+<!-- Registro 2026-10-02: las revisiones y cambios del flujo comercial se consultan en una línea de tiempo separada, permitiendo auditar con claridad quién cambió el estado, cuándo y con qué nota. -->

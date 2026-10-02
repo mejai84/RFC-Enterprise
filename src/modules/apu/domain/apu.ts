@@ -24,6 +24,10 @@ export type Apu = {
   lines: ApuLine[];
   quoteId?: string;
   quoteCode?: string;
+  projectId?: string;
+  revision?: number;
+  versionId?: string;
+  status?: "draft" | "in_review" | "approved" | "superseded" | "archived";
   createdAt: string;
   updatedAt: string;
 };

@@ -9,7 +9,7 @@ import { initialAdministrator } from "@/core/users";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import { createBrowserClient } from "@supabase/ssr";
 
-type IconName = "grid" | "briefcase" | "building" | "boxes" | "arrows" | "checklist" | "chart" | "users" | "logout" | "menu" | "bell" | "close";
+type IconName = "grid" | "briefcase" | "building" | "boxes" | "arrows" | "checklist" | "chart" | "users" | "logout" | "menu" | "bell" | "close" | "sidebar";
 
 function Icon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
@@ -86,6 +86,12 @@ function Icon({ name }: { name: IconName }) {
         <path d="m6 6 12 12M18 6 6 18" />
       </>
     ),
+    sidebar: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M9 4v16M15 9l-3 3 3 3" />
+      </>
+    ),
   };
   return (
     <svg
@@ -118,6 +124,7 @@ const navigation = [
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentUser, setCurrentUser] = useState(initialAdministrator);
   const [currentRole, setCurrentRole] = useState("Usuario del portal");
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -150,6 +157,22 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    try {
+      setIsSidebarCollapsed(localStorage.getItem("rfc_dashboard_sidebar_collapsed") === "true");
+    } catch {
+      // La barra lateral permanece expandida si el almacenamiento no está disponible.
+    }
+  }, []);
+
+  function toggleSidebar() {
+    setIsSidebarCollapsed((current) => {
+      const next = !current;
+      try { localStorage.setItem("rfc_dashboard_sidebar_collapsed", String(next)); } catch { /* Preferencia solo temporal. */ }
+      return next;
+    });
+  }
+
   async function signOut() {
     setIsSigningOut(true);
     if (isSupabaseConfigured && supabaseUrl && supabasePublishableKey) {
@@ -160,7 +183,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="dashboard-shell">
+    <div className={`dashboard-shell ${isSidebarCollapsed ? "is-sidebar-collapsed" : ""}`}>
       <button
         className={`dashboard-backdrop ${isMenuOpen ? "is-visible" : ""}`}
         aria-label="Cerrar navegación"
@@ -208,6 +231,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 href={href}
                 key={label}
                 onClick={() => setIsMenuOpen(false)}
+                title={isSidebarCollapsed ? label : undefined}
               >
                 <Icon name={icon} />
                 <span>{label}</span>
@@ -238,6 +262,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             type="button"
           >
             <Icon name="menu" />
+          </button>
+          <button
+            className="dashboard-sidebar-toggle"
+            aria-controls="portal-navigation"
+            aria-expanded={!isSidebarCollapsed}
+            aria-label={isSidebarCollapsed ? "Mostrar barra lateral" : "Contraer barra lateral"}
+            onClick={toggleSidebar}
+            type="button"
+          >
+            <Icon name="sidebar" />
           </button>
           <div className="dashboard-company">
             <strong>RFC Enterprise</strong>

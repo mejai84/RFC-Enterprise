@@ -4,18 +4,27 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   apuCategoryMeta,
   apuTotal,
+  archiveApuAnalysis,
   getLaborPositionCatalog,
   lineTotal,
+  loadApuWorkspaceData,
+  publishApuToBoq,
+  registerBoqCost,
+  saveApuAnalysis,
   type Apu,
   type ApuActivity,
   type ApuCategory,
   type ApuLine,
   type LaborPosition,
   type LaborPositionCatalog,
+  type ApuProject,
+  type ProjectBoqCost,
+  type ProjectBoqItem,
 } from "@/modules/apu";
 import type { StockProduct } from "@/modules/inventory";
 import { ApuActivityCatalog } from "./apu-activity-catalog";
 import { ApuLaborPicker } from "./apu-labor-picker";
+import { ApuResourcePicker } from "./apu-resource-picker";
 
 const categories: ApuCategory[] = ["equipment", "materials", "labor", "transport"];
 const emptyLaborCatalog: LaborPositionCatalog = { positions: [], source: "fallback" };
@@ -31,6 +40,14 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   const [laborCatalog, setLaborCatalog] = useState<LaborPositionCatalog>(emptyLaborCatalog);
   const [isLaborLoading, setIsLaborLoading] = useState(true);
   const [saveMessage, setSaveMessage] = useState("");
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [projects, setProjects] = useState<ApuProject[]>([]);
+  const [boqItems, setBoqItems] = useState<ProjectBoqItem[]>([]);
+  const [boqCosts, setBoqCosts] = useState<ProjectBoqCost[]>([]);
+  const [projectToLink, setProjectToLink] = useState("");
+  const [costType, setCostType] = useState<ProjectBoqCost["costType"]>("committed");
+  const [costAmount, setCostAmount] = useState("");
+  const [costReference, setCostReference] = useState("");
   const selected = useMemo(() => apus.find((apu) => apu.id === selectedId), [apus, selectedId]);
   const visibleApus = useMemo(
     () => quoteContext?.quoteId ? apus.filter((apu) => apu.quoteId === quoteContext.quoteId) : apus,
@@ -38,24 +55,44 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   );
 
   useEffect(() => {
-    try {
-      setProducts(JSON.parse(localStorage.getItem("rfc_inventory_products") || "[]"));
-      const saved = JSON.parse(localStorage.getItem("rfc_apus") || "[]") as Apu[];
-      setApus(saved);
-      const visible = quoteContext?.quoteId ? saved.filter((apu) => apu.quoteId === quoteContext.quoteId) : saved;
-      setSelectedId(visible[0]?.id || "");
-    } catch {
-      setSaveMessage("No fue posible leer los APUs guardados en este dispositivo.");
+    let active = true;
+    async function loadWorkspace() {
+      try {
+        setProducts(JSON.parse(localStorage.getItem("rfc_inventory_products") || "[]"));
+        const remote = await loadApuWorkspaceData();
+        if (remote) {
+          if (!active) return;
+          setCompanyId(remote.companyId);
+          setProjects(remote.projects);
+          setBoqItems(remote.boqItems);
+          setBoqCosts(remote.boqCosts);
+          setApus(remote.apus);
+          const visible = quoteContext?.quoteId ? remote.apus.filter((apu) => apu.quoteId === quoteContext.quoteId) : remote.apus;
+          setSelectedId(visible[0]?.id || "");
+          setSaveMessage("APUs cargados desde la base de datos.");
+          return;
+        }
+        const saved = JSON.parse(localStorage.getItem("rfc_apus") || "[]") as Apu[];
+        if (!active) return;
+        setApus(saved);
+        const visible = quoteContext?.quoteId ? saved.filter((apu) => apu.quoteId === quoteContext.quoteId) : saved;
+        setSelectedId(visible[0]?.id || "");
+      } catch {
+        if (active) setSaveMessage("No fue posible cargar la base de datos; se muestra el respaldo de este dispositivo.");
+      }
     }
+    void loadWorkspace();
+    return () => { active = false; };
   }, [quoteContext?.quoteId]);
 
   useEffect(() => {
     let active = true;
-    getLaborPositionCatalog().then((catalog) => {
-      if (!active) return;
-      setLaborCatalog(catalog);
-      setIsLaborLoading(false);
-    });
+    getLaborPositionCatalog()
+      .then((catalog) => { if (active) setLaborCatalog(catalog); })
+      .catch(() => {
+        if (active) setLaborCatalog({ positions: [], source: "fallback", warning: "No fue posible cargar el catálogo de cargos. Intenta actualizar la página." });
+      })
+      .finally(() => { if (active) setIsLaborLoading(false); });
     return () => { active = false; };
   }, []);
 
@@ -107,10 +144,12 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
 
   function addLine(category: ApuCategory, product?: StockProduct) {
     if (!selected) return;
+    const manualName = product ? undefined : window.prompt(`Nombre del recurso de ${apuCategoryMeta[category].label.toLocaleLowerCase("es-CO")}:`, category === "labor" ? "Nuevo cargo" : "Nuevo recurso")?.trim();
+    if (!product && !manualName) return;
     const line: ApuLine = {
       id: newId(),
       category,
-      name: product?.name || (category === "labor" ? "Nuevo cargo" : "Nuevo recurso"),
+      name: product?.name || manualName || "Nuevo recurso",
       quantity: 1,
       yieldPerDay: 1,
       dailyRate: product?.unitCost || 0,
@@ -147,20 +186,56 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     if (selected) updateApu({ ...selected, lines: selected.lines.filter((line) => line.id !== lineId) });
   }
 
-  function saveSelectedApu() {
+  async function saveSelectedApu() {
     if (!selected) return;
-    localStorage.setItem("rfc_apus", JSON.stringify(apus));
-    setSaveMessage(`${selected.code} guardado correctamente a las ${new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}.`);
+    try {
+      if (companyId) {
+        const saved = await saveApuAnalysis(companyId, selected);
+        const next = { ...selected, versionId: saved.versionId, revision: saved.revision, updatedAt: new Date().toISOString() };
+        setApus((current) => current.map((apu) => apu.id === next.id ? next : apu));
+        localStorage.setItem("rfc_apus", JSON.stringify(apus.map((apu) => apu.id === next.id ? next : apu)));
+        setSaveMessage(`${selected.code} guardado como versión ${saved.revision} en la base de datos.`);
+      } else {
+        localStorage.setItem("rfc_apus", JSON.stringify(apus));
+        setSaveMessage(`${selected.code} guardado localmente. Inicia sesión para crear versiones en la base de datos.`);
+      }
+    } catch (error) {
+      setSaveMessage(error instanceof Error ? error.message : "No fue posible guardar el APU.");
+    }
   }
 
-  function deleteSelectedApu() {
+  async function deleteSelectedApu() {
     if (!selected || !window.confirm(`¿Eliminar únicamente ${selected.code} · ${selected.name}?`)) return;
+    try { if (companyId) await archiveApuAnalysis(selected.id); } catch (error) { setSaveMessage(error instanceof Error ? error.message : "No fue posible archivar el APU."); return; }
     const nextApus = apus.filter((apu) => apu.id !== selected.id);
     const nextVisible = quoteContext?.quoteId ? nextApus.filter((apu) => apu.quoteId === quoteContext.quoteId) : nextApus;
     setApus(nextApus);
     setSelectedId(nextVisible[0]?.id || "");
     localStorage.setItem("rfc_apus", JSON.stringify(nextApus));
     setSaveMessage(`${selected.code} fue eliminado. Los demás APUs no se modificaron.`);
+  }
+
+  async function sendSelectedToBoq() {
+    if (!selected || !companyId || !projectToLink) return;
+    try {
+      await publishApuToBoq(companyId, selected, projectToLink);
+      const remote = await loadApuWorkspaceData();
+      if (remote) { setBoqItems(remote.boqItems); setBoqCosts(remote.boqCosts); }
+      setSaveMessage(`${selected.code} quedó vinculado al presupuesto BOQ de la obra.`);
+    } catch (error) {
+      setSaveMessage(error instanceof Error ? error.message : "Guarda primero el APU para enviarlo al presupuesto.");
+    }
+  }
+
+  async function addBoqCost(boqItemId: string) {
+    if (!companyId || !costAmount || Number(costAmount) <= 0) return;
+    try {
+      await registerBoqCost(companyId, boqItemId, costType, Number(costAmount), costReference);
+      const remote = await loadApuWorkspaceData();
+      if (remote) setBoqCosts(remote.boqCosts);
+      setCostAmount(""); setCostReference("");
+      setSaveMessage("Costo registrado en el control de la obra.");
+    } catch (error) { setSaveMessage(error instanceof Error ? error.message : "No fue posible registrar el costo."); }
   }
 
   return (
@@ -197,9 +272,18 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 <label><span>Actividad</span><input value={selected.name} onChange={(event) => updateApu({ ...selected, name: event.target.value })} /></label>
                 <label><span>Unidad</span><input value={selected.unit} onChange={(event) => updateApu({ ...selected, unit: event.target.value })} /></label>
                 <label><span>Cantidad de obra</span><input type="number" min="0.01" step="any" value={selected.workQuantity} onChange={(event) => updateApu({ ...selected, workQuantity: Number(event.target.value) || 1 })} /></label>
-                <div className="apu-selected-actions"><button type="button" className="inventory-action" onClick={saveSelectedApu}>Guardar APU</button><button type="button" className="apu-delete-apu" onClick={deleteSelectedApu}>Eliminar este APU</button></div>
+                <div className="apu-selected-actions"><button type="button" className="inventory-action" onClick={() => void saveSelectedApu()}>Guardar APU</button><button type="button" className="apu-delete-apu" onClick={() => void deleteSelectedApu()}>Eliminar este APU</button></div>
               </div>
               {saveMessage ? <p className="apu-save-message" role="status">{saveMessage}</p> : null}
+              {companyId ? <section className="apu-budget-control" aria-label="Presupuesto de obra">
+                <div><p>Presupuesto BOQ y control de obra</p><h3>Vincular este APU al presupuesto</h3><small>Guarda una versión y selecciónala como línea presupuestal de una obra.</small></div>
+                <div className="apu-budget-link"><select value={projectToLink} onChange={(event) => setProjectToLink(event.target.value)} aria-label="Obra destino"><option value="">Seleccione obra activa…</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}</select><button type="button" onClick={() => void sendSelectedToBoq()} disabled={!selected.versionId || !projectToLink}>Enviar a presupuesto</button></div>
+              </section> : null}
+              {companyId && boqItems.filter((item) => item.apuAnalysisId === selected.id).map((item) => {
+                const committed = boqCosts.filter((cost) => cost.boqItemId === item.id && cost.costType === "committed").reduce((sum, cost) => sum + cost.amount, 0);
+                const actual = boqCosts.filter((cost) => cost.boqItemId === item.id && cost.costType === "actual").reduce((sum, cost) => sum + cost.amount, 0);
+                return <section className="apu-boq-status" key={item.id}><div><p>Control BOQ · {item.code}</p><h3>{item.description}</h3></div><dl><div><dt>Presupuestado</dt><dd>{formatCOP(item.budgetTotal)}</dd></div><div><dt>Comprometido</dt><dd>{formatCOP(committed)}</dd></div><div><dt>Real</dt><dd>{formatCOP(actual)}</dd></div><div><dt>Variación</dt><dd className={actual > item.budgetTotal ? "is-over" : ""}>{formatCOP(item.budgetTotal - actual)}</dd></div></dl><div className="apu-boq-entry"><select value={costType} onChange={(event) => setCostType(event.target.value as ProjectBoqCost["costType"])}><option value="committed">Comprometido</option><option value="actual">Real ejecutado</option></select><input type="number" min="0" step="any" value={costAmount} onChange={(event) => setCostAmount(event.target.value)} placeholder="Valor COP" aria-label="Valor del costo" /><input value={costReference} onChange={(event) => setCostReference(event.target.value)} placeholder="OC, factura o referencia" aria-label="Referencia del costo" /><button type="button" onClick={() => void addBoqCost(item.id)}>Registrar</button></div></section>;
+              })}
               {categories.map((category) => {
                 const lines = selected.lines.filter((line) => line.category === category);
                 const inventoryChoices = category === "materials" || category === "equipment" ? products : [];
@@ -209,19 +293,19 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                       <div><h3>{apuCategoryMeta[category].label}</h3><small>{apuCategoryMeta[category].description}</small></div>
                       {category === "labor" ? (
                         <ApuLaborPicker catalog={laborCatalog} isLoading={isLaborLoading} onAdd={addLaborPosition} onAddManual={() => addLine("labor")} />
+                      ) : category === "materials" || category === "equipment" ? (
+                        <ApuResourcePicker
+                          category={category}
+                          products={inventoryChoices}
+                          onAdd={(product) => addLine(category, product)}
+                        />
                       ) : (
-                        <div className="apu-add">
-                          <select aria-label={`Añadir ${apuCategoryMeta[category].label}`} defaultValue="">
-                            <option value="">{inventoryChoices.length ? "Añadir desde inventario…" : "Recurso manual"}</option>
-                            {inventoryChoices.map((product) => <option key={product.id} value={product.id}>{product.name} · {formatCOP(product.unitCost || 0)}</option>)}
-                          </select>
-                          <button type="button" onClick={(event) => {
-                            const select = event.currentTarget.previousElementSibling as HTMLSelectElement;
-                            addLine(category, products.find((product) => product.id === select.value));
-                          }}>Agregar</button>
-                        </div>
+                        <div className="apu-add"><button type="button" onClick={() => addLine(category)}>Agregar transporte</button></div>
                       )}
                     </header>
+                    {(category === "materials" || category === "equipment") && !inventoryChoices.length ? (
+                      <p className="apu-resource-note">Este recurso aún no está en Inventarios. Agrégalo manualmente con su nombre, unidad y tarifa; quedará solo en este APU hasta que se registre formalmente en el catálogo.</p>
+                    ) : null}
                     <div className="apu-table-wrap">
                       <table>
                         <thead><tr><th>Recurso</th><th>Cant.</th><th>Rend./día</th><th>Tarifa</th><th>Parcial</th><th /></tr></thead>

@@ -59,9 +59,33 @@ export async function getLaborPositionCatalog(): Promise<LaborPositionCatalog> {
   }
 
   const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
+  const { data: auth, error: authError } = await supabase.auth.getUser();
+  if (authError || !auth.user) {
+    return {
+      positions: localCatalog(),
+      source: "fallback",
+      warning: "No hay una sesión activa para consultar los cargos de la empresa; se muestra el respaldo local.",
+    };
+  }
+
+  const { data: memberships, error: membershipError } = await supabase
+    .from("user_roles")
+    .select("company_id")
+    .eq("user_id", auth.user.id)
+    .limit(1);
+  const companyId = memberships?.[0]?.company_id;
+  if (membershipError || !companyId) {
+    return {
+      positions: localCatalog(),
+      source: "fallback",
+      warning: "No fue posible identificar la empresa de la sesión; se muestra el respaldo local.",
+    };
+  }
+
   const { data, error } = await supabase
     .from("apu_labor_positions")
     .select("id, code, name, activity_type, specialty, specialty_label, level, daily_basic_salary, transport_allowance, food_allowance, non_salary_allowance, total_daily_rate, valid_from, valid_to, source_document, summary")
+    .eq("company_id", companyId)
     .eq("is_active", true)
     .order("name");
 

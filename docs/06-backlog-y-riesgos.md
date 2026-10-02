@@ -75,3 +75,14 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 <!-- APU-006 (Terminado, 2026-10-02): selector de mano de obra respaldado por `apu_labor_positions` en Supabase, con 68 cargos iniciales, búsqueda, filtros, vigencia, tarifa diaria completa, RLS multiempresa y fallback local. -->
 <!-- APU-007 (Terminado, 2026-10-02): guardado explícito y confirmable del APU seleccionado, edición de nombre/unidad/cantidad y eliminación exclusiva del análisis abierto. -->
 <!-- Riesgo APU-R01 (Mitigado, 2026-10-02): si la migración del catálogo salarial no se ha desplegado o no hay conexión, la interfaz identifica el respaldo local y permite continuar; la fuente visible indica si los datos provienen de base de datos. -->
+<!-- NAV-002 (Terminado, 2026-10-02): botón accesible para contraer/mostrar la barra lateral del Dashboard en escritorio, con preferencia persistente y comportamiento móvil intacto. -->
+<!-- APU-008 (Terminado, 2026-10-02): persistencia versionable de APU, líneas de recurso y vínculo opcional a cotización/obra con RLS multiempresa. -->
+<!-- COST-005 (Terminado, 2026-10-02): presupuesto BOQ por obra e imputaciones de costo comprometido/real, con comparación contra el valor presupuestado. -->
+<!-- APU-009 (Pendiente): clasificación configurable RFC/CSI/UniFormat/ICMS; no se incorporan catálogos licenciados sin autorización. -->
+<!-- APU-010 (Pendiente): historial de precios, vigencias, proveedores, ciudades/sedes y alerta de variación de materiales/equipos. -->
+<!-- APU-011 (Pendiente): cuadrillas reutilizables, productividad presupuestada vs. real, factor prestacional y horas extra. -->
+<!-- APU-012 (Pendiente): compras/requisiciones desde líneas APU y alimentación automática de compromiso/real desde compras, inventario, nómina, equipo y subcontratos. -->
+<!-- APU-013 (Pendiente): órdenes de cambio, evidencias técnicas adjuntas, AIU/impuestos/contingencias configurables y permisos finos de revisión/aprobación/exportación. -->
+<!-- DB-001 (Terminado, 2026-10-02): aplicada `quotes_pipeline`; creadas `quotes` y `quote_history` con RLS y políticas por empresa. Se reconcilió el historial de migraciones ya existentes para evitar su reejecución. -->
+<!-- APU-014 (Terminado, 2026-10-02): catálogo laboral robustecido por empresa y estado visible de contingencia; recursos no catalogados se pueden presupuestar manualmente sin afectar Inventarios. -->
+<!-- UI-005 (Terminado, 2026-10-02): selector de recursos APU rediseñado como combobox buscable, limitado y táctil; elimina el desborde de listas nativas con catálogos extensos. -->

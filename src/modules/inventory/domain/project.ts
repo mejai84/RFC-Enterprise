@@ -1,6 +1,7 @@
 export const projectTypeOptions = [
   { value: "obra", label: "Obra", prefix: "OBRA" },
   { value: "mantenimiento", label: "Mantenimiento", prefix: "MANT" },
+  { value: "alquiler", label: "Alquiler", prefix: "ALQ" },
   { value: "otro", label: "Otro", prefix: "OTRO" },
 ] as const;
 

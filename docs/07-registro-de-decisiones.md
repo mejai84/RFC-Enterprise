@@ -34,6 +34,20 @@ El APU es evidencia de la estimación y nunca se oculta por un cambio de pipelin
 
 `Proyecto` es la entidad transversal creada al adjudicar una cotización. `Obra`, `Mantenimiento` y `Alquiler` son tipos de proyecto. El alquiler tendrá consecutivo `ALQ`, control de periodo, equipo en custodia y cargos adicionales antes de facturar.
 
+## ADR-076 · Alquiler rápido para clientes particulares
+
+**Fecha:** 2026-10-02
+**Estado:** Aceptada
+
+El alquiler de corta duración no exige cotización ni APU. Se registra mediante un comprobante operativo `ALQ-RAP`, con cliente, teléfono, documento, periodo, tarifa, garantía, accesorios y estado. Al entregar, descuenta una unidad disponible; al devolver, registra novedades/cargo adicional y la restaura.
+
+## ADR-077 · Informes por propósito de decisión
+
+**Fecha:** 2026-10-02
+**Estado:** Aceptada
+
+Los informes se clasifican en Gerenciales, Operativos y Financieros para que cada usuario encuentre el indicador requerido sin conocer la estructura técnica de los módulos. La versión inicial consulta datos locales y deja para la fase de permisos el control de acceso y exportación.
+
 Este registro conserva decisiones que afectan el rumbo del producto. Una decisión no se elimina: si cambia, se agrega una nueva entrada que indique cuál reemplaza.
 
 ## ADR-001 · Monolito modular

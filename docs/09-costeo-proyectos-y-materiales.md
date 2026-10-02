@@ -21,6 +21,10 @@ El APU de una cotización enviada, confirmada o en ejecución se conserva como l
 
 Para alquileres, el APU o tarifa cubre equipo, tiempo de uso, transporte, operador y otros conceptos pactados. El proyecto de tipo Alquiler deberá relacionar el equipo con su entrega/devolución y registrar días, horas, daños o extensiones como cargos facturables.
 
+El alquiler rápido usa una tarifa diaria y garantía sin crear proyecto ni cotización. La disponibilidad del activo se descuenta durante el alquiler y se repone únicamente al registrar devolución; los extras por daños, faltantes o tiempo adicional se dejan registrados para su cobro posterior.
+
+Los informes financieros consolidan el costo de inventario, gasto por proyecto, APU y alquileres; los operativos muestran kardex, stock crítico y custodia. Esta separación permite revisar el costo estimado y la operación sin mezclar controles de naturaleza diferente.
+
 ## Unidad de compra vs. unidad de consumo
 
 Las entradas pueden recibirse en una presentación comercial y consumirse en una unidad menor. Cada nuevo artículo guarda la presentación, su equivalencia y su costo; el inventario valoriza y descuenta en la unidad de consumo. Ejemplo: una caja de 100 tornillos a COP 50.000 ingresa 100 unidades a COP 500 cada una.

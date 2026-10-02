@@ -25,6 +25,12 @@ Un APU creado permanece disponible durante todo el pipeline. Se puede crear y ed
 
 Proyecto es el concepto general y `Obra`, `Mantenimiento` o `Alquiler` son sus tipos. El flujo de alquiler se planifica desde Cotizaciones: tarifa/APU, periodo, transporte, operador y condiciones; al confirmarse genera un proyecto `ALQ-AAAAMMDD-##`, enlazado con la custodia de equipos y con los cargos para facturación.
 
+Como vía alternativa para clientes particulares se incorpora `Alquiler rápido`: entrega sin cotización formal, con consecutivo `ALQ-RAP-AAAAMMDD-###`, identificación básica, equipo, periodo, tarifa, garantía, devolución y novedades.
+
+## Centro de informes
+
+El módulo de Informes se organiza en vistas Gerenciales, Operativas y Financieras. Consolida cotizaciones, inventario, kardex, proyectos, APU y alquileres rápidos, con filtros, exportación CSV e impresión.
+
 ## Módulos de la plataforma
 
 | Código | Módulo | Estado | Alcance actual |

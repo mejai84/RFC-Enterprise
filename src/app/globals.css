@@ -5,6 +5,7 @@
 @import "./inventory-catalog.css";
 @import "./quotes-pipeline.css";
 @import "./apu.css";
+@import "./rentals.css";
 @import "./responsive-devices.css";
 
 :root {

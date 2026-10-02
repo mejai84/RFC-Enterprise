@@ -410,6 +410,8 @@
   transform: translateY(-1px);
 }
 
+.report-catalog { display:grid; gap:12px; margin:18px 0; }.report-catalog>div { align-items:center; display:grid; gap:10px; grid-template-columns:110px minmax(0,1fr); }.report-catalog>div>p { color:var(--muted); font-size:12px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }.report-catalog>div>div { display:flex; flex-wrap:wrap; gap:8px; }.report-catalog button { background:var(--surface); border:1px solid var(--line); border-radius:9px; color:var(--ink-secondary); display:grid; gap:2px; min-height:52px; padding:8px 11px; text-align:left; transition:border-color .16s ease,background .16s ease,transform .16s ease; }.report-catalog button strong { font-size:13px; }.report-catalog button span { color:var(--muted); font-size:11px; max-width:190px; }.report-catalog button:hover,.report-catalog button.is-active { background:var(--brand-soft); border-color:var(--brand); color:var(--brand-dark); }.report-catalog button:active { transform:scale(.99); } .report-controls>p { align-self:end; color:var(--muted); font-size:13px; margin:0; } @media (max-width:760px) { .report-catalog>div { grid-template-columns:1fr; gap:6px; }.report-catalog button { flex:1 1 170px; }.report-controls>p { grid-column:1 / -1; } } @media (max-width:480px) { .report-catalog button { flex-basis:100%; min-height:48px; }.report-catalog button span { max-width:none; } }
+
 .inventory-action:active {
   transform: translateY(0);
 }

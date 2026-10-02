@@ -15,6 +15,10 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 - **PRJ-UX-006 · Terminado:** ayudas accesibles para acciones, selector, filtros y pestañas principales de Obras y Proyectos.
 - **APU-006 · Terminado:** conservación y consulta del APU fuera de los estados editables, con bloqueo visible de edición y ruta de revisión.
 - **ALQ-001 · Alta · Pendiente:** tipo de proyecto Alquiler, consecutivo `ALQ`, periodo de entrega/devolución, asignación de equipo, cargos por extensión/daños y enlace a facturación.
+- **ALQ-002 · Terminado:** módulo de Alquiler rápido local para clientes particulares, bloqueo de disponibilidad del equipo y cierre con cargos adicionales.
+- **ALQ-003 · Alta · Pendiente:** persistencia empresarial, adjuntos de cédula/fotos/firma y facturación para alquiler rápido.
+- **REP-001 · Terminado:** centro de informes por nivel gerencial, operativo y financiero, con reportes de pipeline, APU y alquileres rápidos.
+- **REP-002 · Alta · Pendiente:** filtros por período, indicadores de rentabilidad real y permisos por rol para exportaciones sensibles.
 
 ## Backlog priorizado
 

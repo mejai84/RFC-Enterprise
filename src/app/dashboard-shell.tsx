@@ -114,6 +114,7 @@ const navigation = [
   { icon: "briefcase" as const, label: "Cotizaciones", href: "/quotes" },
   { icon: "checklist" as const, label: "APU", href: "/apu" },
   { icon: "building" as const, label: "Proyectos & Obras", href: "/projects" },
+  { icon: "briefcase" as const, label: "Alquiler rápido", href: "/rentals" },
   { icon: "boxes" as const, label: "Inventarios", href: "/inventory" },
   { icon: "arrows" as const, label: "Movimientos", href: "/movements" },
   { icon: "checklist" as const, label: "Conteos físicos", href: "/counts" },

@@ -9,7 +9,7 @@ import { initialAdministrator } from "@/core/users";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import { createBrowserClient } from "@supabase/ssr";
 
-type IconName = "grid" | "briefcase" | "building" | "boxes" | "arrows" | "checklist" | "chart" | "users" | "logout" | "menu" | "bell" | "close" | "sidebar";
+type IconName = "grid" | "briefcase" | "building" | "boxes" | "arrows" | "checklist" | "chart" | "users" | "logout" | "menu" | "bell" | "close" | "sidebar" | "settings";
 
 function Icon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
@@ -92,6 +92,7 @@ function Icon({ name }: { name: IconName }) {
         <path d="M9 4v16M15 9l-3 3 3 3" />
       </>
     ),
+    settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 2-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-2.8v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3L9 19l-2-2 .1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H5.6v-2.8h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L7 8.2l2-2 .1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.2h2.8V5a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 2 2-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2V14H21a1.7 1.7 0 0 0-1.6 1Z" /></>,
   };
   return (
     <svg
@@ -120,6 +121,7 @@ const navigation = [
   { icon: "checklist" as const, label: "Conteos físicos", href: "/counts" },
   { icon: "chart" as const, label: "Informes", href: "/reports" },
   { icon: "users" as const, label: "Empleados", href: "/employees" },
+  { icon: "settings" as const, label: "Configuración", href: "/settings" },
 ];
 
 export function DashboardShell({ children }: { children: ReactNode }) {

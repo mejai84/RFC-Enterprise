@@ -2380,6 +2380,14 @@
 .toast-dismiss:hover { color: var(--ink); }
 /* Employees administration */
 .employees-layout { display:grid; gap:20px; grid-template-columns:minmax(250px,.75fr) minmax(0,2fr); }
+.settings-grid { display:grid; gap:20px; grid-template-columns:minmax(280px,.8fr) minmax(0,1.6fr); }
+.settings-card { display:grid; gap:14px; align-content:start; padding:24px; }
+.settings-card h2 { font-size:22px; }
+.settings-card label { color:var(--ink-secondary); display:grid; font-size:12px; font-weight:750; gap:7px; }
+.settings-card input { border:1px solid var(--line); border-radius:7px; font:inherit; min-height:42px; padding:9px 10px; }
+.settings-columns { display:grid; gap:14px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.settings-card-wide { min-width:0; }
+.settings-notice { background:#e8f5ed; border:1px solid #bde1c9; border-radius:7px; color:#17663d; margin:0 0 18px; padding:12px 14px; }
 .employees-main { display:grid; gap:20px; }
 .employee-row { align-items:center; background:transparent; border:0; border-bottom:1px solid var(--line); display:grid; gap:10px; grid-template-columns:38px 1fr auto; padding:13px 4px; text-align:left; width:100%; }
 .employee-row.is-selected { background:var(--brand-soft); margin:0 -8px; padding-left:12px; padding-right:12px; }
@@ -2388,6 +2396,7 @@
 .employee-form { display:grid; gap:16px; grid-template-columns:1fr 1fr; }.employee-form label { display:grid; font-size:12px; font-weight:700; gap:7px; }.employee-form input,.employee-form select { border:1px solid var(--line); border-radius:6px; min-height:42px; padding:9px; }.employee-form button { grid-column:1/-1; justify-self:start; }
 .permission-groups { display:grid; gap:14px; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:22px; }.permission-groups fieldset { border:1px solid var(--line); padding:14px; }.permission-groups legend { color:var(--brand-dark); font-size:12px; font-weight:800; padding:0 5px; text-transform:capitalize; }.permission-groups label { align-items:start; display:flex; font-size:12px; gap:9px; line-height:1.35; margin:12px 0; }.permission-groups input { accent-color:var(--brand); margin-top:2px; }.employee-message { background:var(--brand-soft); color:var(--brand-dark); font-size:13px; font-weight:700; margin-top:18px; padding:12px; }
 @media (max-width:900px) { .employees-layout { grid-template-columns:1fr; } }
+@media (max-width:900px) { .settings-grid,.settings-columns { grid-template-columns:1fr; } }
 @media (max-width:560px) { .employee-form,.permission-groups { grid-template-columns:1fr; } }
 
 /* ── Employee Premium Modals and Buttons ── */

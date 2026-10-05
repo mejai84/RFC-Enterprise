@@ -26,7 +26,8 @@ import {
   isStale,
 } from "@/modules/quotes";
 import { getNextProjectCode, type Project } from "@/modules/inventory";
-import { apuCostBreakdown, type Apu } from "@/modules/apu";
+import { apuCostBreakdown, apuSellingBreakdown, type Apu } from "@/modules/apu";
+import { prepareRealDataStorage } from "@/shared/browser/real-data-storage";
 
 /* ── Helpers de formato ─────────────────────────────────────── */
 
@@ -141,6 +142,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   const searchParams = useSearchParams();
   const [quotes, setQuotes] = useState<Quote[]>(() => {
     if (typeof window === "undefined") return initialQuotes;
+    prepareRealDataStorage();
     try {
       const storedQuotes = localStorage.getItem("rfc_quotes");
       const baseQuotes = storedQuotes ? (JSON.parse(storedQuotes) as Quote[]) : initialQuotes;
@@ -150,8 +152,12 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         const linkedApus = apus.filter((apu) => apu.quoteId === quote.id);
         if (!linkedApus.length) return quote;
         const directCosts = apuCostBreakdown(linkedApus);
-        const costBreakdown = { ...quote.costBreakdown, ...directCosts, indirects: quote.costBreakdown?.indirects ?? 0 };
-        const estimatedValue = calculateTotalCost(costBreakdown);
+        const sellingBreakdown = apuSellingBreakdown(linkedApus);
+        const directTotal = directCosts.materials + directCosts.labor + directCosts.equipment + directCosts.transport;
+        const sellingTotal = sellingBreakdown.materials + sellingBreakdown.labor + sellingBreakdown.equipment + sellingBreakdown.transport;
+        const profit = Math.max(0, sellingTotal - directTotal);
+        const costBreakdown = { ...quote.costBreakdown, ...directCosts, indirects: profit };
+        const estimatedValue = sellingTotal > 0 ? sellingTotal : calculateTotalCost(costBreakdown);
         return { ...quote, costBreakdown, estimatedValue };
       });
     } catch {

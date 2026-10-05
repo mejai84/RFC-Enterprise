@@ -19,6 +19,7 @@ import { PrintableDispatchVoucher } from "./printable-dispatch-voucher";
 import { SearchableProductPicker } from "./searchable-product-picker";
 import { daysSince, initialQuotes, isStale, type Quote } from "@/modules/quotes";
 import { type Apu } from "@/modules/apu";
+import { prepareRealDataStorage } from "@/shared/browser/real-data-storage";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -55,16 +56,17 @@ function formatDateTime() {
   }).format(date);
 }
 
-export function DashboardExecutiveWorkspace() {
+export function DashboardExecutiveWorkspace({ initialProducts = [] }: { initialProducts?: StockProduct[] }) {
   // Sincronización con localStorage
   const [products, setProducts] = useState<StockProduct[]>(() => {
+    prepareRealDataStorage();
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("rfc_inventory_products");
       if (saved) {
         try { return withDefaultInventoryAliases(JSON.parse(saved)); } catch {}
       }
     }
-    return [...inventoryProducts];
+    return initialProducts;
   });
 
   const [movements, setMovements] = useState<InventoryMovement[]>(() => {
@@ -74,7 +76,7 @@ export function DashboardExecutiveWorkspace() {
         try { return JSON.parse(saved); } catch {}
       }
     }
-    return [...sampleInitialMovements];
+    return [];
   });
 
   const [projects, setProjects] = useState<Project[]>(() => {
@@ -84,7 +86,7 @@ export function DashboardExecutiveWorkspace() {
         try { return JSON.parse(saved); } catch {}
       }
     }
-    return [...inventoryProjects];
+    return [];
   });
 
   const [requisitions, setRequisitions] = useState<MaterialRequisition[]>(() => {
@@ -94,7 +96,7 @@ export function DashboardExecutiveWorkspace() {
         try { return JSON.parse(saved); } catch {}
       }
     }
-    return [...inventoryRequisitions];
+    return [];
   });
 
   const [toolLoans, setToolLoans] = useState<ToolLoan[]>(() => {
@@ -104,7 +106,7 @@ export function DashboardExecutiveWorkspace() {
         try { return JSON.parse(saved); } catch {}
       }
     }
-    return [...inventoryToolLoans];
+    return [];
   });
 
   const [quotes, setQuotes] = useState<Quote[]>(() => {
@@ -114,7 +116,7 @@ export function DashboardExecutiveWorkspace() {
         try { return JSON.parse(saved); } catch { /* Use the operational examples below. */ }
       }
     }
-    return [...initialQuotes];
+    return [];
   });
 
   const [apus, setApus] = useState<Apu[]>(() => {

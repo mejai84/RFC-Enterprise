@@ -1,6 +1,15 @@
 "use client";
 
-import { apuCategoryMeta, apuTotal, lineTotal, type Apu, type ApuCategory, type ApuLine } from "@/modules/apu";
+import {
+  apuCategoryMeta,
+  apuCostTotal,
+  apuEffectiveMarginPercent,
+  apuProfitAmount,
+  apuSellingTotal,
+  lineTotal,
+  type Apu,
+  type ApuCategory,
+} from "@/modules/apu";
 
 const formatCOP = (value: number) =>
   value.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
@@ -8,8 +17,12 @@ const formatCOP = (value: number) =>
 const categories: ApuCategory[] = ["equipment", "materials", "labor", "transport"];
 
 export function ApuPrintModal({ apu, onClose }: { apu: Apu; onClose: () => void }) {
-  const total = apuTotal(apu);
-  const unitCost = total / (apu.workQuantity || 1);
+  const directCost = apuCostTotal(apu);
+  const directUnitCost = directCost / (apu.workQuantity || 1);
+  const sellingTotal = apuSellingTotal(apu);
+  const sellingUnitCost = sellingTotal / (apu.workQuantity || 1);
+  const profit = apuProfitAmount(apu);
+  const marginPercent = apuEffectiveMarginPercent(apu);
   const now = new Date();
   const dateStr = now.toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
 
@@ -93,12 +106,20 @@ export function ApuPrintModal({ apu, onClose }: { apu: Apu; onClose: () => void 
           );
         })}
 
-        {/* ─── Resumen de costos ─── */}
+        {/* ─── Resumen de costos y precios ─── */}
         <section className="apu-print-summary">
           <table>
             <tbody>
-              <tr><td>Costo directo total</td><td className="apu-print-number"><strong>{formatCOP(total)}</strong></td></tr>
-              <tr className="apu-print-unit-row"><td>Costo unitario ({apu.unit})</td><td className="apu-print-number"><strong>{formatCOP(unitCost)}</strong></td></tr>
+              <tr><td>Costo directo total</td><td className="apu-print-number">{formatCOP(directCost)}</td></tr>
+              <tr><td>Margen / Utilidad estimada (+{marginPercent.toFixed(1)}%)</td><td className="apu-print-number">+{formatCOP(profit)}</td></tr>
+              <tr style={{ background: 'var(--brand-soft)', fontWeight: 800 }}>
+                <td>Precio de venta cotizado</td>
+                <td className="apu-print-number" style={{ color: 'var(--brand-dark)' }}><strong>{formatCOP(sellingTotal)}</strong></td>
+              </tr>
+              <tr className="apu-print-unit-row">
+                <td>Precio unitario de venta ({apu.unit})</td>
+                <td className="apu-print-number"><strong>{formatCOP(sellingUnitCost)}</strong></td>
+              </tr>
             </tbody>
           </table>
         </section>

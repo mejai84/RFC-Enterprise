@@ -85,70 +85,8 @@ function getDefaultAliases(name: string): string[] {
     .flatMap((entry) => entry.aliases);
 }
 
-export const sampleInitialMovements: InventoryMovement[] = [
-  {
-    id: "mov-init-01",
-    productId: inventoryProducts[0]?.id || "prod-1",
-    productName: inventoryProducts[0]?.name || "Cemento Gris Tipo 1",
-    type: "exit",
-    quantity: 40,
-    unit: "bulto",
-    unitCost: 32000,
-    totalCost: 1280000,
-    occurredAt: "10 Mar, 08:30",
-    reference: "VALE-2026-001",
-    projectId: "prj-01",
-    projectName: "Construcción Estructura Metálica y Cubierta",
-    responsible: "Carlos Restrepo (Maestro)",
-    notes: "Fundición de zapatas bloque frontal",
-  },
-  {
-    id: "mov-init-02",
-    productId: inventoryProducts[1]?.id || "prod-2",
-    productName: inventoryProducts[1]?.name || "Varilla Corrugada 1/2 pulg",
-    type: "exit",
-    quantity: 25,
-    unit: "unidad",
-    unitCost: 68000,
-    totalCost: 1700000,
-    occurredAt: "11 Mar, 10:15",
-    reference: "VALE-2026-002",
-    projectId: "prj-01",
-    projectName: "Construcción Estructura Metálica y Cubierta",
-    responsible: "Carlos Restrepo (Maestro)",
-    notes: "Armado de columnas principales",
-  },
-  {
-    id: "mov-init-03",
-    productId: inventoryProducts[2]?.id || "prod-3",
-    productName: inventoryProducts[2]?.name || "Pintura Anticorrosiva Verde",
-    type: "exit",
-    quantity: 6,
-    unit: "galon",
-    unitCost: 95000,
-    totalCost: 570000,
-    occurredAt: "12 Mar, 14:00",
-    reference: "VALE-2026-003",
-    projectId: "prj-02",
-    projectName: "Mantenimiento Integral de Instalaciones Industriales",
-    responsible: "Javier Morales (Ing. Residente)",
-    notes: "Protección de tanques y tuberías",
-  },
-  {
-    id: "mov-init-04",
-    productId: inventoryProducts[0]?.id || "prod-1",
-    productName: inventoryProducts[0]?.name || "Cemento Gris Tipo 1",
-    type: "entry",
-    quantity: 100,
-    unit: "bulto",
-    unitCost: 32000,
-    totalCost: 3200000,
-    occurredAt: "14 Mar, 09:00",
-    reference: "FAC-PROV-8841",
-    responsible: "Almacén Central",
-    notes: "Compra a Distribuidora Argos",
-  },
-];
+export const sampleInitialMovements: InventoryMovement[] = [];
+
 
 export const inventoryMovements: readonly InventoryMovement[] = sampleInitialMovements;
 export const inventoryProjects: readonly Project[] = initialProjects;

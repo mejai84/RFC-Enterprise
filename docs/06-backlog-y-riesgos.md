@@ -117,3 +117,4 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 <!-- QTE-018 (Terminado, 2026-10-02): notas comerciales multirenglón se preservan y se presentan como filas separadas en la propuesta, evitando agrupación ilegible. -->
 <!-- QTE-019 (Terminado, 2026-10-02): trazabilidad bidireccional Cotización ↔ Obra; se evita perder el contexto comercial al entrar a la ejecución. -->
 <!-- UI-008 (Terminado, 2026-10-02): historial comercial rediseñado como timeline responsivo; evita acumulación visual de fechas, responsables, cambios y notas. -->
+<!-- APU-017 (Terminado, 2026-10-05): márgenes de ganancia diferenciados por rubro en APU (Materiales, Mano de obra, Equipos, Transporte) con cálculo en vivo de Costo Directo, Ganancia Estimada ponderada y Precio de Venta Cotizado integrado con Cotizaciones. -->

@@ -6,6 +6,7 @@ import { apuTotal, type Apu } from "@/modules/apu";
 import { initialQuotes, type Quote } from "@/modules/quotes";
 import { type QuickRental } from "@/modules/rentals";
 import { inventoryProducts, inventoryProjects, sampleInitialMovements, type InventoryMovement, type Project, type StockProduct } from "../index";
+import { prepareRealDataStorage } from "@/shared/browser/real-data-storage";
 
 type ReportKey = "executive" | "commercial" | "projects" | "inventory" | "kardex" | "critical" | "apu" | "rentals";
 type ReportGroup = "Gerenciales" | "Operativos" | "Financieros";
@@ -27,14 +28,15 @@ function stored<T>(key: string, fallback: T): T {
   try { return JSON.parse(localStorage.getItem(key) || "") as T; } catch { return fallback; }
 }
 
-export function ReportsWorkspace() {
+export function ReportsWorkspace({ initialProducts = [] }: { initialProducts?: StockProduct[] }) {
+  prepareRealDataStorage();
   const [report, setReport] = useState<ReportKey>("executive");
   const [category, setCategory] = useState("all");
   const [projectId, setProjectId] = useState("all");
-  const [products] = useState<StockProduct[]>(() => stored("rfc_inventory_products", [...inventoryProducts]));
-  const [movements] = useState<InventoryMovement[]>(() => stored("rfc_inventory_movements", [...sampleInitialMovements]));
-  const [projects] = useState<Project[]>(() => stored("rfc_inventory_projects", [...inventoryProjects]));
-  const [quotes] = useState<Quote[]>(() => stored("rfc_quotes", [...initialQuotes]));
+  const [products] = useState<StockProduct[]>(() => stored("rfc_inventory_products", initialProducts));
+  const [movements] = useState<InventoryMovement[]>(() => stored("rfc_inventory_movements", []));
+  const [projects] = useState<Project[]>(() => stored("rfc_inventory_projects", []));
+  const [quotes] = useState<Quote[]>(() => stored("rfc_quotes", []));
   const [apus] = useState<Apu[]>(() => stored("rfc_apus", []));
   const [rentals] = useState<QuickRental[]>(() => stored("rfc_quick_rentals", []));
   const categories = useMemo(() => [...new Set(products.map((product) => product.category).filter(Boolean))].sort(collator.compare), [products]);

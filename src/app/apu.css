@@ -94,9 +94,31 @@
   .apu-budget-link,.apu-boq-entry { display:grid; grid-template-columns:1fr; }.apu-budget-link select,.apu-budget-link button,.apu-boq-entry select,.apu-boq-entry input,.apu-boq-entry button { width:100%; }.apu-boq-status dl { grid-template-columns:1fr; }
 }
 
-/* ── Botón Imprimir APU ── */
-.apu-print-btn { border:1px solid var(--brand); background:var(--brand-soft); color:var(--brand-dark); font-weight:800; transition:background .15s ease,color .15s ease; }
-.apu-print-btn:hover,.apu-print-btn:focus-visible { background:var(--brand); color:#fff; outline:2px solid var(--brand-glow); outline-offset:2px; }
+/* ── Panel de Márgenes por Rubro y Resumen Financiero ── */
+.apu-margins-panel { display:grid; gap:12px; border:1px solid var(--line); border-radius:10px; padding:14px; background:var(--canvas); }
+.apu-margins-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+.apu-margins-header p { color:var(--brand-dark); font-size:11px; font-weight:800; letter-spacing:.04em; margin:0; text-transform:uppercase; }
+.apu-margins-header small { color:var(--muted); font-size:12px; }
+.apu-margins-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; }
+.apu-margin-card { display:grid; gap:4px; background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:8px 10px; }
+.apu-margin-card label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; }
+.apu-margin-input-wrap { display:flex; align-items:center; gap:4px; }
+.apu-margin-input-wrap input { width:100%; border:1px solid var(--line); border-radius:6px; padding:6px 8px; font-weight:700; font-size:14px; background:var(--canvas); }
+.apu-margin-input-wrap span { font-weight:800; color:var(--brand-dark); font-size:13px; }
+
+.apu-financial-summary { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-top:4px; }
+.apu-financial-card { border:1px solid var(--line); border-radius:8px; padding:10px 14px; background:var(--surface); display:grid; gap:2px; }
+.apu-financial-card.is-selling { background:var(--brand-soft); border-color:var(--brand); }
+.apu-financial-card p { font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; margin:0; }
+.apu-financial-card.is-selling p { color:var(--brand-dark); }
+.apu-financial-card strong { font-size:17px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; }
+.apu-financial-card.is-selling strong { color:var(--brand-dark); }
+.apu-financial-card small { font-size:11px; color:var(--muted); }
+
+.apu-section-footer-breakdown { display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:8px; }
+.apu-footer-cost { color:var(--muted); font-size:12px; }
+.apu-footer-selling { font-size:13px; color:var(--brand-dark); font-weight:800; }
+.apu-footer-badge { background:var(--brand-soft); color:var(--brand-dark); border-radius:4px; padding:2px 6px; font-size:11px; font-weight:700; margin-left:6px; }
 
 /* ── Modal de impresión ── */
 .apu-print-overlay { position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.55); display:flex; flex-direction:column; align-items:center; overflow-y:auto; overscroll-behavior:contain; padding:24px; }

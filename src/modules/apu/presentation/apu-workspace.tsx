@@ -3,9 +3,15 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   apuCategoryMeta,
+  apuCostTotal,
+  apuEffectiveMarginPercent,
+  apuProfitAmount,
+  apuSellingTotal,
   apuTotal,
   archiveApuAnalysis,
+  defaultApuMargins,
   getLaborPositionCatalog,
+  lineSellingTotal,
   lineTotal,
   loadApuWorkspaceData,
   publishApuToBoq,
@@ -14,6 +20,7 @@ import {
   type Apu,
   type ApuActivity,
   type ApuCategory,
+  type ApuCategoryMargins,
   type ApuLine,
   type LaborPosition,
   type LaborPositionCatalog,
@@ -264,6 +271,18 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     updateApu({ ...selected, lines: selected.lines.map((line) => line.id === lineId ? { ...line, [field]: value } : line) });
   }
 
+  function updateMargin(category: ApuCategory, percent: number) {
+    if (!selected) return;
+    const currentMargins = selected.categoryMargins ?? { ...defaultApuMargins };
+    updateApu({
+      ...selected,
+      categoryMargins: {
+        ...currentMargins,
+        [category]: Number.isNaN(percent) ? 0 : Math.max(0, percent),
+      },
+    });
+  }
+
   function removeLine(lineId: string) {
     if (selected) updateApu({ ...selected, lines: selected.lines.filter((line) => line.id !== lineId) });
   }
@@ -365,7 +384,9 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
           <div className="panel-title"><div><p>APUs</p><h2>{visibleApus.length} análisis</h2></div></div>
           {visibleApus.map((apu) => (
             <button type="button" key={apu.id} className={`apu-row ${apu.id === selectedId ? "is-selected" : ""}`} onClick={() => setSelectedId(apu.id)}>
-              <strong>{apu.code}</strong><span>{apu.name}</span><small>{formatCOP(apuTotal(apu))}</small>
+              <strong>{apu.code}</strong>
+              <span>{apu.name}</span>
+              <small>Venta: {formatCOP(apuSellingTotal(apu))}</small>
             </button>
           ))}
           <form className="apu-new-form" onSubmit={createApu}>
@@ -378,8 +399,15 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
           {selected ? (
             <>
               <div className="panel-title apu-editor-heading">
-                <div><p>{selected.code} · {selected.unit}</p><h2>{selected.name}</h2><small>Cantidad de obra: {selected.workQuantity.toLocaleString("es-CO")} {selected.unit}</small></div>
-                <strong className="apu-total">{formatCOP(apuTotal(selected))}<small>{formatCOP(apuTotal(selected) / selected.workQuantity)} / {selected.unit}</small></strong>
+                <div>
+                  <p>{selected.code} · {selected.unit}</p>
+                  <h2>{selected.name}</h2>
+                  <small>Cantidad de obra: {selected.workQuantity.toLocaleString("es-CO")} {selected.unit}</small>
+                </div>
+                <strong className="apu-total">
+                  {formatCOP(apuSellingTotal(selected))}
+                  <small>Precio de venta ({formatCOP(apuSellingTotal(selected) / selected.workQuantity)} / {selected.unit})</small>
+                </strong>
               </div>
               <div className="apu-selected-toolbar">
                 <label><span>Actividad</span><input value={selected.name} onChange={(event) => updateApu({ ...selected, name: event.target.value })} /></label>
@@ -388,6 +416,54 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 <div className="apu-selected-actions"><button type="button" className="inventory-action" onClick={() => void saveSelectedApu()}>Guardar APU</button><button type="button" className="apu-print-btn" onClick={() => setPrintingApu(selected)}>🖨️ Imprimir APU</button><button type="button" className="apu-delete-apu" onClick={() => void deleteSelectedApu()}>Eliminar este APU</button></div>
               </div>
               {saveMessage ? <p className={`apu-save-message is-${saveState}`} role="status" aria-live="polite">{saveMessage}</p> : null}
+
+              {/* Panel de Márgenes por Rubro y Resumen Financiero */}
+              <section className="apu-margins-panel" aria-label="Márgenes de ganancia por rubro">
+                <div className="apu-margins-header">
+                  <div>
+                    <p>Márgenes de ganancia por rubro</p>
+                    <small>Define el porcentaje adicional para cubrir imprevistos, mermas y utilidad comercial.</small>
+                  </div>
+                </div>
+                <div className="apu-margins-grid">
+                  {categories.map((cat) => {
+                    const currentMargin = selected.categoryMargins?.[cat] ?? defaultApuMargins[cat];
+                    return (
+                      <div className="apu-margin-card" key={`margin-${cat}`}>
+                        <label>{apuCategoryMeta[cat].label}</label>
+                        <div className="apu-margin-input-wrap">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={currentMargin}
+                            onChange={(e) => updateMargin(cat, parseFloat(e.target.value))}
+                          />
+                          <span>%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="apu-financial-summary">
+                  <div className="apu-financial-card">
+                    <p>Costo Directo Real</p>
+                    <strong>{formatCOP(apuCostTotal(selected))}</strong>
+                    <small>{formatCOP(apuCostTotal(selected) / selected.workQuantity)} / {selected.unit}</small>
+                  </div>
+                  <div className="apu-financial-card">
+                    <p>Ganancia Estimada</p>
+                    <strong>+{formatCOP(apuProfitAmount(selected))}</strong>
+                    <small>+{apuEffectiveMarginPercent(selected).toFixed(1)}% margen global</small>
+                  </div>
+                  <div className="apu-financial-card is-selling">
+                    <p>Precio Venta Cotizado</p>
+                    <strong>{formatCOP(apuSellingTotal(selected))}</strong>
+                    <small>{formatCOP(apuSellingTotal(selected) / selected.workQuantity)} / {selected.unit} (unitario)</small>
+                  </div>
+                </div>
+              </section>
+
               <section className="apu-budget-control" aria-label="Presupuesto de obra">
                 <div><p>Presupuesto BOQ y control de obra</p><h3>Vincular este APU al presupuesto</h3><small>{companyId ? "Guarda una versión y selecciónala como línea presupuestal de una obra." : "Modo local: selecciona una obra para vincular este APU."}</small></div>
                 <div className="apu-budget-link"><select value={projectToLink} onChange={(event) => setProjectToLink(event.target.value)} aria-label="Obra destino"><option value="">Seleccione obra activa…</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}</select><button type="button" onClick={() => void sendSelectedToBoq()} disabled={(!selected.versionId && !!companyId) || !projectToLink}>Enviar a presupuesto</button></div>
@@ -400,6 +476,9 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
               {categories.map((category) => {
                 const lines = selected.lines.filter((line) => line.category === category);
                 const inventoryChoices = category === "materials" || category === "equipment" ? products : [];
+                const marginPercent = selected.categoryMargins?.[category] ?? defaultApuMargins[category];
+                const costSubtotal = lines.reduce((sum, line) => sum + lineTotal(line), 0);
+                const sellingSubtotal = lines.reduce((sum, line) => sum + lineSellingTotal(line, selected.categoryMargins), 0);
                 return (
                   <section className="apu-section" key={category}>
                     <header>
@@ -428,7 +507,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                     ) : null}
                     <div className="apu-table-wrap">
                       <table>
-                        <thead><tr><th>Recurso</th><th>Cant.</th><th>Rend./día</th><th>Tarifa</th><th>Parcial</th><th /></tr></thead>
+                        <thead><tr><th>Recurso</th><th>Cant.</th><th>Rend./día</th><th>Tarifa base</th><th>Costo base</th><th>Venta (+{marginPercent}%)</th><th /></tr></thead>
                         <tbody>
                           {lines.length ? lines.map((line) => (
                             <tr key={line.id}>
@@ -441,14 +520,23 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                               <td><input type="number" min="0" step="any" value={line.quantity} onChange={(event) => updateLine(line.id, "quantity", Number(event.target.value))} /></td>
                               <td><input type="number" min="0" step="any" value={line.yieldPerDay} onChange={(event) => updateLine(line.id, "yieldPerDay", Number(event.target.value))} /></td>
                               <td><input type="number" min="0" step="any" value={line.dailyRate} onChange={(event) => updateLine(line.id, "dailyRate", Number(event.target.value))} /></td>
-                              <td><strong>{formatCOP(lineTotal(line))}</strong></td>
+                              <td>{formatCOP(lineTotal(line))}</td>
+                              <td><strong>{formatCOP(lineSellingTotal(line, selected.categoryMargins))}</strong></td>
                               <td><button className="apu-remove" aria-label={`Eliminar ${line.name}`} type="button" onClick={() => removeLine(line.id)}>×</button></td>
                             </tr>
-                          )) : <tr><td colSpan={6}>Aún no hay recursos en este rubro.</td></tr>}
+                          )) : <tr><td colSpan={7}>Aún no hay recursos en este rubro.</td></tr>}
                         </tbody>
                       </table>
                     </div>
-                    <footer>Subtotal {apuCategoryMeta[category].label}: <strong>{formatCOP(lines.reduce((sum, line) => sum + lineTotal(line), 0))}</strong></footer>
+                    <footer>
+                      <div className="apu-section-footer-breakdown">
+                        <span className="apu-footer-cost">Costo base: <strong>{formatCOP(costSubtotal)}</strong></span>
+                        <span className="apu-footer-selling">
+                          Venta cotizada (+{marginPercent}%): <strong>{formatCOP(sellingSubtotal)}</strong>
+                          <span className="apu-footer-badge">+{formatCOP(sellingSubtotal - costSubtotal)}</span>
+                        </span>
+                      </div>
+                    </footer>
                   </section>
                 );
               })}

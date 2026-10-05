@@ -1,5 +1,14 @@
 export type ApuCategory = "materials" | "equipment" | "labor" | "transport";
 
+export type ApuCategoryMargins = Partial<Record<ApuCategory, number>>;
+
+export const defaultApuMargins: Record<ApuCategory, number> = {
+  materials: 10,
+  labor: 25,
+  equipment: 15,
+  transport: 10,
+};
+
 export type ApuLine = {
   id: string;
   category: ApuCategory;
@@ -24,6 +33,7 @@ export type Apu = {
   unit: string;
   workQuantity: number;
   lines: ApuLine[];
+  categoryMargins?: ApuCategoryMargins;
   quoteId?: string;
   quoteCode?: string;
   projectId?: string;
@@ -46,14 +56,51 @@ export function lineTotal(line: ApuLine) {
   return line.quantity * line.dailyRate * factor;
 }
 
-export function apuTotal(apu: Apu) {
+export function lineSellingTotal(line: ApuLine, margins?: ApuCategoryMargins) {
+  const cost = lineTotal(line);
+  const margin = margins?.[line.category] ?? defaultApuMargins[line.category] ?? 0;
+  return cost * (1 + margin / 100);
+}
+
+export function apuCostTotal(apu: Apu) {
   return apu.lines.reduce((total, line) => total + lineTotal(line), 0);
+}
+
+export function apuTotal(apu: Apu) {
+  return apuCostTotal(apu);
+}
+
+export function apuSellingTotal(apu: Apu) {
+  return apu.lines.reduce((total, line) => total + lineSellingTotal(line, apu.categoryMargins), 0);
+}
+
+export function apuProfitAmount(apu: Apu) {
+  return apuSellingTotal(apu) - apuCostTotal(apu);
+}
+
+export function apuEffectiveMarginPercent(apu: Apu) {
+  const cost = apuCostTotal(apu);
+  return cost > 0 ? (apuProfitAmount(apu) / cost) * 100 : 0;
 }
 
 export function apuCostBreakdown(apus: ReadonlyArray<Apu>) {
   return apus.reduce(
     (total, apu) => {
-      for (const line of apu.lines) total[line.category] += lineTotal(line);
+      for (const line of apu.lines) {
+        total[line.category] += lineTotal(line);
+      }
+      return total;
+    },
+    { materials: 0, equipment: 0, labor: 0, transport: 0 },
+  );
+}
+
+export function apuSellingBreakdown(apus: ReadonlyArray<Apu>) {
+  return apus.reduce(
+    (total, apu) => {
+      for (const line of apu.lines) {
+        total[line.category] += lineSellingTotal(line, apu.categoryMargins);
+      }
       return total;
     },
     { materials: 0, equipment: 0, labor: 0, transport: 0 },

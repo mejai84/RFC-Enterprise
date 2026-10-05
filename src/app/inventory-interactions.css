@@ -105,11 +105,15 @@
 
 .modal-header {
   align-items: flex-start;
+  background: #ffffff;
+  border-bottom: 1px solid var(--line);
   display: flex;
   justify-content: space-between;
-  margin-bottom: 22px;
+  margin: -32px -32px 22px;
+  padding: 24px 32px 18px;
   position: sticky;
   top: -32px;
+  box-shadow: 0 8px 14px rgba(16, 49, 35, 0.06);
   z-index: 2;
 }
 

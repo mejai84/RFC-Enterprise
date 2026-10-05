@@ -25,6 +25,7 @@ import { PrintableDispatchVoucher } from "./printable-dispatch-voucher";
 import { CurrencyInput } from "@/shared/components/currency-input";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import { getEffectiveQuoteCode, initialQuotes, type Quote } from "@/modules/quotes";
+import { prepareRealDataStorage } from "@/shared/browser/real-data-storage";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -65,18 +66,19 @@ function ProjectHelp({ text, label = "Ayuda" }: { text: string; label?: string }
   );
 }
 
-export function ProjectsWorkspace({ responsibleName }: { responsibleName: string }) {
+export function ProjectsWorkspace({ responsibleName, initialProducts = [] }: { responsibleName: string; initialProducts?: StockProduct[] }) {
   const searchParams = useSearchParams();
   const supabase = useMemo(() => isSupabaseConfigured && supabaseUrl && supabasePublishableKey ? createBrowserClient(supabaseUrl, supabasePublishableKey) : null, []);
   // Sincronización con localStorage
   const [products, setProducts] = useState<StockProduct[]>(() => {
+    prepareRealDataStorage();
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("rfc_inventory_products");
       if (saved) {
         try { return JSON.parse(saved); } catch {}
       }
     }
-    return [...inventoryProducts];
+    return initialProducts;
   });
 
   const [movements, setMovements] = useState<InventoryMovement[]>(() => {
@@ -86,7 +88,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
         try { return JSON.parse(saved); } catch {}
       }
     }
-    return [...sampleInitialMovements];
+    return [];
   });
 
   const [projects, setProjects] = useState<Project[]>(() => {
@@ -103,7 +105,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
         } catch {}
       }
     }
-    return [...inventoryProjects];
+    return [];
   });
   const [quotes] = useState<Quote[]>(() => {
     if (typeof window !== "undefined") {
@@ -112,7 +114,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
         if (saved) return JSON.parse(saved) as Quote[];
       } catch { /* Use catalogue examples when offline. */ }
     }
-    return [...initialQuotes];
+    return [];
   });
 
   const [requisitions, setRequisitions] = useState<MaterialRequisition[]>(() => {
@@ -122,7 +124,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
         try { return JSON.parse(saved); } catch {}
       }
     }
-    return [...inventoryRequisitions];
+    return [];
   });
 
   const [toolLoans, setToolLoans] = useState<ToolLoan[]>(() => {
@@ -132,7 +134,7 @@ export function ProjectsWorkspace({ responsibleName }: { responsibleName: string
         try { return JSON.parse(saved); } catch {}
       }
     }
-    return [...inventoryToolLoans];
+    return [];
   });
 
   // Selected Project State

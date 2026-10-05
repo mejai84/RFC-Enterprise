@@ -25,6 +25,12 @@ export type StockProduct = Product & {
   purchaseUnit?: string; // Presentación recibida del proveedor, p. ej. caja
   unitsPerPurchase?: number; // Unidades de consumo contenidas por presentación
   purchaseUnitCost?: number; // Costo de una presentación de compra en COP
+  model?: string;
+  technicalReference?: string;
+  serialNumber?: string;
+  acquiredAt?: string;
+  warrantyUntil?: string;
+  assetCondition?: "available" | "in_service" | "maintenance" | "retired";
   sourceRow: number;
 };
 

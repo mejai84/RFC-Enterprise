@@ -7,7 +7,7 @@ import {
   supabasePublishableKey,
   supabaseUrl,
 } from "@/lib/supabase/config";
-import type { StockProduct } from "@/modules/inventory";
+import { inventoryUnits, type StockProduct } from "@/modules/inventory";
 
 type Props = { products: StockProduct[] };
 type Line = { quantity: string; cost: string; location: string };
@@ -27,6 +27,9 @@ type ArticleDraft = {
   notes: string;
 };
 type SortKey = "location" | "quantity" | "cost" | "status";
+
+const purchasePresentations = ["Bolsa", "Bulto", "Caja", "Caneca", "Carrete", "Galón", "Paquete", "Par", "Rollo", "Tambor", "Tubo", "Unidad"];
+const standardLocations = ["Bodega principal", "Patio", "Taller", "Almacén de herramientas", "Zona de equipos", "Sin ubicación"];
 
 function FieldHelp({ label, example }: { label: string; example: string }) {
   return (
@@ -50,6 +53,7 @@ function FieldHelp({ label, example }: { label: string; example: string }) {
 
 export function CountsWorkspace({ products }: Props) {
   const [query, setQuery] = useState("");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [lines, setLines] = useState<Record<string, Line>>({});
   const [countId, setCountId] = useState("");
   const [status, setStatus] = useState("");
@@ -90,22 +94,19 @@ export function CountsWorkspace({ products }: Props) {
     [products, query, lines, sortKey, sortDirection],
   );
   const knownValues = useMemo(() => {
-    const unique = (values: Array<string | undefined | null>) =>
-      [
-        ...new Set(
-          values
-            .map((value) => value?.trim())
-            .filter((value): value is string => Boolean(value)),
-        ),
-      ].sort((a, b) => a.localeCompare(b, "es-CO"));
+    const unique = (values: Array<string | undefined | null>) => {
+      const normalized = new Map<string, string>();
+      values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)).forEach((value) => normalized.set(value.toLocaleLowerCase("es-CO"), value));
+      return [...normalized.values()].sort((a, b) => a.localeCompare(b, "es-CO"));
+    };
     return {
       categories: unique(products.map((product) => product.category)),
       brands: unique(products.map((product) => product.brand)),
       references: unique(products.map((product) => product.technicalReference)),
       models: unique(products.map((product) => product.model)),
-      units: unique(products.map((product) => product.unit)),
-      purchaseUnits: unique(products.map((product) => product.purchaseUnit)),
-      locations: unique(products.map((product) => product.location)),
+      units: inventoryUnits.map((unit) => ({ value: unit.symbol, label: `${unit.name} (${unit.symbol})` })),
+      purchaseUnits: unique([...purchasePresentations, ...products.map((product) => product.purchaseUnit)]),
+      locations: unique([...standardLocations, ...products.map((product) => product.location)]),
     };
   }, [products]);
   const client = () =>
@@ -180,6 +181,7 @@ export function CountsWorkspace({ products }: Props) {
       );
       return;
     }
+    setSaveStatus("saving");
     try {
       const id = await ensureCount();
       const supabase = client();
@@ -224,11 +226,15 @@ export function CountsWorkspace({ products }: Props) {
       setStatus(
         `${product.name} guardado${line.cost === "" ? " como pendiente de valorar" : ""}.`,
       );
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 3000);
       if (closeModal) {
         setEditingProduct(null);
         setArticleDraft(null);
+        setSaveStatus("idle");
       }
     } catch (error) {
+      setSaveStatus("error");
       setStatus(error instanceof Error ? error.message : "No se pudo guardar.");
     }
   }
@@ -379,7 +385,12 @@ export function CountsWorkspace({ products }: Props) {
           <div className="modal-card">
             <div className="modal-header">
               <div>
-                <p>Ficha de artículo</p>
+                <p>
+                  Ficha de artículo
+                  {saveStatus === "saving" && <span style={{ marginLeft: '10px', color: '#6b7280', fontSize: '13px' }}>Guardando... ⏳</span>}
+                  {saveStatus === "saved" && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '13px' }}>Guardado ✓</span>}
+                  {saveStatus === "error" && <span style={{ marginLeft: '10px', color: '#ef4444', fontSize: '13px' }}>Error al guardar ⚠️</span>}
+                </p>
                 <h3 id="initial-count-item-title">
                   {articleDraft.name || "Artículo sin nombre"}
                 </h3>
@@ -539,6 +550,7 @@ export function CountsWorkspace({ products }: Props) {
                   list="initial-count-locations"
                   value={currentLine.location}
                   placeholder="Bodega · Estantería · Nivel"
+                  onBlur={() => void saveLine(editingProduct)}
                   onChange={(e) =>
                     setLines((current) => ({
                       ...current,
@@ -550,7 +562,7 @@ export function CountsWorkspace({ products }: Props) {
                   }
                 />
               </div>
-              <div className="form-group">
+              <div className="form-group" style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <FieldHelp
                   label={`Cantidad física (${articleDraft.unit || editingProduct.unit}) *`}
                   example="48 unidades encontradas al contar"
@@ -561,6 +573,8 @@ export function CountsWorkspace({ products }: Props) {
                   step="any"
                   value={currentLine.quantity}
                   placeholder="Cuenta real"
+                  style={{ fontSize: '1.1em', fontWeight: 'bold' }}
+                  onBlur={() => void saveLine(editingProduct)}
                   onChange={(e) =>
                     setLines((current) => ({
                       ...current,
@@ -572,27 +586,32 @@ export function CountsWorkspace({ products }: Props) {
                   }
                 />
               </div>
-              <div className="form-group">
+              <div className="form-group" style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <FieldHelp
                   label="Costo unitario COP (opcional)"
                   example="12.500 por unidad; vacío si se desconoce"
                 />
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  value={currentLine.cost}
-                  placeholder="Déjalo vacío si se desconoce"
-                  onChange={(e) =>
-                    setLines((current) => ({
-                      ...current,
-                      [editingProduct.id]: {
-                        ...currentLine,
-                        cost: e.target.value,
-                      },
-                    }))
-                  }
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#64748b' }}>$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={currentLine.cost}
+                    placeholder="Déjalo vacío si se desconoce"
+                    style={{ flex: 1, fontSize: '1.1em' }}
+                    onBlur={() => void saveLine(editingProduct)}
+                    onChange={(e) =>
+                      setLines((current) => ({
+                        ...current,
+                        [editingProduct.id]: {
+                          ...currentLine,
+                          cost: e.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </div>
               </div>
               <div className="form-group">
                 <FieldHelp
@@ -626,8 +645,8 @@ export function CountsWorkspace({ products }: Props) {
               ))}
             </datalist>
             <datalist id="initial-count-units">
-              {knownValues.units.map((value) => (
-                <option key={value} value={value} />
+              {knownValues.units.map((unit) => (
+                <option key={unit.value} value={unit.value} label={unit.label} />
               ))}
             </datalist>
             <datalist id="initial-count-purchase-units">

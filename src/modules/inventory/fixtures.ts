@@ -10,6 +10,7 @@ export type InventoryGroup = "bodega" | "dotacion" | "trabajadores";
 export type InventoryItemKind = "material" | "tool" | "equipment" | "ppe";
 
 export type StockProduct = Product & {
+  itemId?: string;
   unit: string;
   available: number;
   minimum: number | null;

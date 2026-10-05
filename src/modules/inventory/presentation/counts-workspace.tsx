@@ -99,12 +99,22 @@ export function CountsWorkspace({ products }: Props) {
       values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)).forEach((value) => normalized.set(value.toLocaleLowerCase("es-CO"), value));
       return [...normalized.values()].sort((a, b) => a.localeCompare(b, "es-CO"));
     };
+    const defaultUnitList = [
+      "unidad", "und", "metro", "m", "kilogramo", "kg", "galón", "gal", 
+      "litro", "L", "par", "metro cuadrado (m²)", "m²", "metro cúbico (m³)", "m³", 
+      "gramo", "g", "bulto", "caja", "caneca", "rollo", "bolsa", "tubo"
+    ];
     return {
       categories: unique(products.map((product) => product.category)),
       brands: unique(products.map((product) => product.brand)),
       references: unique(products.map((product) => product.technicalReference)),
       models: unique(products.map((product) => product.model)),
-      units: inventoryUnits.map((unit) => ({ value: unit.symbol, label: `${unit.name} (${unit.symbol})` })),
+      units: unique([
+        ...defaultUnitList,
+        ...inventoryUnits.map((u) => u.name.toLowerCase()),
+        ...inventoryUnits.map((u) => u.symbol),
+        ...products.map((product) => product.unit),
+      ]),
       purchaseUnits: unique([...purchasePresentations, ...products.map((product) => product.purchaseUnit)]),
       locations: unique([...standardLocations, ...products.map((product) => product.location)]),
     };
@@ -645,8 +655,8 @@ export function CountsWorkspace({ products }: Props) {
               ))}
             </datalist>
             <datalist id="initial-count-units">
-              {knownValues.units.map((unit) => (
-                <option key={unit.value} value={unit.value} label={unit.label} />
+              {knownValues.units.map((value) => (
+                <option key={value} value={value} />
               ))}
             </datalist>
             <datalist id="initial-count-purchase-units">

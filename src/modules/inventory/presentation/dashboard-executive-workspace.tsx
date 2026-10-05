@@ -560,7 +560,7 @@ export function DashboardExecutiveWorkspace() {
         </article>
       </section>
 
-      <section className="operational-alerts" aria-labelledby="operational-alerts-title">
+      <section className="operational-alerts" id="operational-alerts" aria-labelledby="operational-alerts-title">
         <div className="operational-alerts-heading"><div><p>Centro de atención</p><h2 id="operational-alerts-title">Alertas operativas</h2></div><span role="status" aria-atomic="true">{operationalAlerts.length} alerta{operationalAlerts.length === 1 ? "" : "s"} activa{operationalAlerts.length === 1 ? "" : "s"}</span></div>
         {operationalAlerts.length ? <div className="operational-alert-list">{operationalAlerts.map((alert) => <Link key={alert.id} href={alert.href} className={`operational-alert is-${alert.severity}`}><span className="operational-alert-origin"><AlertSourceIcon source={alert.source} /><span>{alert.source}</span></span><span className="operational-alert-copy"><strong>{alert.title}</strong><small>{alert.detail}</small></span><span className="operational-alert-action">Ver <span aria-hidden="true">→</span></span></Link>)}</div> : <div className="operational-alert-empty"><span aria-hidden="true">✓</span><div><strong>Sin alertas críticas ni pendientes operativos.</strong><small>La operación se encuentra al día.</small></div></div>}
       </section>

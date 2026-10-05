@@ -278,9 +278,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <strong>RFC Enterprise</strong>
           </div>
           <div className="dashboard-top-actions">
-            <button aria-label="Sin notificaciones pendientes" type="button">
+            <Link aria-label="Ver alertas operativas" className="dashboard-notifications-link" data-tooltip="Ver alertas operativas" href="/dashboard#operational-alerts">
               <Icon name="bell" />
-            </button>
+            </Link>
             <button className="dashboard-signout" aria-label="Cerrar sesión y cambiar de usuario" disabled={isSigningOut} onClick={() => void signOut()} type="button">
               <Icon name="logout" /><span>{isSigningOut ? "Saliendo…" : "Cerrar sesión"}</span>
             </button>

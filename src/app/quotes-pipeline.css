@@ -1152,6 +1152,18 @@
   .quote-apu-guidance { align-items:flex-start; }
 }
 
+/* Correcciones de lectura y desbordamiento en teléfonos */
+@media (max-width: 768px) {
+  .quotes-workspace { overflow-x: hidden; }
+  .quotes-header-actions { display: grid; grid-template-columns: 1fr; }
+  .quotes-view-toggle { background: transparent; border: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; overflow: visible; }
+  .quotes-toggle-btn { background: #fff; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--ink); font-size: 13px; min-width: 0; }
+  .quotes-toggle-btn.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .quotes-new-btn { align-items: center; color: #fff; display: flex; justify-content: center; min-height: 46px; width: 100%; }
+  .kanban-board { margin-left: -16px; margin-right: -16px; max-width: none; padding: 0 16px 18px; scroll-padding-left: 16px; }
+  .kanban-column { width: min(86vw, 336px); }
+}
+
 @media (min-width:769px) and (max-width:1100px) {
   .quotes-workspace { padding:24px 20px 40px; }
   .quotes-pipeline-kpi { grid-template-columns:repeat(2,minmax(0,1fr)); }

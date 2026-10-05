@@ -1,6 +1,8 @@
 /* Public landing page — RFC Enterprise */
 .site-page { background: #f4f6f2; color: var(--ink); overflow-x: hidden; }
-.site-hero { background: linear-gradient(90deg, rgba(4, 21, 15, .94) 0%, rgba(5, 25, 17, .75) 40%, rgba(5, 25, 17, .18) 76%), url('/hero-caucasia-rfc.png') center/cover no-repeat; color: white; display: flex; flex-direction: column; min-height: max(720px, 100dvh); padding: 28px clamp(24px, 5.5vw, 88px) 24px; }
+.site-hero { background: linear-gradient(90deg, rgba(4, 21, 15, .94) 0%, rgba(5, 25, 17, .75) 40%, rgba(5, 25, 17, .18) 76%), url('/hero-caucasia-rfc.png') center/cover no-repeat; background-attachment: fixed; color: white; display: flex; flex-direction: column; min-height: max(720px, 100dvh); overflow: hidden; padding: 28px clamp(24px, 5.5vw, 88px) 24px; position: relative; }
+.site-hero::before { background-image: linear-gradient(rgba(198,144,36,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(198,144,36,.18) 1px, transparent 1px); background-size: 72px 72px; content:""; inset:0; opacity:.22; pointer-events:none; position:absolute; }
+.site-hero > * { position:relative; z-index:1; }
 .site-nav { align-items: center; display: flex; gap: 28px; justify-content: space-between; }
 .site-logo { align-items: center; color: inherit; display: inline-flex; flex-shrink: 0; gap: 12px; }
 .site-logo-image { height: auto; width: auto; }
@@ -14,6 +16,9 @@
 .site-portal-access { align-items: center; border-bottom: 1px solid rgba(143, 226, 179, .68); color: #dff7e9; display: inline-flex; flex-shrink: 0; font-size: 13px; font-weight: 750; gap: 6px; padding: 8px 1px; }
 .site-portal-access:hover { border-color: white; color: white; }
 .site-hero-content { margin: auto 0; max-width: 760px; padding: 110px 0 86px; }
+.site-hero-parallax-logo { border: 1px solid rgba(255,255,255,.42); display: inline-flex; margin-bottom: 26px; padding: 16px; transform: translate3d(0, 0, 0); width: fit-content; }
+.site-hero-parallax-logo img { height: auto; opacity: .94; width: 96px; }
+@media (max-width: 700px), (prefers-reduced-motion: reduce) { .site-hero { background-attachment: scroll; } }
 .site-kicker, .site-section-label { color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .13em; line-height: 1.4; text-transform: uppercase; }
 .site-hero h1, .site-intro h2, .site-work h2, .site-section-heading h2, .site-process h2, .site-contact h2 { font-family: var(--font-display, Georgia, serif); font-weight: 400; letter-spacing: -.055em; line-height: .98; }
 .site-hero h1 { font-size: clamp(3.45rem, 7.4vw, 6.9rem); margin: 22px 0 28px; max-width: 790px; }

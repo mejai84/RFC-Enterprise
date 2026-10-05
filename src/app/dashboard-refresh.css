@@ -318,7 +318,7 @@
   margin-left: auto;
 }
 
-.dashboard-top-actions button {
+.dashboard-top-actions button, .dashboard-top-actions .dashboard-notifications-link {
   align-items: center;
   background: #ffffff;
   border: 1px solid var(--line);
@@ -332,16 +332,17 @@
   width: 40px;
 }
 
-.dashboard-top-actions button:hover {
+.dashboard-top-actions button:hover, .dashboard-top-actions .dashboard-notifications-link:hover {
   background: var(--brand-soft);
   border-color: var(--brand);
   color: var(--brand-dark);
 }
 
-.dashboard-top-actions button .icon {
+.dashboard-top-actions button .icon, .dashboard-top-actions .dashboard-notifications-link .icon {
   height: 18px;
   width: 18px;
 }
+.dashboard-notifications-link { position:relative; }.dashboard-notifications-link::after { background:var(--ink); border-radius:6px; color:#fff; content:attr(data-tooltip); font-size:11px; font-weight:700; left:50%; opacity:0; padding:8px 10px; pointer-events:none; position:absolute; top:calc(100% + 10px); transform:translate(-50%,-4px); transition:opacity .18s ease, transform .18s ease; white-space:nowrap; z-index:20; }.dashboard-notifications-link:hover .icon { animation:notification-bell .48s ease-in-out; }.dashboard-notifications-link:hover::after, .dashboard-notifications-link:focus-visible::after { opacity:1; transform:translate(-50%,0); } @keyframes notification-bell { 0%,100% { transform:rotate(0); } 25% { transform:rotate(12deg); } 75% { transform:rotate(-12deg); } }
 .dashboard-top-actions .dashboard-signout { gap: 7px; padding: 0 12px; width: auto; }
 .dashboard-signout span { font-size: 12px; font-weight: 750; white-space: nowrap; }
 

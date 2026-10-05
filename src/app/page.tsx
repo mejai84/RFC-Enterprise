@@ -46,6 +46,9 @@ export default function Home() {
         </nav>
 
         <div className="site-hero-content">
+          <div className="site-hero-parallax-logo" aria-hidden="true">
+            <Image src="/rfc-logo.svg" alt="" width={146} height={146} priority />
+          </div>
           <p className="site-kicker">Caucasia, Antioquia · Desde 2014</p>
           <h1>La precisión que una obra necesita antes de empezar.</h1>
           <p className="site-lede">Arquitectura, ingeniería, estructuras metálicas y mantenimiento para proyectos que exigen decisiones claras y una ejecución bien acompañada.</p>

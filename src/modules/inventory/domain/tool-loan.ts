@@ -13,7 +13,8 @@ export type ToolLoan = {
   actualReturnDate?: string;
   status: ToolLoanStatus;
   notes?: string;
+  deliverySignatureDataUrl?: string;
+  returnSignatureDataUrl?: string;
 };
 
 export const sampleInitialToolLoans: ToolLoan[] = [];
-

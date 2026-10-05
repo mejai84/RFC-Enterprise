@@ -1,4 +1,10 @@
-export type UnitOfMeasure = { code: string; name: string; symbol: string; baseCode?: string; factor?: number };
+export type UnitOfMeasure = {
+  code: string;
+  name: string;
+  symbol: string;
+  baseCode?: string;
+  factor?: number;
+};
 
 export const inventoryUnits: UnitOfMeasure[] = [
   { code: "unit", name: "Unidad", symbol: "und" },
@@ -14,7 +20,13 @@ export const inventoryUnits: UnitOfMeasure[] = [
   { code: "ounce", name: "Onza", symbol: "oz" },
   { code: "liter", name: "Litro", symbol: "L" },
   { code: "milliliter", name: "Mililitro", symbol: "mL" },
-  { code: "gallon", name: "Galón", symbol: "gal", baseCode: "liter", factor: 3.785 },
+  {
+    code: "gallon",
+    name: "Galón",
+    symbol: "gal",
+    baseCode: "liter",
+    factor: 3.785,
+  },
   { code: "hour", name: "Hora", symbol: "h" },
   { code: "day", name: "Día", symbol: "día" },
   { code: "bag", name: "Bulto", symbol: "bulto" },

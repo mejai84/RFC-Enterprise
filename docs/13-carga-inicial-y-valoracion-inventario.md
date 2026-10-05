@@ -27,3 +27,13 @@ La carga inicial establece el inventario real de partida sin obligar a inventar 
 ## Criterio de control
 
 No se utiliza un costo ficticio. Los valores pendientes deben revisarse antes de usar los informes financieros para decisiones contables.
+
+## Jornadas periódicas de conteo físico
+
+Después de la carga inicial, el mismo módulo abre una **Nueva jornada**. La persona responsable elige si contará toda la bodega, una ubicación o una categoría, registra las cantidades reales y finalmente selecciona **Cerrar y conciliar**. La conciliación genera ajustes de entrada o salida únicamente para las diferencias y conserva la jornada, el motivo, la fecha y el historial como evidencia auditable.
+
+## Catálogos y normalización
+
+- Las unidades de consumo se seleccionan con nombre y abreviatura: por ejemplo, **Kilogramo (kg)**, **Metro (m)**, **Galón (gal)** y **Onza (oz)**.
+- Presentación y ubicación parten de un catálogo base y se complementan con los valores reales registrados.
+- Marcas, modelos y referencias sugieren valores ya usados. La normalización une solamente variantes inequívocas; por ejemplo, `uyustools`, `Uyustools N/A` y el error `ayustool` se consolidan como **UYUSTOOLS**. Los nombres que incluyen una referencia de modelo se conservan para revisión, sin asumir que sean la misma marca.

@@ -15,4 +15,5 @@ export type InventoryMovement = {
   projectName?: string;
   responsible?: string;
   notes?: string;
+  signatureDataUrl?: string;
 };

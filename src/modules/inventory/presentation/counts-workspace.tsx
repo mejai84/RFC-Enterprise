@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   isSupabaseConfigured,
@@ -27,9 +27,37 @@ type ArticleDraft = {
   notes: string;
 };
 type SortKey = "location" | "quantity" | "cost" | "status";
+type CountScope = "all" | "location" | "category";
+type CountSession = {
+  id: string;
+  reason: string;
+  status: string;
+  countedAt: string;
+  approvedAt?: string | null;
+};
 
-const purchasePresentations = ["Bolsa", "Bulto", "Caja", "Caneca", "Carrete", "Galón", "Paquete", "Par", "Rollo", "Tambor", "Tubo", "Unidad"];
-const standardLocations = ["Bodega principal", "Patio", "Taller", "Almacén de herramientas", "Zona de equipos", "Sin ubicación"];
+const purchasePresentations = [
+  "Bolsa",
+  "Bulto",
+  "Caja",
+  "Caneca",
+  "Carrete",
+  "Galón",
+  "Paquete",
+  "Par",
+  "Rollo",
+  "Tambor",
+  "Tubo",
+  "Unidad",
+];
+const standardLocations = [
+  "Bodega principal",
+  "Patio",
+  "Taller",
+  "Almacén de herramientas",
+  "Zona de equipos",
+  "Sin ubicación",
+];
 
 function FieldHelp({ label, example }: { label: string; example: string }) {
   return (
@@ -53,7 +81,9 @@ function FieldHelp({ label, example }: { label: string; example: string }) {
 
 export function CountsWorkspace({ products }: Props) {
   const [query, setQuery] = useState("");
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveStatus, setSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   const [lines, setLines] = useState<Record<string, Line>>({});
   const [countId, setCountId] = useState("");
   const [status, setStatus] = useState("");
@@ -63,9 +93,22 @@ export function CountsWorkspace({ products }: Props) {
   const [articleDraft, setArticleDraft] = useState<ArticleDraft | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("location");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sessionModalOpen, setSessionModalOpen] = useState(false);
+  const [countScope, setCountScope] = useState<CountScope>("all");
+  const [scopeValue, setScopeValue] = useState("");
+  const [sessionReason, setSessionReason] = useState("");
+  const [activeSession, setActiveSession] = useState<CountSession | null>(null);
+  const [history, setHistory] = useState<CountSession[]>([]);
+  const scopedProducts = useMemo(() => {
+    if (countScope === "location" && scopeValue)
+      return products.filter((product) => product.location === scopeValue);
+    if (countScope === "category" && scopeValue)
+      return products.filter((product) => product.category === scopeValue);
+    return products;
+  }, [products, countScope, scopeValue]);
   const rows = useMemo(
     () =>
-      products
+      scopedProducts
         .filter((p) =>
           `${p.name} ${p.sku}`.toLowerCase().includes(query.toLowerCase()),
         )
@@ -91,18 +134,45 @@ export function CountsWorkspace({ products }: Props) {
           return sortDirection === "asc" ? compared : -compared;
         })
         .slice(0, 120),
-    [products, query, lines, sortKey, sortDirection],
+    [scopedProducts, query, lines, sortKey, sortDirection],
   );
   const knownValues = useMemo(() => {
     const unique = (values: Array<string | undefined | null>) => {
       const normalized = new Map<string, string>();
-      values.map((value) => value?.trim()).filter((value): value is string => Boolean(value)).forEach((value) => normalized.set(value.toLocaleLowerCase("es-CO"), value));
-      return [...normalized.values()].sort((a, b) => a.localeCompare(b, "es-CO"));
+      values
+        .map((value) => value?.trim())
+        .filter((value): value is string => Boolean(value))
+        .forEach((value) =>
+          normalized.set(value.toLocaleLowerCase("es-CO"), value),
+        );
+      return [...normalized.values()].sort((a, b) =>
+        a.localeCompare(b, "es-CO"),
+      );
     };
     const defaultUnitList = [
-      "unidad", "und", "metro", "m", "kilogramo", "kg", "galón", "gal", 
-      "litro", "L", "par", "metro cuadrado (m²)", "m²", "metro cúbico (m³)", "m³", 
-      "gramo", "g", "bulto", "caja", "caneca", "rollo", "bolsa", "tubo"
+      "unidad",
+      "und",
+      "metro",
+      "m",
+      "kilogramo",
+      "kg",
+      "galón",
+      "gal",
+      "litro",
+      "L",
+      "par",
+      "metro cuadrado (m²)",
+      "m²",
+      "metro cúbico (m³)",
+      "m³",
+      "gramo",
+      "g",
+      "bulto",
+      "caja",
+      "caneca",
+      "rollo",
+      "bolsa",
+      "tubo",
     ];
     return {
       categories: unique(products.map((product) => product.category)),
@@ -115,17 +185,24 @@ export function CountsWorkspace({ products }: Props) {
         ...inventoryUnits.map((u) => u.symbol),
         ...products.map((product) => product.unit),
       ]),
-      purchaseUnits: unique([...purchasePresentations, ...products.map((product) => product.purchaseUnit)]),
-      locations: unique([...standardLocations, ...products.map((product) => product.location)]),
+      purchaseUnits: unique([
+        ...purchasePresentations,
+        ...products.map((product) => product.purchaseUnit),
+      ]),
+      locations: unique([
+        ...standardLocations,
+        ...products.map((product) => product.location),
+      ]),
     };
   }, [products]);
 
   // ─── Cascada: Categoría → Marca, Unidad ─────────────────────────────────
   const filteredByCategory = useMemo(() => {
-    const catQuery = articleDraft?.category?.trim().toLocaleLowerCase("es-CO") ?? "";
+    const catQuery =
+      articleDraft?.category?.trim().toLocaleLowerCase("es-CO") ?? "";
     if (!catQuery) return products;
     return products.filter(
-      (p) => p.category?.trim().toLocaleLowerCase("es-CO") === catQuery
+      (p) => p.category?.trim().toLocaleLowerCase("es-CO") === catQuery,
     );
   }, [products, articleDraft?.category]);
 
@@ -142,22 +219,40 @@ export function CountsWorkspace({ products }: Props) {
   /** Unidades sugeridas para la categoría seleccionada */
   const unitsForCategory = useMemo(() => {
     const defaultUnitList = [
-      "unidad", "und", "metro", "m", "kilogramo", "kg", "galón", "gal",
-      "litro", "L", "par", "m²", "m³", "gramo", "g",
+      "unidad",
+      "und",
+      "metro",
+      "m",
+      "kilogramo",
+      "kg",
+      "galón",
+      "gal",
+      "litro",
+      "L",
+      "par",
+      "m²",
+      "m³",
+      "gramo",
+      "g",
     ];
-    const fromCategory = filteredByCategory.map((p) => p.unit?.trim()).filter((v): v is string => Boolean(v));
+    const fromCategory = filteredByCategory
+      .map((p) => p.unit?.trim())
+      .filter((v): v is string => Boolean(v));
     const unique = new Map<string, string>();
-    [...defaultUnitList, ...fromCategory].forEach((v) => unique.set(v.toLocaleLowerCase("es-CO"), v));
+    [...defaultUnitList, ...fromCategory].forEach((v) =>
+      unique.set(v.toLocaleLowerCase("es-CO"), v),
+    );
     return [...unique.values()].sort((a, b) => a.localeCompare(b, "es-CO"));
   }, [filteredByCategory]);
 
   // ─── Cascada: Marca → Modelo, Referencia ────────────────────────────────
   /** Modelos y referencias filtrados por la marca actualmente escrita en el draft */
   const filteredByBrand = useMemo(() => {
-    const brandQuery = articleDraft?.brand?.trim().toLocaleLowerCase("es-CO") ?? "";
+    const brandQuery =
+      articleDraft?.brand?.trim().toLocaleLowerCase("es-CO") ?? "";
     if (!brandQuery) return filteredByCategory;
     return filteredByCategory.filter(
-      (p) => p.brand?.trim().toLocaleLowerCase("es-CO") === brandQuery
+      (p) => p.brand?.trim().toLocaleLowerCase("es-CO") === brandQuery,
     );
   }, [filteredByCategory, articleDraft?.brand]);
 
@@ -172,10 +267,11 @@ export function CountsWorkspace({ products }: Props) {
 
   // ─── Cascada: Marca + Modelo → Referencia ───────────────────────────────
   const filteredByModel = useMemo(() => {
-    const modelQuery = articleDraft?.model?.trim().toLocaleLowerCase("es-CO") ?? "";
+    const modelQuery =
+      articleDraft?.model?.trim().toLocaleLowerCase("es-CO") ?? "";
     if (!modelQuery) return filteredByBrand;
     return filteredByBrand.filter(
-      (p) => p.model?.trim().toLocaleLowerCase("es-CO") === modelQuery
+      (p) => p.model?.trim().toLocaleLowerCase("es-CO") === modelQuery,
     );
   }, [filteredByBrand, articleDraft?.model]);
 
@@ -191,6 +287,62 @@ export function CountsWorkspace({ products }: Props) {
     isSupabaseConfigured && supabaseUrl && supabasePublishableKey
       ? createBrowserClient(supabaseUrl, supabasePublishableKey)
       : null;
+
+  useEffect(() => {
+    const supabase = client();
+    if (!supabase) return;
+    void supabase
+      .from("physical_counts")
+      .select("id,reason,status,counted_at,approved_at")
+      .order("created_at", { ascending: false })
+      .limit(8)
+      .then(({ data }) =>
+        setHistory(
+          (data ?? []).map((row) => ({
+            id: row.id,
+            reason: row.reason,
+            status: row.status,
+            countedAt: row.counted_at,
+            approvedAt: row.approved_at,
+          })),
+        ),
+      );
+  }, []);
+
+  async function startSession() {
+    const supabase = client();
+    if (!supabase || !scopedProducts[0]) {
+      setStatus("No hay artículos dentro del alcance seleccionado.");
+      return;
+    }
+    const { data: stock, error: stockError } = await supabase
+      .from("inventory_stock")
+      .select("company_id,branch_id")
+      .eq("id", scopedProducts[0].id)
+      .single();
+    if (stockError || !stock) {
+      setStatus(stockError?.message ?? "No se identificó la sede del conteo.");
+      return;
+    }
+    const scopeLabel = countScope === "all" ? "Toda la bodega" : `${countScope === "location" ? "Ubicación" : "Categoría"}: ${scopeValue}`;
+    const reason = sessionReason.trim() || `Conteo físico · ${scopeLabel}`;
+    const { data, error } = await supabase
+      .from("physical_counts")
+      .insert({ company_id: stock.company_id, branch_id: stock.branch_id, reason })
+      .select("id,reason,status,counted_at,approved_at")
+      .single();
+    if (error || !data) {
+      setStatus(error?.message ?? "No fue posible abrir la jornada.");
+      return;
+    }
+    const session = { id: data.id, reason: data.reason, status: data.status, countedAt: data.counted_at, approvedAt: data.approved_at };
+    setCountId(data.id);
+    setActiveSession(session);
+    setHistory((current) => [session, ...current]);
+    setLines({});
+    setSessionModalOpen(false);
+    setStatus(`Jornada abierta para ${scopedProducts.length} artículo(s).`);
+  }
   const defaultLine = (product: StockProduct): Line => ({
     quantity: "",
     cost: "",
@@ -226,29 +378,7 @@ export function CountsWorkspace({ products }: Props) {
 
   async function ensureCount() {
     if (countId) return countId;
-    const supabase = client();
-    if (!supabase || !products[0])
-      throw new Error("No hay conexión o artículos disponibles.");
-    const { data: stock, error: stockError } = await supabase
-      .from("inventory_stock")
-      .select("company_id,branch_id")
-      .eq("id", products[0].id)
-      .single();
-    if (stockError || !stock)
-      throw stockError ?? new Error("No se identificó la bodega.");
-    const { data, error } = await supabase
-      .from("physical_counts")
-      .insert({
-        company_id: stock.company_id,
-        branch_id: stock.branch_id,
-        reason: "Carga inicial de inventario",
-      })
-      .select("id")
-      .single();
-    if (error || !data)
-      throw error ?? new Error("No fue posible iniciar la carga.");
-    setCountId(data.id);
-    return data.id;
+    throw new Error("Abre una nueva jornada de conteo antes de guardar artículos.");
   }
 
   async function saveLine(product: StockProduct, closeModal = false) {
@@ -296,7 +426,7 @@ export function CountsWorkspace({ products }: Props) {
           counted_quantity: Number(line.quantity),
           unit_cost: line.cost === "" ? null : Number(line.cost),
           counted_location: line.location.trim() || null,
-          reason: "Carga inicial",
+          reason: activeSession?.reason ?? "Conteo físico",
         },
         { onConflict: "count_id,stock_id" },
       );
@@ -330,13 +460,18 @@ export function CountsWorkspace({ products }: Props) {
       return;
     const supabase = client();
     if (!supabase) return;
-    const { error } = await supabase.rpc("approve_initial_inventory_count", {
+    const { error } = await supabase.rpc("approve_physical_count", {
       target_count: countId,
     });
-    setStatus(
-      error?.message ??
-        "Carga inicial aprobada. Los artículos sin costo quedaron pendientes de valorar.",
-    );
+    if (error) {
+      setStatus(error.message);
+      return;
+    }
+    setStatus("Jornada conciliada. Las diferencias quedaron registradas como ajustes auditables.");
+    setActiveSession(null);
+    setHistory((current) => current.map((session) => session.id === countId ? { ...session, status: "approved", approvedAt: new Date().toISOString() } : session));
+    setCountId("");
+    setLines({});
   }
 
   const edit = (key: keyof ArticleDraft, value: string) =>
@@ -348,24 +483,27 @@ export function CountsWorkspace({ products }: Props) {
       <section className="dashboard-heading">
         <div>
           <p>Operaciones · RFC Enterprise</p>
-          <h1>Carga inicial de inventario</h1>
+          <h1>Conteos físicos</h1>
           <small>
-            Selecciona cada artículo para abrir su ficha completa, actualizar su
-            información y registrar el conteo real.
+            Abre una jornada, define su alcance y registra el conteo real antes
+            de conciliar las diferencias contra el inventario del sistema.
           </small>
         </div>
-        <button
-          className="inventory-action"
-          onClick={() => void approve()}
-          type="button"
-        >
-          Aprobar carga inicial
-        </button>
+        <div className="counts-heading-actions">
+          {activeSession && <span className="count-session-badge">Jornada abierta</span>}
+          <button className="btn-cancel" onClick={() => setSessionModalOpen(true)} type="button">
+            Nueva jornada
+          </button>
+          <button className="inventory-action" onClick={() => void approve()} type="button" disabled={!activeSession}>
+            Cerrar y conciliar
+          </button>
+        </div>
       </section>
       <section className="dashboard-panel">
         <p className="panel-intro">
-          La ficha permite corregir la información técnica, ubicación y valor.
-          Un costo vacío queda pendiente de valorar.
+          {activeSession
+            ? `${activeSession.reason}. Registra el conteo físico de cada artículo incluido.`
+            : "Crea una jornada antes de registrar cantidades. Puedes contar toda la bodega, una ubicación o una categoría."}
         </p>
         <div className="inventory-catalog-controls">
           <label className="search-field">
@@ -453,6 +591,55 @@ export function CountsWorkspace({ products }: Props) {
             `Mostrando ${rows.length} artículos. Selecciona un artículo para abrir su ficha.`}
         </p>
       </section>
+      <section className="counts-history" aria-label="Historial de jornadas">
+        <strong>Últimas jornadas</strong>
+        {history.length ? (
+          <ul>
+            {history.slice(0, 4).map((session) => (
+              <li key={session.id}>
+                <span>{session.reason}</span>
+                <small>{session.status === "approved" ? "Conciliada" : "Abierta"} · {new Date(session.countedAt).toLocaleDateString("es-CO")}</small>
+              </li>
+            ))}
+          </ul>
+        ) : <p>Aún no hay jornadas registradas.</p>}
+      </section>
+      {sessionModalOpen && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="count-session-title">
+          <div className="modal-card small">
+            <div className="modal-header">
+              <div><p>Conteo físico</p><h3 id="count-session-title">Nueva jornada</h3></div>
+              <button className="btn-close-modal" type="button" aria-label="Cerrar" onClick={() => setSessionModalOpen(false)}>×</button>
+            </div>
+            <p className="panel-intro">Elige qué se contará. Las existencias del sistema se compararán solo al cerrar y conciliar.</p>
+            <div className="form-group">
+              <label htmlFor="count-scope">Alcance</label>
+              <select id="count-scope" value={countScope} onChange={(event) => { setCountScope(event.target.value as CountScope); setScopeValue(""); }}>
+                <option value="all">Toda la bodega</option>
+                <option value="location">Una ubicación</option>
+                <option value="category">Una categoría</option>
+              </select>
+            </div>
+            {countScope !== "all" && (
+              <div className="form-group">
+                <label htmlFor="count-scope-value">{countScope === "location" ? "Ubicación" : "Categoría"}</label>
+                <select id="count-scope-value" value={scopeValue} onChange={(event) => setScopeValue(event.target.value)} required>
+                  <option value="">Selecciona una opción</option>
+                  {(countScope === "location" ? knownValues.locations : knownValues.categories).map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="form-group">
+              <label htmlFor="count-reason">Observación de la jornada</label>
+              <input id="count-reason" value={sessionReason} onChange={(event) => setSessionReason(event.target.value)} placeholder="Ej.: Inventario mensual de bodega principal" />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-cancel" type="button" onClick={() => setSessionModalOpen(false)}>Cancelar</button>
+              <button className="inventory-action" type="button" disabled={countScope !== "all" && !scopeValue} onClick={() => void startSession()}>Abrir jornada</button>
+            </div>
+          </div>
+        </div>
+      )}
       {editingProduct && currentLine && articleDraft ? (
         <div
           className="modal-backdrop"
@@ -465,9 +652,39 @@ export function CountsWorkspace({ products }: Props) {
               <div>
                 <p>
                   Ficha de artículo
-                  {saveStatus === "saving" && <span style={{ marginLeft: '10px', color: '#6b7280', fontSize: '13px' }}>Guardando... ⏳</span>}
-                  {saveStatus === "saved" && <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '13px' }}>Guardado ✓</span>}
-                  {saveStatus === "error" && <span style={{ marginLeft: '10px', color: '#ef4444', fontSize: '13px' }}>Error al guardar ⚠️</span>}
+                  {saveStatus === "saving" && (
+                    <span
+                      style={{
+                        marginLeft: "10px",
+                        color: "#6b7280",
+                        fontSize: "13px",
+                      }}
+                    >
+                      Guardando... ⏳
+                    </span>
+                  )}
+                  {saveStatus === "saved" && (
+                    <span
+                      style={{
+                        marginLeft: "10px",
+                        color: "#10b981",
+                        fontSize: "13px",
+                      }}
+                    >
+                      Guardado ✓
+                    </span>
+                  )}
+                  {saveStatus === "error" && (
+                    <span
+                      style={{
+                        marginLeft: "10px",
+                        color: "#ef4444",
+                        fontSize: "13px",
+                      }}
+                    >
+                      Error al guardar ⚠️
+                    </span>
+                  )}
                 </p>
                 <h3 id="initial-count-item-title">
                   {articleDraft.name || "Artículo sin nombre"}
@@ -516,9 +733,23 @@ export function CountsWorkspace({ products }: Props) {
                   value={articleDraft.category}
                   onChange={(e) => {
                     // Al cambiar categoría, limpiar marca, modelo y referencia
-                    setArticleDraft((prev) => prev ? { ...prev, category: e.target.value, brand: "", model: "", reference: "" } : prev);
+                    setArticleDraft((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            category: e.target.value,
+                            brand: "",
+                            model: "",
+                            reference: "",
+                          }
+                        : prev,
+                    );
                   }}
-                  placeholder={knownValues.categories.length > 0 ? `${knownValues.categories.length} categoría(s) en catálogo` : "Escribe o crea una categoría"}
+                  placeholder={
+                    knownValues.categories.length > 0
+                      ? `${knownValues.categories.length} categoría(s) en catálogo`
+                      : "Escribe o crea una categoría"
+                  }
                 />
               </div>
               <div className="form-group">
@@ -531,12 +762,27 @@ export function CountsWorkspace({ products }: Props) {
                   value={articleDraft.brand}
                   onChange={(e) => {
                     // Al cambiar marca, limpiar modelo y referencia para evitar inconsistencias
-                    setArticleDraft((prev) => prev ? { ...prev, brand: e.target.value, model: "", reference: "" } : prev);
+                    setArticleDraft((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            brand: e.target.value,
+                            model: "",
+                            reference: "",
+                          }
+                        : prev,
+                    );
                   }}
-                  placeholder={brandsForCategory.length > 0 ? `${brandsForCategory.length} marca(s) en esta categoría` : "Escribe o crea una marca"}
+                  placeholder={
+                    brandsForCategory.length > 0
+                      ? `${brandsForCategory.length} marca(s) en esta categoría`
+                      : "Escribe o crea una marca"
+                  }
                 />
                 <datalist id="initial-count-brands-filtered">
-                  {brandsForCategory.map((b) => <option key={b} value={b} />)}
+                  {brandsForCategory.map((b) => (
+                    <option key={b} value={b} />
+                  ))}
                 </datalist>
               </div>
               <div className="form-group">
@@ -548,10 +794,16 @@ export function CountsWorkspace({ products }: Props) {
                   list="initial-count-models-filtered"
                   value={articleDraft.model}
                   onChange={(e) => edit("model", e.target.value)}
-                  placeholder={modelsForBrand.length > 0 ? `${modelsForBrand.length} modelo(s) disponibles` : "Escribe el modelo"}
+                  placeholder={
+                    modelsForBrand.length > 0
+                      ? `${modelsForBrand.length} modelo(s) disponibles`
+                      : "Escribe el modelo"
+                  }
                 />
                 <datalist id="initial-count-models-filtered">
-                  {modelsForBrand.map((m) => <option key={m} value={m} />)}
+                  {modelsForBrand.map((m) => (
+                    <option key={m} value={m} />
+                  ))}
                 </datalist>
               </div>
               <div className="form-group">
@@ -563,10 +815,16 @@ export function CountsWorkspace({ products }: Props) {
                   list="initial-count-references-filtered"
                   value={articleDraft.reference}
                   onChange={(e) => edit("reference", e.target.value)}
-                  placeholder={referencesForBrand.length > 0 ? `${referencesForBrand.length} referencia(s) disponibles` : "Escribe la referencia"}
+                  placeholder={
+                    referencesForBrand.length > 0
+                      ? `${referencesForBrand.length} referencia(s) disponibles`
+                      : "Escribe la referencia"
+                  }
                 />
                 <datalist id="initial-count-references-filtered">
-                  {referencesForBrand.map((r) => <option key={r} value={r} />)}
+                  {referencesForBrand.map((r) => (
+                    <option key={r} value={r} />
+                  ))}
                 </datalist>
               </div>
               <div className="form-group">
@@ -591,7 +849,9 @@ export function CountsWorkspace({ products }: Props) {
                   placeholder={"unidad, metro, kg, galón…"}
                 />
                 <datalist id="initial-count-units-filtered">
-                  {unitsForCategory.map((u) => <option key={u} value={u} />)}
+                  {unitsForCategory.map((u) => (
+                    <option key={u} value={u} />
+                  ))}
                 </datalist>
               </div>
               <div className="form-group">
@@ -663,7 +923,15 @@ export function CountsWorkspace({ products }: Props) {
                   }
                 />
               </div>
-              <div className="form-group" style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div
+                className="form-group"
+                style={{
+                  background: "#f8fafc",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
                 <FieldHelp
                   label={`Cantidad física (${articleDraft.unit || editingProduct.unit}) *`}
                   example="48 unidades encontradas al contar"
@@ -674,7 +942,7 @@ export function CountsWorkspace({ products }: Props) {
                   step="any"
                   value={currentLine.quantity}
                   placeholder="Cuenta real"
-                  style={{ fontSize: '1.1em', fontWeight: 'bold' }}
+                  style={{ fontSize: "1.1em", fontWeight: "bold" }}
                   onBlur={() => void saveLine(editingProduct)}
                   onChange={(e) =>
                     setLines((current) => ({
@@ -687,20 +955,32 @@ export function CountsWorkspace({ products }: Props) {
                   }
                 />
               </div>
-              <div className="form-group" style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <div
+                className="form-group"
+                style={{
+                  background: "#f8fafc",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
                 <FieldHelp
                   label="Costo unitario COP (opcional)"
                   example="12.500 por unidad; vacío si se desconoce"
                 />
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontWeight: 'bold', color: '#64748b' }}>$</span>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <span style={{ fontWeight: "bold", color: "#64748b" }}>
+                    $
+                  </span>
                   <input
                     type="number"
                     min="0"
                     step="any"
                     value={currentLine.cost}
                     placeholder="Déjalo vacío si se desconoce"
-                    style={{ flex: 1, fontSize: '1.1em' }}
+                    style={{ flex: 1, fontSize: "1.1em" }}
                     onBlur={() => void saveLine(editingProduct)}
                     onChange={(e) =>
                       setLines((current) => ({

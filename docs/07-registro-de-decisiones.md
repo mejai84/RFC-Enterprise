@@ -57,6 +57,13 @@ Las rutas de módulos internos se renderizan dentro de `DashboardShell`. Ningún
 
 Este registro conserva decisiones que afectan el rumbo del producto. Una decisión no se elimina: si cambia, se agrega una nueva entrada que indique cuál reemplaza.
 
+## ADR-079 · Jornadas periódicas de conteo físico
+
+**Fecha:** 2026-10-05
+**Estado:** Aceptada
+
+La carga inicial y los conteos posteriores comparten la entidad `physical_counts`, pero la interfaz obliga a abrir una jornada explícita y elegir su alcance antes de aceptar cantidades. El cierre compara conteo contra saldo de sistema y genera ajustes auditables; no sobrescribe existencias sin dejar movimiento, motivo y sesión vinculada.
+
 ## ADR-001 · Monolito modular
 
 **Fecha:** 2026-09-15  

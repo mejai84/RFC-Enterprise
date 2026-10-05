@@ -6,7 +6,13 @@
  * ───────────────────────────────────────────────────────────── */
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, type FormEvent } from "react";
+import {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  type FormEvent,
+} from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -51,20 +57,74 @@ function formatCompactCOP(value: number | undefined): string {
 function formatDate(iso: string | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);
-  return d.toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString("es-CO", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString("es-CO", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 /** Convierte valores enteros COP a la leyenda comercial exigida en la propuesta. */
 function amountInColombianPesos(value: number): string {
-  const units = ["", "UNO", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"];
-  const teens = ["DIEZ", "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISÉIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE"];
-  const tens = ["", "", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"];
-  const hundreds = ["", "CIENTO", "DOSCIENTOS", "TRESCIENTOS", "CUATROCIENTOS", "QUINIENTOS", "SEISCIENTOS", "SETECIENTOS", "OCHOCIENTOS", "NOVECIENTOS"];
+  const units = [
+    "",
+    "UNO",
+    "DOS",
+    "TRES",
+    "CUATRO",
+    "CINCO",
+    "SEIS",
+    "SIETE",
+    "OCHO",
+    "NUEVE",
+  ];
+  const teens = [
+    "DIEZ",
+    "ONCE",
+    "DOCE",
+    "TRECE",
+    "CATORCE",
+    "QUINCE",
+    "DIECISÉIS",
+    "DIECISIETE",
+    "DIECIOCHO",
+    "DIECINUEVE",
+  ];
+  const tens = [
+    "",
+    "",
+    "VEINTE",
+    "TREINTA",
+    "CUARENTA",
+    "CINCUENTA",
+    "SESENTA",
+    "SETENTA",
+    "OCHENTA",
+    "NOVENTA",
+  ];
+  const hundreds = [
+    "",
+    "CIENTO",
+    "DOSCIENTOS",
+    "TRESCIENTOS",
+    "CUATROCIENTOS",
+    "QUINIENTOS",
+    "SEISCIENTOS",
+    "SETECIENTOS",
+    "OCHOCIENTOS",
+    "NOVECIENTOS",
+  ];
   const underThousand = (number: number): string => {
     if (number === 0) return "";
     if (number === 100) return "CIEN";
@@ -73,9 +133,19 @@ function amountInColombianPesos(value: number): string {
     const result = hundred ? hundreds[hundred] : "";
     if (rest < 10) return [result, units[rest]].filter(Boolean).join(" ");
     if (rest < 20) return [result, teens[rest - 10]].filter(Boolean).join(" ");
-    if (rest < 30) return [result, rest === 20 ? "VEINTE" : `VEINTI${units[rest - 20].toLowerCase()}`.toUpperCase()].filter(Boolean).join(" ");
+    if (rest < 30)
+      return [
+        result,
+        rest === 20
+          ? "VEINTE"
+          : `VEINTI${units[rest - 20].toLowerCase()}`.toUpperCase(),
+      ]
+        .filter(Boolean)
+        .join(" ");
     const ten = tens[Math.floor(rest / 10)];
-    return [result, rest % 10 ? `${ten} Y ${units[rest % 10]}` : ten].filter(Boolean).join(" ");
+    return [result, rest % 10 ? `${ten} Y ${units[rest % 10]}` : ten]
+      .filter(Boolean)
+      .join(" ");
   };
   const amount = Math.max(0, Math.round(value));
   if (amount === 0) return "CERO PESOS COLOMBIANOS M/L";
@@ -88,8 +158,14 @@ function amountInColombianPesos(value: number): string {
     if (group) {
       let words = underThousand(group);
       if (index === 1) words = group === 1 ? "MIL" : `${words} MIL`;
-      else if (index === 2) words = group === 1 ? "UN MILLÓN" : `${words.replace(/UNO$/, "UN")} MILLONES`;
-      else if (index > 2) words = group === 1 ? `UN ${groups[index]}` : `${words.replace(/UNO$/, "UN")} ${groups[index]}`;
+      else if (index === 2)
+        words =
+          group === 1 ? "UN MILLÓN" : `${words.replace(/UNO$/, "UN")} MILLONES`;
+      else if (index > 2)
+        words =
+          group === 1
+            ? `UN ${groups[index]}`
+            : `${words.replace(/UNO$/, "UN")} ${groups[index]}`;
       parts.unshift(words);
     }
     remaining = Math.floor(remaining / 1000);
@@ -99,7 +175,10 @@ function amountInColombianPesos(value: number): string {
 }
 
 function proposalNoteLines(notes: string | undefined): string[] {
-  return (notes ?? "").split(/\r?\n/).map((note) => note.trim()).filter(Boolean);
+  return (notes ?? "")
+    .split(/\r?\n/)
+    .map((note) => note.trim())
+    .filter(Boolean);
 }
 
 function uid(): string {
@@ -108,27 +187,77 @@ function uid(): string {
 
 /** Ayuda contextual: visible con cursor, foco de teclado o toque. */
 const statusHelp: Record<QuoteStatus, string> = {
-  received: "Radica la solicitud, el contacto y los documentos o planos recibidos.",
-  in_review: "Valida alcance, requisitos, documentación y si se necesita visita técnica.",
+  received:
+    "Radica la solicitud, el contacto y los documentos o planos recibidos.",
+  in_review:
+    "Valida alcance, requisitos, documentación y si se necesita visita técnica.",
   estimating: "Elabora o ajusta el APU y prepara la propuesta económica.",
   sent: "La propuesta ya fue enviada al cliente; verifica vigencia y seguimiento.",
-  awaiting_response: "Esperando decisión del cliente. Haz seguimiento si supera 3 días.",
-  revision_requested: "El cliente pidió cambios: ajusta APU, alcance o propuesta antes de reenviar.",
-  confirmed: "Oferta aceptada. Convierte la cotización en Obra para iniciar la ejecución.",
-  in_execution: "La obra está activa: registra avances, costos y consumo de recursos.",
-  work_completed: "Trabajo terminado: valida entrega, acta y soportes para facturación.",
-  billing_pending: "Pendiente de facturación o cobro según las condiciones acordadas.",
-  closed: "Ciclo comercial y de cobro finalizado. Se conserva para consulta y trazabilidad.",
+  awaiting_response:
+    "Esperando decisión del cliente. Haz seguimiento si supera 3 días.",
+  revision_requested:
+    "El cliente pidió cambios: ajusta APU, alcance o propuesta antes de reenviar.",
+  confirmed:
+    "Oferta aceptada. Convierte la cotización en Obra para iniciar la ejecución.",
+  in_execution:
+    "La obra está activa: registra avances, costos y consumo de recursos.",
+  work_completed:
+    "Trabajo terminado: valida entrega, acta y soportes para facturación.",
+  billing_pending:
+    "Pendiente de facturación o cobro según las condiciones acordadas.",
+  closed:
+    "Ciclo comercial y de cobro finalizado. Se conserva para consulta y trazabilidad.",
   lost: "No adjudicada. Registra el motivo para análisis comercial futuro.",
 };
 
-function QuoteStatusHelp({ compact = false, status }: { compact?: boolean; status?: QuoteStatus }) {
+function QuoteStatusHelp({
+  compact = false,
+  status,
+}: {
+  compact?: boolean;
+  status?: QuoteStatus;
+}) {
   return (
     <span className={`quote-help ${compact ? "is-compact" : ""}`}>
-      <button type="button" className="quote-help-trigger" aria-label="Ayuda sobre los estados de cotización">?</button>
+      <button
+        type="button"
+        className="quote-help-trigger"
+        aria-label="Ayuda sobre los estados de cotización"
+      >
+        ?
+      </button>
       <span className="quote-help-popover" role="tooltip">
-        <strong>{status ? `${getStatusMeta(status).label}: qué hacer` : "Flujo de cotización"}</strong>
-        {status ? <span>{statusHelp[status]}</span> : <><span><b>1. Recibido / En revisión:</b> registra solicitud, planos, alcance y visita.</span><span><b>2. Cotización en proceso:</b> crea o modifica el APU y la propuesta.</span><span><b>3. Enviada / Esperando respuesta:</b> seguimiento comercial al cliente.</span><span><b>4. Confirmada:</b> conviértela en Obra; luego continúa Ejecución, Terminada y Pago.</span><span><b>Por modificar:</b> habilita ajustar el APU tras comentarios del cliente.</span></>}
+        <strong>
+          {status
+            ? `${getStatusMeta(status).label}: qué hacer`
+            : "Flujo de cotización"}
+        </strong>
+        {status ? (
+          <span>{statusHelp[status]}</span>
+        ) : (
+          <>
+            <span>
+              <b>1. Recibido / En revisión:</b> registra solicitud, planos,
+              alcance y visita.
+            </span>
+            <span>
+              <b>2. Cotización en proceso:</b> crea o modifica el APU y la
+              propuesta.
+            </span>
+            <span>
+              <b>3. Enviada / Esperando respuesta:</b> seguimiento comercial al
+              cliente.
+            </span>
+            <span>
+              <b>4. Confirmada:</b> conviértela en Obra; luego continúa
+              Ejecución, Terminada y Pago.
+            </span>
+            <span>
+              <b>Por modificar:</b> habilita ajustar el APU tras comentarios del
+              cliente.
+            </span>
+          </>
+        )}
       </span>
     </span>
   );
@@ -145,19 +274,36 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     prepareRealDataStorage();
     try {
       const storedQuotes = localStorage.getItem("rfc_quotes");
-      const baseQuotes = storedQuotes ? (JSON.parse(storedQuotes) as Quote[]) : initialQuotes;
-      const apus = JSON.parse(localStorage.getItem("rfc_apus") || "[]") as Apu[];
+      const baseQuotes = storedQuotes
+        ? (JSON.parse(storedQuotes) as Quote[])
+        : initialQuotes;
+      const apus = JSON.parse(
+        localStorage.getItem("rfc_apus") || "[]",
+      ) as Apu[];
       if (!apus.length) return baseQuotes;
       return baseQuotes.map((quote) => {
         const linkedApus = apus.filter((apu) => apu.quoteId === quote.id);
         if (!linkedApus.length) return quote;
         const directCosts = apuCostBreakdown(linkedApus);
         const sellingBreakdown = apuSellingBreakdown(linkedApus);
-        const directTotal = directCosts.materials + directCosts.labor + directCosts.equipment + directCosts.transport;
-        const sellingTotal = sellingBreakdown.materials + sellingBreakdown.labor + sellingBreakdown.equipment + sellingBreakdown.transport;
+        const directTotal =
+          directCosts.materials +
+          directCosts.labor +
+          directCosts.equipment +
+          directCosts.transport;
+        const sellingTotal =
+          sellingBreakdown.materials +
+          sellingBreakdown.labor +
+          sellingBreakdown.equipment +
+          sellingBreakdown.transport;
         const profit = Math.max(0, sellingTotal - directTotal);
-        const costBreakdown = { ...quote.costBreakdown, ...directCosts, indirects: profit };
-        const estimatedValue = sellingTotal > 0 ? sellingTotal : calculateTotalCost(costBreakdown);
+        const costBreakdown = {
+          ...quote.costBreakdown,
+          ...directCosts,
+          indirects: profit,
+        };
+        const estimatedValue =
+          sellingTotal > 0 ? sellingTotal : calculateTotalCost(costBreakdown);
         return { ...quote, costBreakdown, estimatedValue };
       });
     } catch {
@@ -168,7 +314,9 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   const [view, setView] = useState<ViewMode>("kanban");
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(() => {
     const quoteId = searchParams.get("quoteId");
-    return quoteId ? quotes.find((quote) => quote.id === quoteId) ?? null : null;
+    return quoteId
+      ? (quotes.find((quote) => quote.id === quoteId) ?? null)
+      : null;
   });
   const [showNewForm, setShowNewForm] = useState(false);
   const [quoteToPrint, setQuoteToPrint] = useState<Quote | null>(null);
@@ -203,7 +351,8 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   /* ── Filtrado ───────────────────────────────────────────── */
   const filtered = useMemo(() => {
     let result = quotes;
-    if (filterStatus !== "all") result = result.filter((q) => q.status === filterStatus);
+    if (filterStatus !== "all")
+      result = result.filter((q) => q.status === filterStatus);
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       result = result.filter(
@@ -211,153 +360,182 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           q.title.toLowerCase().includes(term) ||
           q.code.toLowerCase().includes(term) ||
           q.client.toLowerCase().includes(term) ||
-          (q.responsible && q.responsible.toLowerCase().includes(term))
+          (q.responsible && q.responsible.toLowerCase().includes(term)),
       );
     }
     return result;
   }, [quotes, filterStatus, searchTerm]);
 
   /* ── Cambiar estado con nota ─────────────────────────────── */
-  const changeStatus = useCallback((quoteId: string, newStatus: QuoteStatus, note?: string) => {
-    const now = new Date().toISOString();
-    setQuotes((prev) =>
-      prev.map((q) => {
-        if (q.id !== quoteId) return q;
+  const changeStatus = useCallback(
+    (quoteId: string, newStatus: QuoteStatus, note?: string) => {
+      const now = new Date().toISOString();
+      setQuotes((prev) =>
+        prev.map((q) => {
+          if (q.id !== quoteId) return q;
+          const entry: QuoteHistoryEntry = {
+            id: uid(),
+            fromStatus: q.status,
+            toStatus: newStatus,
+            changedBy: "Jorge Figueroa",
+            changedAt: now,
+            note,
+          };
+          const isNowSent = newStatus === "sent" && !q.sentAt;
+          return {
+            ...q,
+            status: newStatus,
+            sentAt: isNowSent ? now.slice(0, 10) : q.sentAt,
+            updatedAt: now,
+            history: [...q.history, entry],
+          };
+        }),
+      );
+      setSelectedQuote((prev) => {
+        if (!prev || prev.id !== quoteId) return prev;
         const entry: QuoteHistoryEntry = {
           id: uid(),
-          fromStatus: q.status,
+          fromStatus: prev.status,
           toStatus: newStatus,
           changedBy: "Jorge Figueroa",
           changedAt: now,
           note,
         };
-        const isNowSent = newStatus === "sent" && !q.sentAt;
+        const isNowSent = newStatus === "sent" && !prev.sentAt;
         return {
-          ...q,
+          ...prev,
           status: newStatus,
-          sentAt: isNowSent ? now.slice(0, 10) : q.sentAt,
+          sentAt: isNowSent ? now.slice(0, 10) : prev.sentAt,
           updatedAt: now,
-          history: [...q.history, entry],
+          history: [...prev.history, entry],
         };
-      })
-    );
-    setSelectedQuote((prev) => {
-      if (!prev || prev.id !== quoteId) return prev;
-      const entry: QuoteHistoryEntry = {
-        id: uid(),
-        fromStatus: prev.status,
-        toStatus: newStatus,
-        changedBy: "Jorge Figueroa",
-        changedAt: now,
-        note,
-      };
-      const isNowSent = newStatus === "sent" && !prev.sentAt;
-      return {
-        ...prev,
-        status: newStatus,
-        sentAt: isNowSent ? now.slice(0, 10) : prev.sentAt,
-        updatedAt: now,
-        history: [...prev.history, entry],
-      };
-    });
-  }, []);
+      });
+    },
+    [],
+  );
 
   /* ── Guardar actualización de Pre-costeo ─────────────────── */
-  const handleSaveCostBreakdown = useCallback((quoteId: string, breakdown: QuoteCostBreakdown) => {
-    const total = calculateTotalCost(breakdown);
-    const now = new Date().toISOString();
-    setQuotes((prev) =>
-      prev.map((q) => {
-        if (q.id !== quoteId) return q;
+  const handleSaveCostBreakdown = useCallback(
+    (quoteId: string, breakdown: QuoteCostBreakdown) => {
+      const total = calculateTotalCost(breakdown);
+      const now = new Date().toISOString();
+      setQuotes((prev) =>
+        prev.map((q) => {
+          if (q.id !== quoteId) return q;
+          return {
+            ...q,
+            costBreakdown: breakdown,
+            estimatedValue: total > 0 ? total : q.estimatedValue,
+            updatedAt: now,
+          };
+        }),
+      );
+      setSelectedQuote((prev) => {
+        if (!prev || prev.id !== quoteId) return prev;
         return {
-          ...q,
+          ...prev,
           costBreakdown: breakdown,
-          estimatedValue: total > 0 ? total : q.estimatedValue,
+          estimatedValue: total > 0 ? total : prev.estimatedValue,
           updatedAt: now,
         };
-      })
-    );
-    setSelectedQuote((prev) => {
-      if (!prev || prev.id !== quoteId) return prev;
-      return {
-        ...prev,
-        costBreakdown: breakdown,
-        estimatedValue: total > 0 ? total : prev.estimatedValue,
-        updatedAt: now,
-      };
-    });
-    setActionNotice("Pre-costeo de 3 rubros actualizado con éxito.");
-  }, []);
+      });
+      setActionNotice("Pre-costeo de 3 rubros actualizado con éxito.");
+    },
+    [],
+  );
 
-  const handleSaveProposalNotes = useCallback((quoteId: string, notes: string) => {
-    const updatedAt = new Date().toISOString();
-    const nextNotes = notes.trim() || undefined;
-    setQuotes((previous) => previous.map((quote) => quote.id === quoteId ? { ...quote, notes: nextNotes, updatedAt } : quote));
-    setSelectedQuote((previous) => previous?.id === quoteId ? { ...previous, notes: nextNotes, updatedAt } : previous);
-    setActionNotice(nextNotes ? "Notas para la propuesta guardadas." : "Notas para la propuesta eliminadas.");
-  }, []);
+  const handleSaveProposalNotes = useCallback(
+    (quoteId: string, notes: string) => {
+      const updatedAt = new Date().toISOString();
+      const nextNotes = notes.trim() || undefined;
+      setQuotes((previous) =>
+        previous.map((quote) =>
+          quote.id === quoteId
+            ? { ...quote, notes: nextNotes, updatedAt }
+            : quote,
+        ),
+      );
+      setSelectedQuote((previous) =>
+        previous?.id === quoteId
+          ? { ...previous, notes: nextNotes, updatedAt }
+          : previous,
+      );
+      setActionNotice(
+        nextNotes
+          ? "Notas para la propuesta guardadas."
+          : "Notas para la propuesta eliminadas.",
+      );
+    },
+    [],
+  );
 
   /* ── Guardar actualización de Visita Técnica ─────────────── */
-  const handleSaveTechnicalVisit = useCallback((quoteId: string, visit: TechnicalVisit) => {
-    const now = new Date().toISOString();
-    setQuotes((prev) =>
-      prev.map((q) => {
-        if (q.id !== quoteId) return q;
-        return { ...q, technicalVisit: visit, updatedAt: now };
-      })
-    );
-    setSelectedQuote((prev) => {
-      if (!prev || prev.id !== quoteId) return prev;
-      return { ...prev, technicalVisit: visit, updatedAt: now };
-    });
-    setActionNotice("Datos de visita técnica guardados.");
-  }, []);
+  const handleSaveTechnicalVisit = useCallback(
+    (quoteId: string, visit: TechnicalVisit) => {
+      const now = new Date().toISOString();
+      setQuotes((prev) =>
+        prev.map((q) => {
+          if (q.id !== quoteId) return q;
+          return { ...q, technicalVisit: visit, updatedAt: now };
+        }),
+      );
+      setSelectedQuote((prev) => {
+        if (!prev || prev.id !== quoteId) return prev;
+        return { ...prev, technicalVisit: visit, updatedAt: now };
+      });
+      setActionNotice("Datos de visita técnica guardados.");
+    },
+    [],
+  );
 
   /* ── Crear nueva revisión (R1, R2...) ───────────────────── */
-  const handleCreateRevision = useCallback((quoteId: string, reason: string) => {
-    const now = new Date().toISOString();
-    setQuotes((prev) =>
-      prev.map((q) => {
-        if (q.id !== quoteId) return q;
-        const nextRev = (q.revision || 0) + 1;
+  const handleCreateRevision = useCallback(
+    (quoteId: string, reason: string) => {
+      const now = new Date().toISOString();
+      setQuotes((prev) =>
+        prev.map((q) => {
+          if (q.id !== quoteId) return q;
+          const nextRev = (q.revision || 0) + 1;
+          const entry: QuoteHistoryEntry = {
+            id: uid(),
+            fromStatus: q.status,
+            toStatus: "revision_requested",
+            changedBy: "Jorge Figueroa",
+            changedAt: now,
+            note: `Creación de Revisión R${nextRev}: ${reason}`,
+          };
+          return {
+            ...q,
+            revision: nextRev,
+            status: "revision_requested",
+            updatedAt: now,
+            history: [...q.history, entry],
+          };
+        }),
+      );
+      setSelectedQuote((prev) => {
+        if (!prev || prev.id !== quoteId) return prev;
+        const nextRev = (prev.revision || 0) + 1;
         const entry: QuoteHistoryEntry = {
           id: uid(),
-          fromStatus: q.status,
+          fromStatus: prev.status,
           toStatus: "revision_requested",
           changedBy: "Jorge Figueroa",
           changedAt: now,
           note: `Creación de Revisión R${nextRev}: ${reason}`,
         };
         return {
-          ...q,
+          ...prev,
           revision: nextRev,
           status: "revision_requested",
           updatedAt: now,
-          history: [...q.history, entry],
+          history: [...prev.history, entry],
         };
-      })
-    );
-    setSelectedQuote((prev) => {
-      if (!prev || prev.id !== quoteId) return prev;
-      const nextRev = (prev.revision || 0) + 1;
-      const entry: QuoteHistoryEntry = {
-        id: uid(),
-        fromStatus: prev.status,
-        toStatus: "revision_requested",
-        changedBy: "Jorge Figueroa",
-        changedAt: now,
-        note: `Creación de Revisión R${nextRev}: ${reason}`,
-      };
-      return {
-        ...prev,
-        revision: nextRev,
-        status: "revision_requested",
-        updatedAt: now,
-        history: [...prev.history, entry],
-      };
-    });
-    setActionNotice("Nueva revisión generada con éxito.");
-  }, []);
+      });
+      setActionNotice("Nueva revisión generada con éxito.");
+    },
+    [],
+  );
 
   /* ── Conversión 1-Click a Obra / Proyecto ────────────────── */
   const handleConvertToProject = useCallback((quote: Quote) => {
@@ -365,18 +543,24 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     const createdAt = now.toISOString();
     const startDate = createdAt.slice(0, 10);
     const estimatedEnd = new Date(now);
-    estimatedEnd.setDate(estimatedEnd.getDate() + (quote.deliveryTimeWeeks ?? 3) * 7);
+    estimatedEnd.setDate(
+      estimatedEnd.getDate() + (quote.deliveryTimeWeeks ?? 3) * 7,
+    );
     const estimatedEndDate = estimatedEnd.toISOString().slice(0, 10);
     const storedProjects = (() => {
       try {
         const saved = localStorage.getItem("rfc_inventory_projects");
-        return saved ? JSON.parse(saved) as Project[] : [];
+        return saved ? (JSON.parse(saved) as Project[]) : [];
       } catch {
         return [] as Project[];
       }
     })();
     const projectId = `prj-${crypto.randomUUID()}`;
-    const generatedProjectCode = getNextProjectCode(storedProjects, "obra", startDate);
+    const generatedProjectCode = getNextProjectCode(
+      storedProjects,
+      "obra",
+      startDate,
+    );
     const newProject: Project = {
       id: projectId,
       code: generatedProjectCode,
@@ -392,7 +576,10 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       startDate,
       estimatedEndDate,
     };
-    localStorage.setItem("rfc_inventory_projects", JSON.stringify([...storedProjects, newProject]));
+    localStorage.setItem(
+      "rfc_inventory_projects",
+      JSON.stringify([...storedProjects, newProject]),
+    );
     // Formato de código de obra
 
     // Registrar en cotización
@@ -415,7 +602,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           updatedAt: createdAt,
           history: [...q.history, entry],
         };
-      })
+      }),
     );
 
     setSelectedQuote((prev) => {
@@ -429,94 +616,111 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       };
     });
 
-    setActionNotice(`¡Proyecto creado exitosamente con código ${generatedProjectCode}!`);
+    setActionNotice(
+      `¡Proyecto creado exitosamente con código ${generatedProjectCode}!`,
+    );
   }, []);
 
   /* ── Crear nueva cotización ────────────────────────────── */
-  const handleCreateQuote = useCallback((e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const title = String(fd.get("title") ?? "").trim();
-    const client = String(fd.get("client") ?? "").trim();
-    const contactName = String(fd.get("contactName") ?? "").trim();
-    const contactEmail = String(fd.get("contactEmail") ?? "").trim();
-    const contactPhone = String(fd.get("contactPhone") ?? "").trim();
-    const emailOrigin = String(fd.get("emailOrigin") ?? "").trim();
-    const validityDays = Number(fd.get("validityDays") || 30);
-    const deliveryTimeWeeks = Number(fd.get("deliveryTimeWeeks") || 3);
-    const paymentTerms = String(fd.get("paymentTerms") ?? "50% anticipo, 50% contra entrega").trim();
-    const folderUrl = String(fd.get("folderUrl") ?? "").trim();
-    const reqVisit = fd.get("reqVisit") === "on";
-    const deadline = String(fd.get("deadline") ?? "").trim();
-    const notes = String(fd.get("notes") ?? "").trim();
-    const laborScale = String(fd.get("laborScale") ?? "rfc_standard") as "rfc_standard" | "ocensa";
+  const handleCreateQuote = useCallback(
+    (e: FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const fd = new FormData(e.currentTarget);
+      const title = String(fd.get("title") ?? "").trim();
+      const client = String(fd.get("client") ?? "").trim();
+      const contactName = String(fd.get("contactName") ?? "").trim();
+      const contactEmail = String(fd.get("contactEmail") ?? "").trim();
+      const contactPhone = String(fd.get("contactPhone") ?? "").trim();
+      const emailOrigin = String(fd.get("emailOrigin") ?? "").trim();
+      const validityDays = Number(fd.get("validityDays") || 30);
+      const deliveryTimeWeeks = Number(fd.get("deliveryTimeWeeks") || 3);
+      const paymentTerms = String(
+        fd.get("paymentTerms") ?? "50% anticipo, 50% contra entrega",
+      ).trim();
+      const folderUrl = String(fd.get("folderUrl") ?? "").trim();
+      const reqVisit = fd.get("reqVisit") === "on";
+      const deadline = String(fd.get("deadline") ?? "").trim();
+      const notes = String(fd.get("notes") ?? "").trim();
+      const laborScale = String(fd.get("laborScale") ?? "rfc_standard") as
+        | "rfc_standard"
+        | "ocensa";
 
-    // Valores de pre-costeo preliminares
-    const matVal = Number(String(fd.get("matValue") ?? "").replace(/\D/g, "")) || 0;
-    const labVal = Number(String(fd.get("labValue") ?? "").replace(/\D/g, "")) || 0;
-    const eqVal = Number(String(fd.get("eqValue") ?? "").replace(/\D/g, "")) || 0;
-    const estSum = matVal + labVal + eqVal;
+      // Valores de pre-costeo preliminares
+      const matVal =
+        Number(String(fd.get("matValue") ?? "").replace(/\D/g, "")) || 0;
+      const labVal =
+        Number(String(fd.get("labValue") ?? "").replace(/\D/g, "")) || 0;
+      const eqVal =
+        Number(String(fd.get("eqValue") ?? "").replace(/\D/g, "")) || 0;
+      const estSum = matVal + labVal + eqVal;
 
-    if (!title || !client) return;
+      if (!title || !client) return;
 
-    const code = getNextQuoteCode(quotes, client, title);
-    const now = new Date().toISOString();
-    const newQuote: Quote = {
-      id: uid(),
-      code,
-      revision: 0,
-      title,
-      client,
-      contactName: contactName || undefined,
-      contactEmail: contactEmail || undefined,
-      contactPhone: contactPhone || undefined,
-      emailOrigin: emailOrigin || undefined,
-      status: "received",
-      responsible: "Jorge Figueroa",
-      estimatedValue: estSum > 0 ? estSum : undefined,
-      costBreakdown:
-        estSum > 0
+      const code = getNextQuoteCode(quotes, client, title);
+      const now = new Date().toISOString();
+      const newQuote: Quote = {
+        id: uid(),
+        code,
+        revision: 0,
+        title,
+        client,
+        contactName: contactName || undefined,
+        contactEmail: contactEmail || undefined,
+        contactPhone: contactPhone || undefined,
+        emailOrigin: emailOrigin || undefined,
+        status: "received",
+        responsible: "Jorge Figueroa",
+        estimatedValue: estSum > 0 ? estSum : undefined,
+        costBreakdown:
+          estSum > 0
+            ? {
+                materials: matVal,
+                labor: labVal,
+                equipment: eqVal,
+              }
+            : undefined,
+        laborScale,
+        validityDays,
+        deliveryTimeWeeks,
+        paymentTerms,
+        technicalVisit: reqVisit
           ? {
-              materials: matVal,
-              labor: labVal,
-              equipment: eqVal,
+              required: true,
+              status: "pending",
+              findings:
+                "Visita de inspección requerida antes de fijar APU final.",
             }
           : undefined,
-      laborScale,
-      validityDays,
-      deliveryTimeWeeks,
-      paymentTerms,
-      technicalVisit: reqVisit
-        ? {
-            required: true,
-            status: "pending",
-            findings: "Visita de inspección requerida antes de fijar APU final.",
-          }
-        : undefined,
-      folderUrl: folderUrl || undefined,
-      receivedAt: now.slice(0, 10),
-      deadline: deadline || undefined,
-      notes: notes || undefined,
-      nextAction: reqVisit ? "Programar visita técnica al sitio de la obra" : "Revisar alcance y documentación técnica",
-      history: [
-        {
-          id: uid(),
-          fromStatus: null,
-          toStatus: "received",
-          changedBy: "Jorge Figueroa",
-          changedAt: now,
-          note: emailOrigin ? `Recibido vía: ${emailOrigin}` : "Registro manual en el sistema",
-        },
-      ],
-      createdAt: now,
-      updatedAt: now,
-    };
+        folderUrl: folderUrl || undefined,
+        receivedAt: now.slice(0, 10),
+        deadline: deadline || undefined,
+        notes: notes || undefined,
+        nextAction: reqVisit
+          ? "Programar visita técnica al sitio de la obra"
+          : "Revisar alcance y documentación técnica",
+        history: [
+          {
+            id: uid(),
+            fromStatus: null,
+            toStatus: "received",
+            changedBy: "Jorge Figueroa",
+            changedAt: now,
+            note: emailOrigin
+              ? `Recibido vía: ${emailOrigin}`
+              : "Registro manual en el sistema",
+          },
+        ],
+        createdAt: now,
+        updatedAt: now,
+      };
 
-    setQuotes((prev) => [newQuote, ...prev]);
-    setShowNewForm(false);
-    setSelectedQuote(newQuote);
-    setActionNotice(`Cotización ${code} registrada exitosamente.`);
-  }, [quotes]);
+      setQuotes((prev) => [newQuote, ...prev]);
+      setShowNewForm(false);
+      setSelectedQuote(newQuote);
+      setActionNotice(`Cotización ${code} registrada exitosamente.`);
+    },
+    [quotes],
+  );
 
   return (
     <div className="quotes-workspace">
@@ -531,19 +735,34 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       {/* ── Header ────────────────────────────────────────────── */}
       <header className="quotes-header">
         <div className="quotes-header-left">
-          <div className="quotes-title-with-help"><h1>Cotizaciones & Pipeline Comercial</h1><QuoteStatusHelp /></div>
+          <div className="quotes-title-with-help">
+            <h1>Cotizaciones & Pipeline Comercial</h1>
+            <QuoteStatusHelp />
+          </div>
           <p className="quotes-subtitle">
-            Flujo comercial continuo: desde la recepción de la solicitud hasta la adjudicación y obra en ejecución.
+            Flujo comercial continuo: desde la recepción de la solicitud hasta
+            la adjudicación y obra en ejecución.
           </p>
         </div>
         <div className="quotes-header-actions">
-          <div className="quotes-view-toggle" role="group" aria-label="Modo de vista">
+          <div
+            className="quotes-view-toggle"
+            role="group"
+            aria-label="Modo de vista"
+          >
             <button
               className={`quotes-toggle-btn ${view === "kanban" ? "active" : ""}`}
               onClick={() => setView("kanban")}
               title="Vista Tablero Kanban"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <rect x="3" y="3" width="7" height="18" rx="1" />
                 <rect x="14" y="3" width="7" height="11" rx="1" />
               </svg>
@@ -554,7 +773,14 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
               onClick={() => setView("list")}
               title="Vista Lista detallada"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <line x1="8" y1="6" x2="21" y2="6" />
                 <line x1="8" y1="12" x2="21" y2="12" />
                 <line x1="8" y1="18" x2="21" y2="18" />
@@ -565,7 +791,10 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
               Lista
             </button>
           </div>
-          <button className="quotes-new-btn" onClick={() => setShowNewForm(true)}>
+          <button
+            className="quotes-new-btn"
+            onClick={() => setShowNewForm(true)}
+          >
             + Nueva Solicitud
           </button>
         </div>
@@ -584,7 +813,9 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         <div className="kpi-block">
           <span className="kpi-label">En Cotización / Negociación</span>
           <span className="kpi-value">
-            {(summary.estimating || 0) + (summary.sent || 0) + (summary.awaiting_response || 0)}
+            {(summary.estimating || 0) +
+              (summary.sent || 0) +
+              (summary.awaiting_response || 0)}
           </span>
         </div>
         <div className="kpi-block">
@@ -612,7 +843,9 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
             <button
               key={s.value}
               className={`quotes-summary-chip ${filterStatus === s.value ? "active" : ""}`}
-              onClick={() => setFilterStatus(filterStatus === s.value ? "all" : s.value)}
+              onClick={() =>
+                setFilterStatus(filterStatus === s.value ? "all" : s.value)
+              }
               style={{ "--chip-color": s.color } as React.CSSProperties}
             >
               <span className="chip-icon">{s.icon}</span>
@@ -633,7 +866,10 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           className="quotes-search-input"
         />
         {searchTerm && (
-          <button className="quotes-clear-filter" onClick={() => setSearchTerm("")}>
+          <button
+            className="quotes-clear-filter"
+            onClick={() => setSearchTerm("")}
+          >
             Limpiar búsqueda ({filtered.length})
           </button>
         )}
@@ -721,7 +957,8 @@ function KanbanView({
               style={{ "--col-color": meta.color } as React.CSSProperties}
             >
               <span className="kanban-col-icon">{meta.icon}</span>
-              <span className="kanban-col-label">{meta.label}</span><QuoteStatusHelp compact status={colStatus} />
+              <span className="kanban-col-label">{meta.label}</span>
+              <QuoteStatusHelp compact status={colStatus} />
               <span className="kanban-col-count">{colQuotes.length}</span>
             </div>
 
@@ -762,7 +999,9 @@ function KanbanCard({
 }) {
   const stale = isStale(quote);
   const effectiveCode = getEffectiveQuoteCode(quote);
-  const expiry = ["sent", "awaiting_response"].includes(quote.status) ? getOfferExpiry(quote) : null;
+  const expiry = ["sent", "awaiting_response"].includes(quote.status)
+    ? getOfferExpiry(quote)
+    : null;
 
   return (
     <div
@@ -793,7 +1032,14 @@ function KanbanCard({
           >
             🖨️
           </button>
-          {stale && <span className="kanban-stale-badge" title="Más de 3 días esperando respuesta">⚠️</span>}
+          {stale && (
+            <span
+              className="kanban-stale-badge"
+              title="Más de 3 días esperando respuesta"
+            >
+              ⚠️
+            </span>
+          )}
         </div>
       </div>
 
@@ -808,16 +1054,16 @@ function KanbanCard({
               expiry.isExpired
                 ? "quote-tag--expired"
                 : expiry.isExpiringSoon
-                ? "quote-tag--expiring"
-                : "quote-tag--valid"
+                  ? "quote-tag--expiring"
+                  : "quote-tag--valid"
             }`}
             title={`Vence: ${expiry.expiryDateStr}`}
           >
             {expiry.isExpired
               ? `⚠️ Vencida hace ${Math.abs(expiry.daysLeft)}d`
               : expiry.isExpiringSoon
-              ? `⏰ Vence en ${expiry.daysLeft}d`
-              : `⏳ Vigente (${expiry.daysLeft}d)`}
+                ? `⏰ Vence en ${expiry.daysLeft}d`
+                : `⏳ Vigente (${expiry.daysLeft}d)`}
           </span>
         )}
 
@@ -830,7 +1076,9 @@ function KanbanCard({
             }`}
             title={quote.technicalVisit.findings || "Visita técnica requerida"}
           >
-            {quote.technicalVisit.status === "completed" ? "✓ Visita OK" : "🚜 Visita pend."}
+            {quote.technicalVisit.status === "completed"
+              ? "✓ Visita OK"
+              : "🚜 Visita pend."}
           </span>
         )}
 
@@ -850,21 +1098,34 @@ function KanbanCard({
 
       {/* ── Mini desglose de 3 rubros si existe ── */}
       {quote.costBreakdown && (
-        <div className="kanban-mini-breakdown" title="Materiales | Cuadrilla | Equipos">
-          <span className="mini-bk-item">🧱 Mat: {formatCompactCOP(quote.costBreakdown.materials)}</span>
-          <span className="mini-bk-item">👷 MO: {formatCompactCOP(quote.costBreakdown.labor)}</span>
-          <span className="mini-bk-item">🚜 Eq: {formatCompactCOP(quote.costBreakdown.equipment)}</span>
+        <div
+          className="kanban-mini-breakdown"
+          title="Materiales | Cuadrilla | Equipos"
+        >
+          <span className="mini-bk-item">
+            🧱 Mat: {formatCompactCOP(quote.costBreakdown.materials)}
+          </span>
+          <span className="mini-bk-item">
+            👷 MO: {formatCompactCOP(quote.costBreakdown.labor)}
+          </span>
+          <span className="mini-bk-item">
+            🚜 Eq: {formatCompactCOP(quote.costBreakdown.equipment)}
+          </span>
         </div>
       )}
 
       <div className="kanban-card-meta">
-        <span className="kanban-card-value">{formatCOP(quote.estimatedValue)}</span>
+        <span className="kanban-card-value">
+          {formatCOP(quote.estimatedValue)}
+        </span>
         <span className="kanban-card-date">{formatDate(quote.receivedAt)}</span>
       </div>
 
       {quote.projectCode && (
         <div className="kanban-linked-project">
-          <span>🏗️ Obra: <strong>{quote.projectCode}</strong></span>
+          <span>
+            🏗️ Obra: <strong>{quote.projectCode}</strong>
+          </span>
         </div>
       )}
 
@@ -878,11 +1139,20 @@ function KanbanCard({
       {getNextQuickStatus(quote.status) && (
         <button
           className="kanban-card-advance"
-          style={{ "--adv-color": getStatusMeta(getNextQuickStatus(quote.status)!).color } as React.CSSProperties}
+          style={
+            {
+              "--adv-color": getStatusMeta(getNextQuickStatus(quote.status)!)
+                .color,
+            } as React.CSSProperties
+          }
           onClick={(e) => {
             e.stopPropagation();
             const next = getNextQuickStatus(quote.status)!;
-            onStatusChange(quote.id, next, `Avanzado rápidamente a ${getStatusMeta(next).label}`);
+            onStatusChange(
+              quote.id,
+              next,
+              `Avanzado rápidamente a ${getStatusMeta(next).label}`,
+            );
           }}
         >
           Pasar a: {getStatusMeta(getNextQuickStatus(quote.status)!).icon}{" "}
@@ -954,7 +1224,9 @@ function ListView({
               const meta = getStatusMeta(q.status);
               const stale = isStale(q);
               const effectiveCode = getEffectiveQuoteCode(q);
-              const expiry = ["sent", "awaiting_response"].includes(q.status) ? getOfferExpiry(q) : null;
+              const expiry = ["sent", "awaiting_response"].includes(q.status)
+                ? getOfferExpiry(q)
+                : null;
 
               return (
                 <tr
@@ -965,17 +1237,23 @@ function ListView({
                 >
                   <td className="cell-code">
                     <span>{effectiveCode}</span>
-                    {q.revision > 0 && <span className="badge-revision">R{q.revision}</span>}
+                    {q.revision > 0 && (
+                      <span className="badge-revision">R{q.revision}</span>
+                    )}
                   </td>
                   <td className="cell-title">
                     <strong>{q.title}</strong>
-                    {q.projectCode && <div className="cell-sub-obra">Obra: {q.projectCode}</div>}
+                    {q.projectCode && (
+                      <div className="cell-sub-obra">Obra: {q.projectCode}</div>
+                    )}
                   </td>
                   <td>{q.client}</td>
                   <td>
                     <span
                       className="status-badge"
-                      style={{ "--badge-color": meta.color } as React.CSSProperties}
+                      style={
+                        { "--badge-color": meta.color } as React.CSSProperties
+                      }
                     >
                       {meta.icon} {meta.label}
                     </span>
@@ -984,8 +1262,16 @@ function ListView({
                   <td className="cell-value">{formatCOP(q.estimatedValue)}</td>
                   <td>
                     {q.technicalVisit?.required ? (
-                      <span className={q.technicalVisit.status === "completed" ? "tag-visit-ok" : "tag-visit-wait"}>
-                        {q.technicalVisit.status === "completed" ? "✓ Realizada" : "⏳ Pendiente"}
+                      <span
+                        className={
+                          q.technicalVisit.status === "completed"
+                            ? "tag-visit-ok"
+                            : "tag-visit-wait"
+                        }
+                      >
+                        {q.technicalVisit.status === "completed"
+                          ? "✓ Realizada"
+                          : "⏳ Pendiente"}
                       </span>
                     ) : (
                       <span style={{ color: "var(--subtle)" }}>—</span>
@@ -993,7 +1279,15 @@ function ListView({
                   </td>
                   <td>
                     {expiry ? (
-                      <span className={expiry.isExpired ? "tag-exp-bad" : expiry.isExpiringSoon ? "tag-exp-warn" : "tag-exp-ok"}>
+                      <span
+                        className={
+                          expiry.isExpired
+                            ? "tag-exp-bad"
+                            : expiry.isExpiringSoon
+                              ? "tag-exp-warn"
+                              : "tag-exp-ok"
+                        }
+                      >
                         {expiry.isExpired ? "Vencida" : `${expiry.daysLeft}d`}
                       </span>
                     ) : (
@@ -1013,7 +1307,9 @@ function ListView({
                       <select
                         className="status-select"
                         value={q.status}
-                        onChange={(e) => onStatusChange(q.id, e.target.value as QuoteStatus)}
+                        onChange={(e) =>
+                          onStatusChange(q.id, e.target.value as QuoteStatus)
+                        }
                       >
                         {quoteStatuses.map((s) => (
                           <option key={s.value} value={s.value}>
@@ -1066,29 +1362,52 @@ function DetailModal({
   const [revReason, setRevReason] = useState("");
 
   // Estado local para edición de Pre-costeo
-  const [materials, setMaterials] = useState(quote.costBreakdown?.materials ?? 0);
+  const [materials, setMaterials] = useState(
+    quote.costBreakdown?.materials ?? 0,
+  );
   const [labor, setLabor] = useState(quote.costBreakdown?.labor ?? 0);
-  const [equipment, setEquipment] = useState(quote.costBreakdown?.equipment ?? 0);
-  const [transport, setTransport] = useState(quote.costBreakdown?.transport ?? 0);
-  const [indirects, setIndirects] = useState(quote.costBreakdown?.indirects ?? 0);
+  const [equipment, setEquipment] = useState(
+    quote.costBreakdown?.equipment ?? 0,
+  );
+  const [transport, setTransport] = useState(
+    quote.costBreakdown?.transport ?? 0,
+  );
+  const [indirects, setIndirects] = useState(
+    quote.costBreakdown?.indirects ?? 0,
+  );
   const [proposalNotes, setProposalNotes] = useState(quote.notes ?? "");
 
   // Estado local para edición de Visita Técnica
-  const [visitReq, setVisitReq] = useState(quote.technicalVisit?.required ?? false);
-  const [visitDate, setVisitDate] = useState(quote.technicalVisit?.scheduledDate ?? "");
-  const [visitResp, setVisitResp] = useState(quote.technicalVisit?.responsible ?? quote.responsible);
-  const [visitStatus, setVisitStatus] = useState<"pending" | "completed" | "not_required">(
-    quote.technicalVisit?.status ?? "pending"
+  const [visitReq, setVisitReq] = useState(
+    quote.technicalVisit?.required ?? false,
   );
-  const [visitFindings, setVisitFindings] = useState(quote.technicalVisit?.findings ?? "");
+  const [visitDate, setVisitDate] = useState(
+    quote.technicalVisit?.scheduledDate ?? "",
+  );
+  const [visitResp, setVisitResp] = useState(
+    quote.technicalVisit?.responsible ?? quote.responsible,
+  );
+  const [visitStatus, setVisitStatus] = useState<
+    "pending" | "completed" | "not_required"
+  >(quote.technicalVisit?.status ?? "pending");
+  const [visitFindings, setVisitFindings] = useState(
+    quote.technicalVisit?.findings ?? "",
+  );
 
   const meta = getStatusMeta(quote.status);
   const effectiveCode = getEffectiveQuoteCode(quote);
   const currentCostSum = materials + labor + equipment + transport + indirects;
-  const canManageApu = quote.status === "estimating" || quote.status === "revision_requested";
+  const canManageApu =
+    quote.status === "estimating" || quote.status === "revision_requested";
   const [hasExistingApu] = useState(() => {
     if (typeof window === "undefined") return false;
-    try { return (JSON.parse(localStorage.getItem("rfc_apus") || "[]") as Apu[]).some((apu) => apu.quoteId === quote.id); } catch { return false; }
+    try {
+      return (
+        JSON.parse(localStorage.getItem("rfc_apus") || "[]") as Apu[]
+      ).some((apu) => apu.quoteId === quote.id);
+    } catch {
+      return false;
+    }
   });
   const apuHref = `/apu?quoteId=${encodeURIComponent(quote.id)}&quoteCode=${encodeURIComponent(effectiveCode)}&quoteTitle=${encodeURIComponent(quote.title)}&quoteStatus=${encodeURIComponent(quote.status)}`;
 
@@ -1100,17 +1419,29 @@ function DetailModal({
       aria-modal="true"
       aria-label={`Detalle de ${effectiveCode}`}
     >
-      <div className="quote-modal quote-modal--detailed" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="quote-modal quote-modal--detailed"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* ── Header con Consecutivo y Botones Superiores ── */}
         <header className="quote-modal-header">
           <div>
             <span className="quote-modal-code">{effectiveCode}</span>
-            {quote.revision > 0 && <span className="badge-revision">Revisión R{quote.revision}</span>}
-            <span className="status-badge" style={{ "--badge-color": meta.color } as React.CSSProperties}>
+            {quote.revision > 0 && (
+              <span className="badge-revision">Revisión R{quote.revision}</span>
+            )}
+            <span
+              className="status-badge"
+              style={{ "--badge-color": meta.color } as React.CSSProperties}
+            >
               {meta.icon} {meta.label}
             </span>
           </div>
-          <button className="quote-modal-close" onClick={onClose} aria-label="Cerrar">
+          <button
+            className="quote-modal-close"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
             ✕
           </button>
         </header>
@@ -1136,8 +1467,19 @@ function DetailModal({
               Gestionar APU de esta cotización
             </Link>
           ) : hasExistingApu ? (
-            <Link className="action-pill-btn btn-apu btn-apu-readonly" href={apuHref} title="Consultar el APU histórico; solo se habilita edición al crear una revisión.">Consultar APU (solo lectura)</Link>
-          ) : <span className="quote-apu-guidance">No hay APU creado. Solo se puede crear o editar durante Cotización en proceso o Por modificar.</span>}
+            <Link
+              className="action-pill-btn btn-apu btn-apu-readonly"
+              href={apuHref}
+              title="Consultar el APU histórico; solo se habilita edición al crear una revisión."
+            >
+              Consultar APU (solo lectura)
+            </Link>
+          ) : (
+            <span className="quote-apu-guidance">
+              No hay APU creado. Solo se puede crear o editar durante Cotización
+              en proceso o Por modificar.
+            </span>
+          )}
 
           <button
             className="action-pill-btn btn-revision"
@@ -1148,18 +1490,22 @@ function DetailModal({
           </button>
 
           {/* Botón de conversión a obra disponible si está confirmado o en ejecución */}
-          {["confirmed", "in_execution"].includes(quote.status) && !quote.projectCode && (
-            <button
-              className="action-pill-btn btn-convert"
-              onClick={() => onConvertToProject(quote)}
-              title="Crea automáticamente el centro de costos en el módulo de Proyectos"
-            >
-              🏗️ Convertir a Obra / Proyecto 1-Click
-            </button>
-          )}
+          {["confirmed", "in_execution"].includes(quote.status) &&
+            !quote.projectCode && (
+              <button
+                className="action-pill-btn btn-convert"
+                onClick={() => onConvertToProject(quote)}
+                title="Crea automáticamente el centro de costos en el módulo de Proyectos"
+              >
+                🏗️ Convertir a Obra / Proyecto 1-Click
+              </button>
+            )}
 
           {quote.projectCode && (
-            <Link href={`/projects?projectId=${encodeURIComponent(quote.projectId ?? "")}`} className="action-pill-btn btn-view-project">
+            <Link
+              href={`/projects?projectId=${encodeURIComponent(quote.projectId ?? "")}`}
+              className="action-pill-btn btn-view-project"
+            >
               ✓ Ver Obra: {quote.projectCode} →
             </Link>
           )}
@@ -1169,7 +1515,10 @@ function DetailModal({
         {showRevPrompt && (
           <div className="revision-prompt-box">
             <h4>Crear Revisión R{quote.revision + 1}</h4>
-            <p>Registra el motivo del ajuste solicitado por el cliente (descuento, alcance, cantidades):</p>
+            <p>
+              Registra el motivo del ajuste solicitado por el cliente
+              (descuento, alcance, cantidades):
+            </p>
             <input
               type="text"
               placeholder="Ej: Cliente solicita rebaja del 5% en materiales y plazo de 2 semanas"
@@ -1189,7 +1538,10 @@ function DetailModal({
               >
                 Generar R{quote.revision + 1}
               </button>
-              <button className="quotes-cancel-btn" onClick={() => setShowRevPrompt(false)}>
+              <button
+                className="quotes-cancel-btn"
+                onClick={() => setShowRevPrompt(false)}
+              >
                 Cancelar
               </button>
             </div>
@@ -1233,16 +1585,35 @@ function DetailModal({
               <Field label="Correo Contacto" value={quote.contactEmail} />
               <Field label="Teléfono" value={quote.contactPhone} />
               <Field label="Responsable RFC" value={quote.responsible} />
-              <Field label="Valor Estimado" value={formatCOP(quote.estimatedValue)} />
+              <Field
+                label="Valor Estimado"
+                value={formatCOP(quote.estimatedValue)}
+              />
               <Field label="Recibido el" value={formatDate(quote.receivedAt)} />
-              <Field label="Fecha Límite Entrega" value={formatDate(quote.deadline)} />
-              <Field label="Validez Comercial" value={`${quote.validityDays ?? 30} días`} />
-              <Field label="Tiempo de Entrega" value={`${quote.deliveryTimeWeeks ?? 3} semanas`} />
+              <Field
+                label="Fecha Límite Entrega"
+                value={formatDate(quote.deadline)}
+              />
+              <Field
+                label="Validez Comercial"
+                value={`${quote.validityDays ?? 30} días`}
+              />
+              <Field
+                label="Tiempo de Entrega"
+                value={`${quote.deliveryTimeWeeks ?? 3} semanas`}
+              />
               <Field label="Condiciones de Pago" value={quote.paymentTerms} />
               {quote.folderUrl && (
                 <div className="quote-field">
-                  <span className="quote-field-label">Expediente en la nube</span>
-                  <a href={quote.folderUrl} target="_blank" rel="noopener noreferrer" className="link-folder">
+                  <span className="quote-field-label">
+                    Expediente en la nube
+                  </span>
+                  <a
+                    href={quote.folderUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="link-folder"
+                  >
                     📂 Abrir carpeta de planos y pliegos ↗
                   </a>
                 </div>
@@ -1251,7 +1622,8 @@ function DetailModal({
 
             {quote.emailOrigin && (
               <div className="quote-info-banner">
-                <strong>📧 Correo de Solicitud Original:</strong> {quote.emailOrigin}
+                <strong>📧 Correo de Solicitud Original:</strong>{" "}
+                {quote.emailOrigin}
               </div>
             )}
 
@@ -1262,9 +1634,29 @@ function DetailModal({
             )}
 
             <div className="quote-proposal-notes-editor">
-              <label htmlFor="quote-proposal-notes"><strong>Notas para la propuesta</strong><small>Escribe una nota por renglón; cada una se imprimirá en su propia fila debajo del valor en letras.</small></label>
-              <textarea id="quote-proposal-notes" rows={4} value={proposalNotes} onChange={(event) => setProposalNotes(event.target.value)} placeholder={"Ej. valor incluye transporte\nEj. no incluye IVA\nEj. vigencia según oferta"} />
-              <button type="button" className="quotes-new-btn" onClick={() => onSaveProposalNotes(quote.id, proposalNotes)}>Guardar notas</button>
+              <label htmlFor="quote-proposal-notes">
+                <strong>Notas para la propuesta</strong>
+                <small>
+                  Escribe una nota por renglón; cada una se imprimirá en su
+                  propia fila debajo del valor en letras.
+                </small>
+              </label>
+              <textarea
+                id="quote-proposal-notes"
+                rows={4}
+                value={proposalNotes}
+                onChange={(event) => setProposalNotes(event.target.value)}
+                placeholder={
+                  "Ej. valor incluye transporte\nEj. no incluye IVA\nEj. vigencia según oferta"
+                }
+              />
+              <button
+                type="button"
+                className="quotes-new-btn"
+                onClick={() => onSaveProposalNotes(quote.id, proposalNotes)}
+              >
+                Guardar notas
+              </button>
             </div>
           </div>
         )}
@@ -1273,7 +1665,9 @@ function DetailModal({
         {activeTab === "breakdown" && (
           <div className="quote-tab-content">
             <p className="tab-intro">
-              Estructura paramétrica de costos preliminares. Al aprobarse la cotización, estos valores se trasladarán al presupuesto base de la obra.
+              Estructura paramétrica de costos preliminares. Al aprobarse la
+              cotización, estos valores se trasladarán al presupuesto base de la
+              obra.
             </p>
 
             <div className="cost-breakdown-editor">
@@ -1386,7 +1780,9 @@ function DetailModal({
         {activeTab === "visit" && (
           <div className="quote-tab-content">
             <p className="tab-intro">
-              Control de inspección previa en sitio para levantamiento de medidas, estado de accesos fluviales/terrestres y condiciones de seguridad.
+              Control de inspección previa en sitio para levantamiento de
+              medidas, estado de accesos fluviales/terrestres y condiciones de
+              seguridad.
             </p>
 
             <div className="visit-editor">
@@ -1425,13 +1821,25 @@ function DetailModal({
                     Estado de la visita
                     <select
                       value={visitStatus}
-                      onChange={(e) => setVisitStatus(e.target.value as NonNullable<TechnicalVisit["status"]>)}
+                      onChange={(e) =>
+                        setVisitStatus(
+                          e.target.value as NonNullable<
+                            TechnicalVisit["status"]
+                          >,
+                        )
+                      }
                       className="status-select"
                       style={{ padding: "10px" }}
                     >
-                      <option value="pending">⏳ Visita pendiente de realización</option>
-                      <option value="completed">✓ Visita técnica ejecutada a satisfacción</option>
-                      <option value="not_required">✕ No requerida / Cancelada</option>
+                      <option value="pending">
+                        ⏳ Visita pendiente de realización
+                      </option>
+                      <option value="completed">
+                        ✓ Visita técnica ejecutada a satisfacción
+                      </option>
+                      <option value="not_required">
+                        ✕ No requerida / Cancelada
+                      </option>
                     </select>
                   </label>
 
@@ -1472,7 +1880,9 @@ function DetailModal({
           <div className="quote-tab-content">
             {/* Cambiar estado */}
             <div className="quote-modal-status-change">
-              <label className="quote-modal-label">Actualizar estado del pipeline <QuoteStatusHelp compact /></label>
+              <label className="quote-modal-label">
+                Actualizar estado del pipeline <QuoteStatusHelp compact />
+              </label>
               <div className="quote-modal-status-row">
                 <select
                   className="status-select"
@@ -1495,7 +1905,11 @@ function DetailModal({
                 <button
                   className="quotes-new-btn"
                   onClick={() => {
-                    const sel = (document.getElementById("modal-status-select-tab") as HTMLSelectElement).value as QuoteStatus;
+                    const sel = (
+                      document.getElementById(
+                        "modal-status-select-tab",
+                      ) as HTMLSelectElement
+                    ).value as QuoteStatus;
                     if (sel !== quote.status) {
                       onStatusChange(quote.id, sel, statusNote || undefined);
                       setStatusNote("");
@@ -1513,19 +1927,27 @@ function DetailModal({
               <div className="quote-history-timeline">
                 {[...quote.history].reverse().map((entry) => {
                   const toMeta = getStatusMeta(entry.toStatus);
-                  const fromMeta = entry.fromStatus ? getStatusMeta(entry.fromStatus) : null;
+                  const fromMeta = entry.fromStatus
+                    ? getStatusMeta(entry.fromStatus)
+                    : null;
                   return (
                     <div className="history-entry" key={entry.id}>
-                      <div className="history-dot" style={{ background: toMeta.color }} />
+                      <div
+                        className="history-dot"
+                        style={{ background: toMeta.color }}
+                      />
                       <div className="history-content">
                         <div className="history-meta">
                           <strong>{entry.changedBy}</strong>
-                          <span className="history-date">{formatDateTime(entry.changedAt)}</span>
+                          <span className="history-date">
+                            {formatDateTime(entry.changedAt)}
+                          </span>
                         </div>
                         <p className="history-change">
                           {fromMeta ? (
                             <>
-                              {fromMeta.icon} {fromMeta.label} → {toMeta.icon} {toMeta.label}
+                              {fromMeta.icon} {fromMeta.label} → {toMeta.icon}{" "}
+                              {toMeta.label}
                             </>
                           ) : (
                             <>
@@ -1533,7 +1955,9 @@ function DetailModal({
                             </>
                           )}
                         </p>
-                        {entry.note && <p className="history-note">{entry.note}</p>}
+                        {entry.note && (
+                          <p className="history-note">{entry.note}</p>
+                        )}
                       </div>
                     </div>
                   );
@@ -1575,12 +1999,19 @@ function NewQuoteModal({
 
   // Vista previa en vivo del código que se generará
   const previewCode = useMemo(() => {
-    return getNextQuoteCode(existingQuotes, client || "CLIENTE", title || "OBRA");
+    return getNextQuoteCode(
+      existingQuotes,
+      client || "CLIENTE",
+      title || "OBRA",
+    );
   }, [existingQuotes, client, title]);
 
   return (
     <div className="quote-modal-backdrop" onClick={onClose}>
-      <div className="quote-modal quote-modal--new" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="quote-modal quote-modal--new"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="quote-modal-header">
           <div>
             <h2>Nueva Solicitud de Cotización</h2>
@@ -1588,7 +2019,11 @@ function NewQuoteModal({
               Consecutivo generado: <strong>{previewCode}</strong>
             </div>
           </div>
-          <button className="quote-modal-close" onClick={onClose} aria-label="Cerrar">
+          <button
+            className="quote-modal-close"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
             ✕
           </button>
         </header>
@@ -1631,18 +2066,30 @@ function NewQuoteModal({
           <div className="new-quote-row">
             <label className="form-field">
               Nombre de contacto
-              <input name="contactName" type="text" placeholder="Ej: Ing. Andrés Gómez" />
+              <input
+                name="contactName"
+                type="text"
+                placeholder="Ej: Ing. Andrés Gómez"
+              />
             </label>
             <label className="form-field">
               Correo electrónico
-              <input name="contactEmail" type="email" placeholder="agomez@empresa.com" />
+              <input
+                name="contactEmail"
+                type="email"
+                placeholder="agomez@empresa.com"
+              />
             </label>
           </div>
 
           <div className="new-quote-row">
             <label className="form-field">
               Teléfono de contacto
-              <input name="contactPhone" type="tel" placeholder="+57 310 123 4567" />
+              <input
+                name="contactPhone"
+                type="tel"
+                placeholder="+57 310 123 4567"
+              />
             </label>
             <label className="form-field">
               Fecha límite para cotizar
@@ -1652,15 +2099,25 @@ function NewQuoteModal({
 
           {/* Pre-costeo preliminar */}
           <div className="new-quote-subgroup">
-            <span className="subgroup-title">💰 Pre-costeo estimado inicial (Opcional)</span>
+            <span className="subgroup-title">
+              💰 Pre-costeo estimado inicial (Opcional)
+            </span>
             <div className="new-quote-row">
               <label className="form-field">
                 🧱 Materiales (COP)
-                <input name="matValue" type="text" placeholder="Ej: 8.500.000" />
+                <input
+                  name="matValue"
+                  type="text"
+                  placeholder="Ej: 8.500.000"
+                />
               </label>
               <label className="form-field">
                 👷 Mano de obra (COP)
-                <input name="labValue" type="text" placeholder="Ej: 5.200.000" />
+                <input
+                  name="labValue"
+                  type="text"
+                  placeholder="Ej: 5.200.000"
+                />
               </label>
             </div>
             <div className="new-quote-row">
@@ -1670,7 +2127,12 @@ function NewQuoteModal({
               </label>
               <label className="form-field">
                 ⏳ Validez oferta (días)
-                <input name="validityDays" type="number" defaultValue={30} min={5} />
+                <input
+                  name="validityDays"
+                  type="number"
+                  defaultValue={30}
+                  min={5}
+                />
               </label>
             </div>
           </div>
@@ -1678,11 +2140,20 @@ function NewQuoteModal({
           <div className="new-quote-row">
             <label className="form-field">
               Tiempo estimado de entrega (semanas)
-              <input name="deliveryTimeWeeks" type="number" defaultValue={3} min={1} />
+              <input
+                name="deliveryTimeWeeks"
+                type="number"
+                defaultValue={3}
+                min={1}
+              />
             </label>
             <label className="form-field">
               Condiciones de pago
-              <input name="paymentTerms" type="text" defaultValue="50% anticipo, 50% contra entrega" />
+              <input
+                name="paymentTerms"
+                type="text"
+                defaultValue="50% anticipo, 50% contra entrega"
+              />
             </label>
           </div>
 
@@ -1691,14 +2162,20 @@ function NewQuoteModal({
               Escala salarial para mano de obra (APUs)
               <select name="laborScale" defaultValue="rfc_standard">
                 <option value="rfc_standard">Estándar RFC (General)</option>
-                <option value="ocensa">Tabla Salarial Sectorial (Ej: OCENSA)</option>
+                <option value="ocensa">
+                  Tabla Salarial Sectorial (Ej: OCENSA)
+                </option>
               </select>
             </label>
           </div>
 
           <label className="form-field">
             Enlace a carpeta de planos / especificaciones (Drive, OneDrive)
-            <input name="folderUrl" type="url" placeholder="https://drive.google.com/..." />
+            <input
+              name="folderUrl"
+              type="url"
+              placeholder="https://drive.google.com/..."
+            />
           </label>
 
           <label className="checkbox-field" style={{ margin: "8px 0" }}>
@@ -1708,16 +2185,28 @@ function NewQuoteModal({
               checked={reqVisit}
               onChange={(e) => setReqVisit(e.target.checked)}
             />
-            <span>Requiere visita técnica de campo previa a elaboración de oferta</span>
+            <span>
+              Requiere visita técnica de campo previa a elaboración de oferta
+            </span>
           </label>
 
           <label className="form-field">
             Notas para la propuesta (aparecen debajo del valor en letras)
-            <textarea name="notes" rows={3} placeholder={"Ej. valor incluye transporte\nEj. no incluye IVA\nEj. vigencia según oferta"} />
+            <textarea
+              name="notes"
+              rows={3}
+              placeholder={
+                "Ej. valor incluye transporte\nEj. no incluye IVA\nEj. vigencia según oferta"
+              }
+            />
           </label>
 
           <div className="new-quote-actions">
-            <button type="button" className="quotes-cancel-btn" onClick={onClose}>
+            <button
+              type="button"
+              className="quotes-cancel-btn"
+              onClick={onClose}
+            >
               Cancelar
             </button>
             <button type="submit" className="quotes-new-btn">
@@ -1736,7 +2225,9 @@ function NewQuoteModal({
 
 function PremiumProposalSheet({ quote }: { quote: Quote }) {
   const effectiveCode = getEffectiveQuoteCode(quote);
-  const subtotal = quote.estimatedValue ?? (quote.costBreakdown ? calculateTotalCost(quote.costBreakdown) : 0);
+  const subtotal =
+    quote.estimatedValue ??
+    (quote.costBreakdown ? calculateTotalCost(quote.costBreakdown) : 0);
   const vat = Math.round(subtotal * 0.19);
   const total = subtotal + vat;
   const totalInWords = amountInColombianPesos(total);
@@ -1747,42 +2238,126 @@ function PremiumProposalSheet({ quote }: { quote: Quote }) {
         ["Mano de obra y cuadrillas técnicas", quote.costBreakdown.labor],
         ["Equipos, maquinaria y herramientas", quote.costBreakdown.equipment],
         ["Transporte, fletes y logística", quote.costBreakdown.transport ?? 0],
-        ["Administración, imprevistos y utilidad", quote.costBreakdown.indirects ?? 0],
+        [
+          "Administración, imprevistos y utilidad",
+          quote.costBreakdown.indirects ?? 0,
+        ],
       ]
     : [[quote.title, subtotal]];
   const rows = costRows.filter(([, value]) => value > 0);
 
-  return <article className="formal-proposal-sheet premium-proposal-sheet">
-    <header className="premium-quote-header">
-      <Image src="/rfc-logo.svg" alt="Representaciones Figueroa Castro" width={76} height={58} priority />
-      <div><h1>REPRESENTACIONES FIGUEROA CASTRO S.A.S.</h1><strong>NIT: 900.708.094-7</strong></div>
-    </header>
-    <section className="premium-recipient">
-      <div><strong>SEÑORES</strong><span>{quote.client.toUpperCase()}{quote.contactName ? ` / ${quote.contactName.toUpperCase()}` : ""}</span></div>
-      <div><strong>CONTACTO</strong><span>{quote.contactEmail || quote.contactPhone || "Por confirmar"}</span><b>{effectiveCode}</b></div>
-    </section>
-    <h2 className="premium-object">{quote.title.toUpperCase()}</h2>
-    <table className="premium-quote-table">
-      <thead><tr><th>ÍTEM</th><th>DESCRIPCIÓN</th><th>UNIDAD</th><th>CANTIDAD</th><th>VALOR UNITARIO</th><th>VALOR PARCIAL</th></tr></thead>
-      <tbody>{rows.map(([label, value], index) => <tr key={label}><td>{index + 1}</td><td>{label}</td><td>GLOBAL</td><td>1</td><td>{formatCOP(value)}</td><td>{formatCOP(value)}</td></tr>)}</tbody>
-      <tfoot>
-        <tr><td colSpan={5}>SUBTOTAL</td><td>{formatCOP(subtotal)}</td></tr>
-        <tr><td colSpan={5}>IVA 19%</td><td>{formatCOP(vat)}</td></tr>
-        <tr className="premium-grand-total"><td colSpan={5}>TOTAL</td><td>{formatCOP(total)}</td></tr>
-      </tfoot>
-    </table>
-    <section className="premium-conditions">
-      <p><strong>VALOR A PAGAR:</strong> {totalInWords}.</p>
-      {notes.map((note, index) => <p key={`${note}-${index}`}><strong>{index === 0 ? "NOTAS:" : ""}</strong> {note}</p>)}
-      <p><strong>TIEMPO DE ENTREGA:</strong> {quote.deliveryTimeWeeks ?? 3} SEMANAS CALENDARIO</p>
-      <p><strong>FORMA DE PAGO:</strong> {(quote.paymentTerms || "30 días calendario después de radicada la factura").toUpperCase()}</p>
-      <p><strong>COTIZACIÓN VÁLIDA POR:</strong> {quote.validityDays ?? 30} DÍAS CALENDARIO</p>
-    </section>
-    <footer className="premium-signature-row">
-      <div className="premium-signature"><Image src="/rfc-signature.png" alt="Firma de Jorge Figueroa Castro" width={190} height={55} /><strong>Jorge Figueroa Castro</strong><span>Representante Legal</span></div>
-      <strong>{formatDate(quote.sentAt || quote.updatedAt).toUpperCase()}</strong>
-    </footer>
-  </article>;
+  return (
+    <article className="formal-proposal-sheet premium-proposal-sheet">
+      <header className="premium-quote-header">
+        <Image
+          src="/rfc-logo.svg"
+          alt="Representaciones Figueroa Castro"
+          width={76}
+          height={58}
+          priority
+        />
+        <div>
+          <h1>REPRESENTACIONES FIGUEROA CASTRO S.A.S.</h1>
+          <strong>NIT: 900.708.094-7</strong>
+        </div>
+      </header>
+      <section className="premium-recipient">
+        <div>
+          <strong>SEÑORES</strong>
+          <span>
+            {quote.client.toUpperCase()}
+            {quote.contactName ? ` / ${quote.contactName.toUpperCase()}` : ""}
+          </span>
+        </div>
+        <div>
+          <strong>CONTACTO</strong>
+          <span>
+            {quote.contactEmail || quote.contactPhone || "Por confirmar"}
+          </span>
+          <b>{effectiveCode}</b>
+        </div>
+      </section>
+      <h2 className="premium-object">{quote.title.toUpperCase()}</h2>
+      <table className="premium-quote-table">
+        <thead>
+          <tr>
+            <th>ÍTEM</th>
+            <th>DESCRIPCIÓN</th>
+            <th>UNIDAD</th>
+            <th>CANTIDAD</th>
+            <th>VALOR UNITARIO</th>
+            <th>VALOR PARCIAL</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([label, value], index) => (
+            <tr key={label}>
+              <td>{index + 1}</td>
+              <td>{label}</td>
+              <td>GLOBAL</td>
+              <td>1</td>
+              <td>{formatCOP(value)}</td>
+              <td>{formatCOP(value)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colSpan={5}>SUBTOTAL</td>
+            <td>{formatCOP(subtotal)}</td>
+          </tr>
+          <tr>
+            <td colSpan={5}>IVA 19%</td>
+            <td>{formatCOP(vat)}</td>
+          </tr>
+          <tr className="premium-grand-total">
+            <td colSpan={5}>TOTAL</td>
+            <td>{formatCOP(total)}</td>
+          </tr>
+        </tfoot>
+      </table>
+      <section className="premium-conditions">
+        <p>
+          <strong>VALOR A PAGAR:</strong> {totalInWords}.
+        </p>
+        {notes.map((note, index) => (
+          <p key={`${note}-${index}`}>
+            <strong>{index === 0 ? "NOTAS:" : ""}</strong> {note}
+          </p>
+        ))}
+        <p>
+          <strong>TIEMPO DE ENTREGA:</strong> {quote.deliveryTimeWeeks ?? 3}{" "}
+          SEMANAS CALENDARIO
+        </p>
+        <p>
+          <strong>FORMA DE PAGO:</strong>{" "}
+          {(
+            quote.paymentTerms ||
+            "30 días calendario después de radicada la factura"
+          ).toUpperCase()}
+        </p>
+        <p>
+          <strong>COTIZACIÓN VÁLIDA POR:</strong> {quote.validityDays ?? 30}{" "}
+          DÍAS CALENDARIO
+        </p>
+      </section>
+      <footer className="premium-signature-row">
+        <div className="premium-signature">
+          <Image
+            src="/rfc-signature.png"
+            alt="Firma de Jorge Figueroa Castro"
+            width={190}
+            height={55}
+          />
+          <strong>Jorge Figueroa Castro</strong>
+          <span>Representante Legal</span>
+        </div>
+        <strong>
+          {formatDate(quote.sentAt || quote.updatedAt).toUpperCase()}
+        </strong>
+      </footer>
+    </article>
+  );
 }
 
 function FormalProposalModal({
@@ -1793,16 +2368,23 @@ function FormalProposalModal({
   onClose: () => void;
 }) {
   const effectiveCode = getEffectiveQuoteCode(quote);
-  const total = quote.estimatedValue ?? (quote.costBreakdown ? calculateTotalCost(quote.costBreakdown) : 0);
+  const total =
+    quote.estimatedValue ??
+    (quote.costBreakdown ? calculateTotalCost(quote.costBreakdown) : 0);
   const totalInWords = amountInColombianPesos(total);
   const notes = proposalNoteLines(quote.notes);
   const validityDays = quote.validityDays ?? 30;
   const deliveryWeeks = quote.deliveryTimeWeeks ?? 3;
-  const paymentTerms = quote.paymentTerms ?? "50% de anticipo y 50% contra acta de entrega final a satisfacción.";
+  const paymentTerms =
+    quote.paymentTerms ??
+    "50% de anticipo y 50% contra acta de entrega final a satisfacción.";
 
   return (
     <div className="quote-modal-backdrop printable-backdrop" onClick={onClose}>
-      <div className="printable-proposal-wrapper" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="printable-proposal-wrapper"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Barra superior de control (se oculta al imprimir) */}
         <div className="print-controls no-print">
           <div className="print-controls-left">
@@ -1824,18 +2406,24 @@ function FormalProposalModal({
         <div className="formal-proposal-sheet proposal-legacy">
           <header className="proposal-header">
             <div className="proposal-brand">
-              <h1 className="company-name">REPRESENTACIONES FIGUEROA CASTRO S.A.S.</h1>
+              <h1 className="company-name">
+                REPRESENTACIONES FIGUEROA CASTRO S.A.S.
+              </h1>
               <p className="company-sub">
-                Obras Civiles · Montajes Mecánicos · Dragados · Suministros Industriales
+                Obras Civiles · Montajes Mecánicos · Dragados · Suministros
+                Industriales
               </p>
               <p className="company-meta">
-                Caucasia, Antioquia · Tel: (+57) 310 445 7821 · contacto@representacionesfigueroa.com
+                Caucasia, Antioquia · Tel: (+57) 310 445 7821 ·
+                contacto@representacionesfigueroa.com
               </p>
             </div>
             <div className="proposal-meta-box">
               <div className="proposal-badge">PROPUESTA TÉCNICO-ECONÓMICA</div>
               <div className="proposal-code">{effectiveCode}</div>
-              <div className="proposal-date">Fecha: {formatDate(quote.sentAt || quote.updatedAt)}</div>
+              <div className="proposal-date">
+                Fecha: {formatDate(quote.sentAt || quote.updatedAt)}
+              </div>
             </div>
           </header>
 
@@ -1844,37 +2432,73 @@ function FormalProposalModal({
           {/* Información de destinatario */}
           <div className="proposal-client-info">
             <div className="client-info-col">
-              <p><strong>SEÑORES:</strong></p>
+              <p>
+                <strong>SEÑORES:</strong>
+              </p>
               <p className="client-name">{quote.client.toUpperCase()}</p>
-              {quote.contactName && <p><strong>Atención:</strong> {quote.contactName}</p>}
-              {quote.contactEmail && <p><strong>Correo:</strong> {quote.contactEmail}</p>}
-              {quote.contactPhone && <p><strong>Teléfono:</strong> {quote.contactPhone}</p>}
+              {quote.contactName && (
+                <p>
+                  <strong>Atención:</strong> {quote.contactName}
+                </p>
+              )}
+              {quote.contactEmail && (
+                <p>
+                  <strong>Correo:</strong> {quote.contactEmail}
+                </p>
+              )}
+              {quote.contactPhone && (
+                <p>
+                  <strong>Teléfono:</strong> {quote.contactPhone}
+                </p>
+              )}
             </div>
             <div className="client-info-col">
-              <p><strong>Lugar de ejecución:</strong> Bajo Cauca Antioqueño</p>
-              <p><strong>Validez de la oferta:</strong> {validityDays} días calendario</p>
-              <p><strong>Tiempo de entrega:</strong> {deliveryWeeks} semanas a partir del anticipo</p>
-              <p><strong>Forma de pago:</strong> {paymentTerms}</p>
+              <p>
+                <strong>Lugar de ejecución:</strong> Bajo Cauca Antioqueño
+              </p>
+              <p>
+                <strong>Validez de la oferta:</strong> {validityDays} días
+                calendario
+              </p>
+              <p>
+                <strong>Tiempo de entrega:</strong> {deliveryWeeks} semanas a
+                partir del anticipo
+              </p>
+              <p>
+                <strong>Forma de pago:</strong> {paymentTerms}
+              </p>
             </div>
           </div>
 
           {/* Objeto de la propuesta */}
           <div className="proposal-section">
-            <h3 className="section-title">1. OBJETO Y ALCANCE DE LOS TRABAJOS</h3>
+            <h3 className="section-title">
+              1. OBJETO Y ALCANCE DE LOS TRABAJOS
+            </h3>
             <p className="proposal-description">
-              Representaciones Figueroa Castro S.A.S. se complace en someter a su consideración la propuesta técnico-económica para la ejecución de: <strong>{quote.title}</strong>, de conformidad con las especificaciones técnicas suministradas y las normas de ingeniería aplicables.
+              Representaciones Figueroa Castro S.A.S. se complace en someter a
+              su consideración la propuesta técnico-económica para la ejecución
+              de: <strong>{quote.title}</strong>, de conformidad con las
+              especificaciones técnicas suministradas y las normas de ingeniería
+              aplicables.
             </p>
             {notes.length > 0 && (
               <div className="proposal-scope-notes">
-                <p><strong>Notas para la propuesta:</strong></p>
-                {notes.map((note, index) => <p key={`${note}-${index}`}>{note}</p>)}
+                <p>
+                  <strong>Notas para la propuesta:</strong>
+                </p>
+                {notes.map((note, index) => (
+                  <p key={`${note}-${index}`}>{note}</p>
+                ))}
               </div>
             )}
           </div>
 
           {/* Resumen económico */}
           <div className="proposal-section">
-            <h3 className="section-title">2. PRESUPUESTO ECONÓMICO DISCRIMINADO</h3>
+            <h3 className="section-title">
+              2. PRESUPUESTO ECONÓMICO DISCRIMINADO
+            </h3>
             <table className="proposal-cost-table">
               <thead>
                 <tr>
@@ -1888,39 +2512,67 @@ function FormalProposalModal({
                   <>
                     <tr>
                       <td>01</td>
-                      <td>Suministro de Materiales e Insumos Industriales Certificados</td>
-                      <td style={{ textAlign: "right" }}>{formatCOP(quote.costBreakdown.materials)}</td>
+                      <td>
+                        Suministro de Materiales e Insumos Industriales
+                        Certificados
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        {formatCOP(quote.costBreakdown.materials)}
+                      </td>
                     </tr>
                     <tr>
                       <td>02</td>
-                      <td>Mano de Obra Especializada y Cuadrillas Técnicas con ARL</td>
-                      <td style={{ textAlign: "right" }}>{formatCOP(quote.costBreakdown.labor)}</td>
+                      <td>
+                        Mano de Obra Especializada y Cuadrillas Técnicas con ARL
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        {formatCOP(quote.costBreakdown.labor)}
+                      </td>
                     </tr>
                     <tr>
                       <td>03</td>
-                      <td>Equipos, Maquinaria, Herramientas Certificadas y Operación</td>
-                      <td style={{ textAlign: "right" }}>{formatCOP(quote.costBreakdown.equipment)}</td>
+                      <td>
+                        Equipos, Maquinaria, Herramientas Certificadas y
+                        Operación
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        {formatCOP(quote.costBreakdown.equipment)}
+                      </td>
                     </tr>
                     {Boolean(quote.costBreakdown.transport) && (
                       <tr>
                         <td>04</td>
-                        <td>Transporte Fluvial / Terrestre y Logística a Frente de Obra</td>
-                        <td style={{ textAlign: "right" }}>{formatCOP(quote.costBreakdown.transport)}</td>
+                        <td>
+                          Transporte Fluvial / Terrestre y Logística a Frente de
+                          Obra
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          {formatCOP(quote.costBreakdown.transport)}
+                        </td>
                       </tr>
                     )}
                     {Boolean(quote.costBreakdown.indirects) && (
                       <tr>
                         <td>05</td>
-                        <td>Costos de Administración, Imprevistos y Contingencias (AIU)</td>
-                        <td style={{ textAlign: "right" }}>{formatCOP(quote.costBreakdown.indirects)}</td>
+                        <td>
+                          Costos de Administración, Imprevistos y Contingencias
+                          (AIU)
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          {formatCOP(quote.costBreakdown.indirects)}
+                        </td>
                       </tr>
                     )}
                   </>
                 ) : (
                   <tr>
                     <td>01</td>
-                    <td>Ejecución integral de la obra según alcance especificado</td>
-                    <td style={{ textAlign: "right" }}>{formatCOP(quote.estimatedValue)}</td>
+                    <td>
+                      Ejecución integral de la obra según alcance especificado
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      {formatCOP(quote.estimatedValue)}
+                    </td>
                   </tr>
                 )}
                 <tr className="proposal-total-row">
@@ -1933,17 +2585,35 @@ function FormalProposalModal({
                 </tr>
               </tbody>
             </table>
-            <p className="proposal-value-in-words"><strong>VALOR EN LETRAS:</strong> {totalInWords}.</p>
+            <p className="proposal-value-in-words">
+              <strong>VALOR EN LETRAS:</strong> {totalInWords}.
+            </p>
           </div>
 
           {/* Condiciones comerciales */}
           <div className="proposal-section">
-            <h3 className="section-title">3. CONDICIONES COMERCIALES Y CONTRACTUALES</h3>
+            <h3 className="section-title">
+              3. CONDICIONES COMERCIALES Y CONTRACTUALES
+            </h3>
             <ul className="proposal-conditions-list">
-              <li>Los precios ofertados no incluyen IVA a menos que se especifique lo contrario.</li>
-              <li>La presente oferta económica tiene una validez de {validityDays} días calendario a partir de su emisión.</li>
-              <li>El tiempo de ejecución estimado es de {deliveryWeeks} semanas tras la firma del acta de inicio y pago del anticipo correspondiente.</li>
-              <li>Representaciones Figueroa Castro S.A.S. garantiza el cumplimiento estricto de las normas SG-SST, dotación EPP y pólizas de ley.</li>
+              <li>
+                Los precios ofertados no incluyen IVA a menos que se especifique
+                lo contrario.
+              </li>
+              <li>
+                La presente oferta económica tiene una validez de {validityDays}{" "}
+                días calendario a partir de su emisión.
+              </li>
+              <li>
+                El tiempo de ejecución estimado es de {deliveryWeeks} semanas
+                tras la firma del acta de inicio y pago del anticipo
+                correspondiente.
+              </li>
+              <li>
+                Representaciones Figueroa Castro S.A.S. garantiza el
+                cumplimiento estricto de las normas SG-SST, dotación EPP y
+                pólizas de ley.
+              </li>
             </ul>
           </div>
 
@@ -1951,19 +2621,29 @@ function FormalProposalModal({
           <div className="proposal-signatures">
             <div className="sig-box">
               <div className="sig-line" />
-              <p><strong>Jorge Figueroa Castro</strong></p>
+              <p>
+                <strong>Jorge Figueroa Castro</strong>
+              </p>
               <p>Representante Legal / Gerencia Técnica</p>
               <p>Representaciones Figueroa Castro S.A.S.</p>
             </div>
             <div className="sig-box">
               <div className="sig-line" />
-              <p><strong>Aceptado y Aprobado por el Cliente</strong></p>
+              <p>
+                <strong>Aceptado y Aprobado por el Cliente</strong>
+              </p>
               <p>{quote.client}</p>
               <p>Nombre, Cargo y Firma Autorizada</p>
             </div>
           </div>
           <footer className="print-bottom-actions no-print">
-            <button className="quotes-cancel-btn" type="button" onClick={onClose}>Cerrar vista previa</button>
+            <button
+              className="quotes-cancel-btn"
+              type="button"
+              onClick={onClose}
+            >
+              Cerrar vista previa
+            </button>
           </footer>
         </div>
       </div>

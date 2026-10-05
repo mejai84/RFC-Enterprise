@@ -7,6 +7,8 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 
 # Backlog y riesgos
 
+<!-- INV-003 (Ampliado, 2026-10-05): Conteos físicos incorpora jornadas periódicas por bodega, ubicación o categoría, historial visible y conciliación que produce movimientos de ajuste auditables. -->
+
 ## Validación de integración
 
 - **QUO-OBRA-004 · Terminado:** caso de prueba `COT-004-2026-ALCALDIA-ESTRUCTURA_GIM-R1` enlazado con `OBRA-20261002-01`, con referencia bidireccional y cambio de estado a ejecución.

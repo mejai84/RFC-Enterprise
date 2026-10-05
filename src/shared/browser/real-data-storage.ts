@@ -13,8 +13,11 @@ const LEGACY_DEMO_KEYS = [
 
 /** Retira los datos de demostración guardados por versiones anteriores y asegura estado en ceros. */
 export function prepareRealDataStorage() {
-  if (typeof window === "undefined" || localStorage.getItem(CLEANUP_MARKER) === "done") return;
+  if (
+    typeof window === "undefined" ||
+    localStorage.getItem(CLEANUP_MARKER) === "done"
+  )
+    return;
   LEGACY_DEMO_KEYS.forEach((key) => localStorage.removeItem(key));
   localStorage.setItem(CLEANUP_MARKER, "done");
 }
-

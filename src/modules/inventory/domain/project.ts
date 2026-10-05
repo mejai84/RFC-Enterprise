@@ -1,11 +1,29 @@
 export const projectTypeOptions = [
-  { value: "obra", label: "Obra", prefix: "OBRA" },
-  { value: "mantenimiento", label: "Mantenimiento", prefix: "MANT" },
-  { value: "alquiler", label: "Alquiler", prefix: "ALQ" },
-  { value: "otro", label: "Otro", prefix: "OTRO" },
+  { value: "obra",            label: "Obra",               prefix: "OBRA", requiresQuote: true,  requiresApu: true,  description: "Construcción, adecuación o montaje con actividades costeables." },
+  { value: "mantenimiento",   label: "Mantenimiento",      prefix: "MANT", requiresQuote: false, requiresApu: false, description: "Mantenimiento programado o correctivo, sin APU formal." },
+  { value: "alquiler",        label: "Alquiler",           prefix: "ALQ",  requiresQuote: false, requiresApu: false, description: "Alquiler de equipos; tarifa por día/hora sin desglose APU." },
+  { value: "emergencia",      label: "Emergencia",         prefix: "EMER", requiresQuote: false, requiresApu: false, description: "Reparación urgente; se ejecuta primero y se documenta después." },
+  { value: "administracion",  label: "Por administración", prefix: "ADM",  requiresQuote: false, requiresApu: false, description: "Obra cobrada por gasto real de materiales + mano de obra." },
+  { value: "consultoria",     label: "Consultoría / Diseño", prefix: "CONS", requiresQuote: false, requiresApu: false, description: "Diseño, trámite o servicio profesional con precio fijo." },
+  { value: "otro",            label: "Otro",               prefix: "OTRO", requiresQuote: false, requiresApu: false, description: "Proyecto genérico que no encaja en las categorías anteriores." },
 ] as const;
 
 export type ProjectType = (typeof projectTypeOptions)[number]["value"];
+
+/** Verifica si un tipo de proyecto requiere APU para costear */
+export function projectTypeRequiresApu(type: ProjectType): boolean {
+  return projectTypeOptions.find((o) => o.value === type)?.requiresApu ?? false;
+}
+
+/** Verifica si un tipo de proyecto requiere cotización formal */
+export function projectTypeRequiresQuote(type: ProjectType): boolean {
+  return projectTypeOptions.find((o) => o.value === type)?.requiresQuote ?? false;
+}
+
+/** Obtiene la descripción del tipo de proyecto */
+export function projectTypeDescription(type: ProjectType): string {
+  return projectTypeOptions.find((o) => o.value === type)?.description ?? "";
+}
 
 export type AssignedProjectEmployee = {
   id: string;
@@ -32,6 +50,7 @@ export type Project = {
   sourceQuoteId?: string;
   sourceQuoteCode?: string;
 };
+
 
 export function getNextProjectCode(
   projects: ReadonlyArray<Pick<Project, "code">>,

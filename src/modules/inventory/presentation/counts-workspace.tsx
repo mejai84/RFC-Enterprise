@@ -30,28 +30,21 @@ type SortKey = "location" | "quantity" | "cost" | "status";
 
 function FieldHelp({ label, example }: { label: string; example: string }) {
   return (
-    <>
-      <label>
-        {label}{" "}
-        <span
-          className="field-help-icon"
-          title={example}
-          aria-label={`Ayuda: ${example}`}
+    <span className="field-label-with-help">
+      <label>{label}</label>
+      <span className="field-help-icon">
+        <button
+          type="button"
+          className="field-help-trigger"
+          aria-label={`Ayuda para ${label}`}
         >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 10v6M12 7h.01" />
-          </svg>
+          ?
+        </button>
+        <span className="field-help-tooltip" role="tooltip">
+          {example}
         </span>
-      </label>
-      <small className="field-help-text">Ej.: {example}</small>
-    </>
+      </span>
+    </span>
   );
 }
 

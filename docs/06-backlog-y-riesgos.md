@@ -56,6 +56,12 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 | PRJ-004 | Alta | Trazabilidad de despachos y cierre de obra | Terminado | Fecha y hora automática por despacho; fecha real de entrega manual al marcar una obra como finalizada |
 | EQP-001 | Alta | Custodia de herramientas por obra | Terminado | Botón de asignación desde existencias, responsable, observaciones, devolución, novedades y anulación de asignaciones erróneas |
 | INV-006 | Media | Clasificación operativa de catálogo | Terminado | Filtro y etiqueta de Material/Insumo, Herramienta, Equipo o Dotación/EPP; custodia limitada a herramientas y equipos |
+| INV-007 | Alta | Requisiciones empresariales y despacho firmado | En implementación | Persistencia Supabase multiempresa de solicitud, líneas, aprobación, despacho, remisión y devolución; reemplaza el estado aislado del navegador. |
+| INV-008 | Alta | Bajas por deterioro, daño o vencimiento | Planeado | Ajuste de salida con causa, evidencia, responsable, aprobación por umbral y acta imprimible. |
+| INV-009 | Alta | Reposición, compras y proveedores | Planeado | Punto de reorden, propuesta de compra, recepción parcial, proveedor y costo promedio ponderado. |
+| INV-010 | Media | Activos, QR y mantenimiento | Planeado | Identificación por QR/código, serial, custodio, estado, garantía, mantenimiento y evidencias. |
+| INV-011 | Media | Inteligencia e importación de inventario | Planeado | Indicadores de rotación/inmovilizado/vencimiento y carga masiva con validación. |
+| TALL-001 | Alta | Orden de taller y remisión de entrega | Planeado | Recepción de equipo/activo, diagnóstico, trabajo ejecutado, repuestos, notas, entrega por responsable y recibido con firma en documento institucional imprimible. |
 | UI-003 | Baja | Orden e iconografía de pestañas de obra | Terminado | Materiales, herramientas, personal, requisiciones y ajustes informativos al final, con iconos SVG por función |
 | UI-004 | Media | Búsqueda y configuración de catálogo | Terminado | Formularios sin solapamientos, icono de configuración y búsqueda de artículos con coincidencias en vivo |
 | SEC-001 | Crítica | Endurecimiento integral de seguridad v1.0 | Terminado | Proxy/Middleware SSR, cookies de sesión, headers HTTP, RLS hardening, política de contraseñas y rate limiting |

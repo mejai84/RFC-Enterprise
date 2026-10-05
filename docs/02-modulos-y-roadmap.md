@@ -41,7 +41,7 @@ Todo módulo interno, incluido Alquiler rápido, se compone dentro de `Dashboard
 | `site` | Sitio institucional | Operativo v0.4 | Portada corporativa ampliada, capacidades, enfoque de trabajo, imágenes sectoriales, acceso superior al portal de empleados y formulario que prepara el correo para el canal corporativo |
 | `dashboard` | Dashboard Ejecutivo | Operativo v0.4 | Panel principal e informes funcionales con filtros, KPIs, gráficos SVG accesibles, exportación CSV, impresión y análisis de inventario, Kardex, stock crítico y obras |
 | `quotes` | Cotizaciones & Pipeline | Operativo v0.2 | Tablero Kanban y lista, consecutivo `COT-###-AAAA-EMPRESA-OBRA`, pre-costeo por 3 rubros (Materiales, Cuadrillas, Equipos), control de revisiones (R1/R2), inspección técnica en campo, semáforo de vigencia comercial, conversión 1-click a obra y propuesta membretada imprimible en PDF |
-| `inventory` | Inventarios & Kardex | Operativo v0.4 | Catálogo, kardex separado, búsqueda por SKU/código y listas alfabéticas filtrables, alta de artículos con catálogos editables en el mismo modal, control de despachos y modelo de conteos, compras, ubicaciones, alertas y auditoría |
+| `inventory` | Inventarios & Kardex | Operativo v0.5 | Catálogo, kardex, conteos, alta de artículos, ubicaciones, custodia y despachos. Se inicia la persistencia empresarial del ciclo requisición de obra → despacho/remisión firmada → devolución. |
 | `projects` | Costeo de Proyectos | Operativo v0.4 | Centro de costos, tipo de proyecto, código consecutivo automático, asignación de empleados, calendario de inicio/entrega estimada, estado de obra, presupuestos y control de sobrecostos |
 | `equipment` | Equipos & Custodia | Operativo v0.1 | Préstamo y seguimiento de herramientas a cuadrillas y trabajadores por obra |
 | `purchases` | Compras | Planeado | Sin implementación |
@@ -58,6 +58,17 @@ Todo módulo interno, incluido Alquiler rápido, se compone dentro de `Dashboard
 - **Inventarios** es dueño de productos, existencias, vales de salida y movimientos.
 - **Proyectos** consume el contrato público de movimientos de Inventarios para imputar costos de materiales a cada obra sin romper el desacoplamiento modular.
 - **Dashboard** expone la síntesis ejecutiva para la toma de decisiones gerenciales y operativas.
+
+## Evolución acordada de Inventarios
+
+La evolución se ejecutará en este orden para que cada fase entregue control operativo completo y reutilizable:
+
+1. **Requisiciones y despacho compartido:** solicitudes por obra persistentes, aprobación, disponibilidad, despacho, remisión firmada y devolución.
+2. **Bajas y deterioros:** salida por daño, vencimiento, pérdida o baja con motivo, evidencia, responsable y autorización según el valor.
+3. **Reposición y compras:** mínimos, punto de reorden, sugerencia/solicitud de compra, proveedores y recepción que actualiza el costo promedio.
+4. **Custodia y activos:** QR/código de barras, préstamos, seriales, estado, garantía, mantenimiento y actas de entrega/devolución.
+5. **Taller y servicios:** orden de recepción, diagnóstico, trabajos ejecutados, repuestos, responsable y remisión de entrega firmada para equipos propios o de terceros.
+6. **Inteligencia e importación:** rotación, inmovilizado, valor por grupo, vencimientos, auditoría e importación validada desde Excel.
 
 ## Entrega actual: Dashboard Ejecutivo, Inteligencia de Costos & Jerarquía de Empleados v0.4
 

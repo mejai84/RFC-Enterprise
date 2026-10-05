@@ -37,3 +37,4 @@ Después de la carga inicial, el mismo módulo abre una **Nueva jornada**. La pe
 - Las unidades de consumo se seleccionan con nombre y abreviatura: por ejemplo, **Kilogramo (kg)**, **Metro (m)**, **Galón (gal)** y **Onza (oz)**.
 - Presentación y ubicación parten de un catálogo base y se complementan con los valores reales registrados.
 - Marcas, modelos y referencias sugieren valores ya usados. La normalización une solamente variantes inequívocas; por ejemplo, `uyustools`, `Uyustools N/A` y el error `ayustool` se consolidan como **UYUSTOOLS**. Los nombres que incluyen una referencia de modelo se conservan para revisión, sin asumir que sean la misma marca.
+- Si un valor no existe, el usuario lo escribe directamente en la ficha y lo guarda con el artículo. No se crean catálogos maestros vacíos: el dato nuevo queda disponible como sugerencia cuando ya existe una ficha real que lo respalda.

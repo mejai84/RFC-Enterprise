@@ -103,6 +103,142 @@
   max-width: 440px;
 }
 
+/* La ficha extensa conserva título y salida visibles; solo el contenido se desplaza. */
+.article-detail-modal {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  max-width: min(700px, calc(100vw - 48px));
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  width: 100%;
+}
+
+.article-detail-modal .modal-header {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 24px 32px 18px;
+  position: relative;
+  top: auto;
+}
+
+.article-modal-content {
+  box-sizing: border-box;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 32px 28px;
+}
+
+.catalog-entry-guide {
+  background: #f2f8f4;
+  border: 1px solid #c7dfcf;
+  border-radius: 8px;
+  color: var(--ink-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0 0 18px;
+  padding: 10px 12px;
+}
+
+.catalog-entry-guide strong {
+  color: var(--brand-dark);
+}
+
+/* Ficha compacta: el contenido siempre se adapta al panel, sin scroll lateral. */
+.article-detail-modal .modal-header {
+  align-items: center;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%);
+  border-bottom-color: #e7eee9;
+}
+
+.article-detail-modal .modal-header h3 {
+  font-size: clamp(18px, 2.2vw, 22px);
+  line-height: 1.15;
+  max-width: min(520px, calc(100vw - 150px));
+  overflow-wrap: anywhere;
+}
+
+.article-detail-modal .modal-header p {
+  color: #a36f16;
+  font-size: 10px;
+}
+
+.article-detail-modal .form-grid-2 {
+  column-gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  row-gap: 2px;
+}
+
+.article-detail-modal .form-group {
+  gap: 5px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.article-detail-modal .form-group label {
+  font-size: 11px;
+}
+
+.article-detail-modal .form-group input,
+.article-detail-modal .form-group select {
+  box-sizing: border-box;
+  font-size: 13px;
+  min-height: 38px;
+  min-width: 0;
+  padding: 7px 10px;
+  width: 100%;
+}
+
+.article-form-section {
+  align-items: center;
+  color: #527162;
+  display: flex;
+  font-size: 10px;
+  font-weight: 800;
+  grid-column: 1 / -1;
+  letter-spacing: 0.1em;
+  margin: 4px 0 8px;
+  text-transform: uppercase;
+}
+
+.article-form-section::after {
+  background: #e7eee9;
+  content: "";
+  flex: 1;
+  height: 1px;
+  margin-left: 10px;
+}
+
+.article-count-metric {
+  background: #f8fbf9;
+  border: 1px solid #dce9e0;
+  border-radius: 8px;
+  box-sizing: border-box;
+  padding: 10px;
+}
+
+.article-count-metric input {
+  background: #fff;
+  font-weight: 700;
+}
+
+.article-detail-modal .panel-intro {
+  color: var(--muted);
+  font-size: 11.5px;
+  margin: 2px 0 0;
+}
+
+.article-detail-modal .modal-actions {
+  border-top: 1px solid #edf2ef;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+}
+
 .modal-header {
   align-items: flex-start;
   background: #ffffff;
@@ -531,6 +667,8 @@
 .counts-history li { align-items: baseline; border-top: 1px solid var(--line); display: flex; gap: 12px; justify-content: space-between; padding-top: 7px; }
 .counts-history li span { color: var(--ink-secondary); font-size: 13px; font-weight: 700; }
 .counts-history li small, .counts-history p { color: var(--muted); font-size: 12px; margin: 0; }
+.counts-workspace .inventory-catalog-controls { grid-template-columns: minmax(220px, 1.6fr) minmax(160px, 0.8fr) 44px; }
+.count-sort-direction { align-items: center; align-self: end; box-sizing: border-box; display: inline-flex; font-size: 16px; justify-content: center; min-height: 42px; overflow: hidden; padding: 0; width: 42px; }
 @media (max-width: 640px) { .counts-heading-actions { justify-content: stretch; width: 100%; }.counts-heading-actions button { flex: 1; }.counts-history li { align-items: flex-start; flex-direction: column; gap: 3px; } }
 
 .btn-cancel {
@@ -568,6 +706,31 @@
   }
   .modal-header {
     top: -22px;
+  }
+  .article-detail-modal .modal-header {
+    padding: 18px 18px 14px;
+    top: auto;
+  }
+  .article-modal-content {
+    padding: 0 18px 22px;
+  }
+  .article-detail-modal {
+    max-width: calc(100vw - 16px);
+  }
+  .article-detail-modal .modal-header h3 {
+    max-width: calc(100vw - 112px);
+  }
+  .article-detail-modal .form-grid-2 {
+    gap: 2px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .article-detail-modal .modal-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+  .article-detail-modal .modal-actions button {
+    min-height: 44px;
+    width: 100%;
   }
   .selected-product-preview {
     align-items: flex-start;

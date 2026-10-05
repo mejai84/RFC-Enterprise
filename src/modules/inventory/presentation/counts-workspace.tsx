@@ -26,7 +26,16 @@ type ArticleDraft = {
   warrantyUntil: string;
   notes: string;
 };
-type SortKey = "location" | "quantity" | "cost" | "status";
+type SortKey =
+  | "name"
+  | "sku"
+  | "category"
+  | "brand"
+  | "unit"
+  | "location"
+  | "quantity"
+  | "cost"
+  | "status";
 type CountScope = "all" | "location" | "category";
 type CountSession = {
   id: string;
@@ -91,7 +100,7 @@ export function CountsWorkspace({ products }: Props) {
     null,
   );
   const [articleDraft, setArticleDraft] = useState<ArticleDraft | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("location");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [sessionModalOpen, setSessionModalOpen] = useState(false);
   const [countScope, setCountScope] = useState<CountScope>("all");
@@ -118,9 +127,19 @@ export function CountsWorkspace({ products }: Props) {
           const status = (line?: Line) =>
             !line || line.quantity === "" ? 0 : line.cost === "" ? 1 : 2;
           const value = (product: StockProduct, line?: Line) =>
-            sortKey === "location"
-              ? (line?.location || product.location).toLocaleLowerCase("es-CO")
-              : sortKey === "quantity"
+            sortKey === "name"
+              ? product.name.toLocaleLowerCase("es-CO")
+              : sortKey === "sku"
+                ? product.sku.toLocaleLowerCase("es-CO")
+                : sortKey === "category"
+                  ? product.category.toLocaleLowerCase("es-CO")
+                  : sortKey === "brand"
+                    ? product.brand.toLocaleLowerCase("es-CO")
+                    : sortKey === "unit"
+                      ? product.unit.toLocaleLowerCase("es-CO")
+                      : sortKey === "location"
+                        ? (line?.location || product.location).toLocaleLowerCase("es-CO")
+                        : sortKey === "quantity"
                 ? Number(line?.quantity ?? product.available)
                 : sortKey === "cost"
                   ? Number(line?.cost ?? product.unitCost ?? 0)
@@ -296,17 +315,24 @@ export function CountsWorkspace({ products }: Props) {
       .select("id,reason,status,counted_at,approved_at")
       .order("created_at", { ascending: false })
       .limit(8)
-      .then(({ data }) =>
-        setHistory(
-          (data ?? []).map((row) => ({
-            id: row.id,
-            reason: row.reason,
-            status: row.status,
-            countedAt: row.counted_at,
-            approvedAt: row.approved_at,
-          })),
-        ),
-      );
+      .then(({ data }) => {
+        const sessions = (data ?? []).map((row) => ({
+          id: row.id,
+          reason: row.reason,
+          status: row.status,
+          countedAt: row.counted_at,
+          approvedAt: row.approved_at,
+        }));
+        setHistory(sessions);
+
+        // Una jornada no se pierde al recargar: se retoma la más reciente que
+        // siga en borrador para poder continuarla o cerrarla y conciliarla.
+        const openSession = sessions.find((session) => session.status === "draft");
+        if (openSession) {
+          setCountId(openSession.id);
+          setActiveSession(openSession);
+        }
+      });
   }, []);
 
   async function startSession() {
@@ -448,18 +474,30 @@ export function CountsWorkspace({ products }: Props) {
   }
 
   async function approve() {
-    if (!countId || !Object.keys(lines).length) {
-      setStatus("Registra al menos un artículo antes de aprobar.");
+    if (!countId) {
+      setStatus("Abre o retoma una jornada antes de conciliar.");
+      return;
+    }
+    const supabase = client();
+    if (!supabase) return;
+    const { count, error: linesError } = await supabase
+      .from("physical_count_lines")
+      .select("id", { count: "exact", head: true })
+      .eq("count_id", countId);
+    if (linesError) {
+      setStatus(linesError.message);
+      return;
+    }
+    if (!count) {
+      setStatus("Registra y guarda al menos un artículo antes de cerrar la jornada.");
       return;
     }
     if (
       !window.confirm(
-        "Se aplicarán las cantidades y ubicaciones registradas. Los artículos sin costo quedarán pendientes de valorar. ¿Continuar?",
+        `Se cerrará la jornada con ${count} artículo(s) registrado(s). Se aplicarán cantidades y ubicaciones; los artículos sin costo quedarán pendientes de valorar. ¿Continuar?`,
       )
     )
       return;
-    const supabase = client();
-    if (!supabase) return;
     const { error } = await supabase.rpc("approve_physical_count", {
       target_count: countId,
     });
@@ -479,7 +517,7 @@ export function CountsWorkspace({ products }: Props) {
       current ? { ...current, [key]: value } : current,
     );
   return (
-    <main className="dashboard-content">
+    <main className="dashboard-content counts-workspace">
       <section className="dashboard-heading">
         <div>
           <p>Operaciones · RFC Enterprise</p>
@@ -491,7 +529,7 @@ export function CountsWorkspace({ products }: Props) {
         </div>
         <div className="counts-heading-actions">
           {activeSession && <span className="count-session-badge">Jornada abierta</span>}
-          <button className="btn-cancel" onClick={() => setSessionModalOpen(true)} type="button">
+          <button className="btn-cancel" onClick={() => setSessionModalOpen(true)} type="button" disabled={Boolean(activeSession)} title={activeSession ? "Cierra y concilia la jornada actual antes de abrir otra." : undefined}>
             Nueva jornada
           </button>
           <button className="inventory-action" onClick={() => void approve()} type="button" disabled={!activeSession}>
@@ -521,6 +559,11 @@ export function CountsWorkspace({ products }: Props) {
               value={sortKey}
               onChange={(event) => setSortKey(event.target.value as SortKey)}
             >
+              <option value="name">Nombre</option>
+              <option value="sku">SKU / código</option>
+              <option value="category">Categoría</option>
+              <option value="brand">Marca</option>
+              <option value="unit">Unidad</option>
               <option value="location">Ubicación</option>
               <option value="quantity">Cantidad</option>
               <option value="cost">Costo</option>
@@ -528,16 +571,17 @@ export function CountsWorkspace({ products }: Props) {
             </select>
           </label>
           <button
-            className="btn-cancel"
+            className="btn-cancel count-sort-direction"
             type="button"
             onClick={() =>
               setSortDirection((current) =>
                 current === "asc" ? "desc" : "asc",
               )
             }
-            aria-label={`Orden ${sortDirection === "asc" ? "ascendente" : "descendente"}`}
+            aria-label={`Cambiar a orden ${sortDirection === "asc" ? "descendente" : "ascendente"}`}
+            title={`Orden ${sortDirection === "asc" ? "ascendente (A a Z)" : "descendente (Z a A)"}`}
           >
-            {sortDirection === "asc" ? "Ascendente ↑" : "Descendente ↓"}
+            {sortDirection === "asc" ? "↑" : "↓"}
           </button>
         </div>
         <div className="inventory-table-container">
@@ -647,7 +691,7 @@ export function CountsWorkspace({ products }: Props) {
           aria-modal="true"
           aria-labelledby="initial-count-item-title"
         >
-          <div className="modal-card">
+          <div className="modal-card article-detail-modal">
             <div className="modal-header">
               <div>
                 <p>
@@ -702,7 +746,12 @@ export function CountsWorkspace({ products }: Props) {
                 ×
               </button>
             </div>
-            <div className="form-grid-2">
+            <div className="article-modal-content">
+              <p id="catalog-entry-guide" className="catalog-entry-guide">
+                <strong>Dato nuevo:</strong> escríbelo y guárdalo; se sugerirá en próximas fichas.
+              </p>
+              <div className="form-grid-2">
+              <p className="article-form-section">Identificación</p>
               <div className="form-group">
                 <FieldHelp
                   label="Nombre *"
@@ -730,6 +779,7 @@ export function CountsWorkspace({ products }: Props) {
                 />
                 <input
                   list="initial-count-categories"
+                  aria-describedby="catalog-entry-guide"
                   value={articleDraft.category}
                   onChange={(e) => {
                     // Al cambiar categoría, limpiar marca, modelo y referencia
@@ -759,6 +809,7 @@ export function CountsWorkspace({ products }: Props) {
                 />
                 <input
                   list="initial-count-brands-filtered"
+                  aria-describedby="catalog-entry-guide"
                   value={articleDraft.brand}
                   onChange={(e) => {
                     // Al cambiar marca, limpiar modelo y referencia para evitar inconsistencias
@@ -792,6 +843,7 @@ export function CountsWorkspace({ products }: Props) {
                 />
                 <input
                   list="initial-count-models-filtered"
+                  aria-describedby="catalog-entry-guide"
                   value={articleDraft.model}
                   onChange={(e) => edit("model", e.target.value)}
                   placeholder={
@@ -813,6 +865,7 @@ export function CountsWorkspace({ products }: Props) {
                 />
                 <input
                   list="initial-count-references-filtered"
+                  aria-describedby="catalog-entry-guide"
                   value={articleDraft.reference}
                   onChange={(e) => edit("reference", e.target.value)}
                   placeholder={
@@ -837,6 +890,7 @@ export function CountsWorkspace({ products }: Props) {
                   onChange={(e) => edit("serial", e.target.value)}
                 />
               </div>
+              <p className="article-form-section">Control y ubicación</p>
               <div className="form-group">
                 <FieldHelp
                   label="Unidad de consumo"
@@ -844,6 +898,7 @@ export function CountsWorkspace({ products }: Props) {
                 />
                 <input
                   list="initial-count-units-filtered"
+                  aria-describedby="catalog-entry-guide"
                   value={articleDraft.unit}
                   onChange={(e) => edit("unit", e.target.value)}
                   placeholder={"unidad, metro, kg, galón…"}
@@ -861,6 +916,7 @@ export function CountsWorkspace({ products }: Props) {
                 />
                 <input
                   list="initial-count-purchase-units"
+                  aria-describedby="catalog-entry-guide"
                   value={articleDraft.purchaseUnit}
                   placeholder="Ej. caja"
                   onChange={(e) => edit("purchaseUnit", e.target.value)}
@@ -909,6 +965,7 @@ export function CountsWorkspace({ products }: Props) {
                 <input
                   autoFocus
                   list="initial-count-locations"
+                  aria-describedby="catalog-entry-guide"
                   value={currentLine.location}
                   placeholder="Bodega · Estantería · Nivel"
                   onBlur={() => void saveLine(editingProduct)}
@@ -923,15 +980,7 @@ export function CountsWorkspace({ products }: Props) {
                   }
                 />
               </div>
-              <div
-                className="form-group"
-                style={{
-                  background: "#f8fafc",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  border: "1px solid #e2e8f0",
-                }}
-              >
+              <div className="form-group article-count-metric">
                 <FieldHelp
                   label={`Cantidad física (${articleDraft.unit || editingProduct.unit}) *`}
                   example="48 unidades encontradas al contar"
@@ -942,7 +991,6 @@ export function CountsWorkspace({ products }: Props) {
                   step="any"
                   value={currentLine.quantity}
                   placeholder="Cuenta real"
-                  style={{ fontSize: "1.1em", fontWeight: "bold" }}
                   onBlur={() => void saveLine(editingProduct)}
                   onChange={(e) =>
                     setLines((current) => ({
@@ -955,15 +1003,7 @@ export function CountsWorkspace({ products }: Props) {
                   }
                 />
               </div>
-              <div
-                className="form-group"
-                style={{
-                  background: "#f8fafc",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  border: "1px solid #e2e8f0",
-                }}
-              >
+              <div className="form-group article-count-metric">
                 <FieldHelp
                   label="Costo unitario COP (opcional)"
                   example="12.500 por unidad; vacío si se desconoce"
@@ -980,7 +1020,7 @@ export function CountsWorkspace({ products }: Props) {
                     step="any"
                     value={currentLine.cost}
                     placeholder="Déjalo vacío si se desconoce"
-                    style={{ flex: 1, fontSize: "1.1em" }}
+                    style={{ flex: 1 }}
                     onBlur={() => void saveLine(editingProduct)}
                     onChange={(e) =>
                       setLines((current) => ({
@@ -1062,6 +1102,7 @@ export function CountsWorkspace({ products }: Props) {
               >
                 Guardar ficha y conteo
               </button>
+            </div>
             </div>
           </div>
         </div>

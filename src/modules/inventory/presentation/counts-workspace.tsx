@@ -119,6 +119,74 @@ export function CountsWorkspace({ products }: Props) {
       locations: unique([...standardLocations, ...products.map((product) => product.location)]),
     };
   }, [products]);
+
+  // ─── Cascada: Categoría → Marca, Unidad ─────────────────────────────────
+  const filteredByCategory = useMemo(() => {
+    const catQuery = articleDraft?.category?.trim().toLocaleLowerCase("es-CO") ?? "";
+    if (!catQuery) return products;
+    return products.filter(
+      (p) => p.category?.trim().toLocaleLowerCase("es-CO") === catQuery
+    );
+  }, [products, articleDraft?.category]);
+
+  /** Marcas disponibles para la categoría seleccionada */
+  const brandsForCategory = useMemo(() => {
+    const unique = new Map<string, string>();
+    filteredByCategory
+      .map((p) => p.brand?.trim())
+      .filter((v): v is string => Boolean(v) && v !== "Sin marca")
+      .forEach((v) => unique.set(v.toLocaleLowerCase("es-CO"), v));
+    return [...unique.values()].sort((a, b) => a.localeCompare(b, "es-CO"));
+  }, [filteredByCategory]);
+
+  /** Unidades sugeridas para la categoría seleccionada */
+  const unitsForCategory = useMemo(() => {
+    const defaultUnitList = [
+      "unidad", "und", "metro", "m", "kilogramo", "kg", "galón", "gal",
+      "litro", "L", "par", "m²", "m³", "gramo", "g",
+    ];
+    const fromCategory = filteredByCategory.map((p) => p.unit?.trim()).filter((v): v is string => Boolean(v));
+    const unique = new Map<string, string>();
+    [...defaultUnitList, ...fromCategory].forEach((v) => unique.set(v.toLocaleLowerCase("es-CO"), v));
+    return [...unique.values()].sort((a, b) => a.localeCompare(b, "es-CO"));
+  }, [filteredByCategory]);
+
+  // ─── Cascada: Marca → Modelo, Referencia ────────────────────────────────
+  /** Modelos y referencias filtrados por la marca actualmente escrita en el draft */
+  const filteredByBrand = useMemo(() => {
+    const brandQuery = articleDraft?.brand?.trim().toLocaleLowerCase("es-CO") ?? "";
+    if (!brandQuery) return filteredByCategory;
+    return filteredByCategory.filter(
+      (p) => p.brand?.trim().toLocaleLowerCase("es-CO") === brandQuery
+    );
+  }, [filteredByCategory, articleDraft?.brand]);
+
+  const modelsForBrand = useMemo(() => {
+    const unique = new Map<string, string>();
+    filteredByBrand
+      .map((p) => p.model?.trim())
+      .filter((v): v is string => Boolean(v))
+      .forEach((v) => unique.set(v.toLocaleLowerCase("es-CO"), v));
+    return [...unique.values()].sort((a, b) => a.localeCompare(b, "es-CO"));
+  }, [filteredByBrand]);
+
+  // ─── Cascada: Marca + Modelo → Referencia ───────────────────────────────
+  const filteredByModel = useMemo(() => {
+    const modelQuery = articleDraft?.model?.trim().toLocaleLowerCase("es-CO") ?? "";
+    if (!modelQuery) return filteredByBrand;
+    return filteredByBrand.filter(
+      (p) => p.model?.trim().toLocaleLowerCase("es-CO") === modelQuery
+    );
+  }, [filteredByBrand, articleDraft?.model]);
+
+  const referencesForBrand = useMemo(() => {
+    const unique = new Map<string, string>();
+    filteredByModel
+      .map((p) => p.technicalReference?.trim())
+      .filter((v): v is string => Boolean(v))
+      .forEach((v) => unique.set(v.toLocaleLowerCase("es-CO"), v));
+    return [...unique.values()].sort((a, b) => a.localeCompare(b, "es-CO"));
+  }, [filteredByModel]);
   const client = () =>
     isSupabaseConfigured && supabaseUrl && supabasePublishableKey
       ? createBrowserClient(supabaseUrl, supabasePublishableKey)
@@ -446,7 +514,11 @@ export function CountsWorkspace({ products }: Props) {
                 <input
                   list="initial-count-categories"
                   value={articleDraft.category}
-                  onChange={(e) => edit("category", e.target.value)}
+                  onChange={(e) => {
+                    // Al cambiar categoría, limpiar marca, modelo y referencia
+                    setArticleDraft((prev) => prev ? { ...prev, category: e.target.value, brand: "", model: "", reference: "" } : prev);
+                  }}
+                  placeholder={knownValues.categories.length > 0 ? `${knownValues.categories.length} categoría(s) en catálogo` : "Escribe o crea una categoría"}
                 />
               </div>
               <div className="form-group">
@@ -455,21 +527,17 @@ export function CountsWorkspace({ products }: Props) {
                   example="Bosch, Truper o fabricante real"
                 />
                 <input
-                  list="initial-count-brands"
+                  list="initial-count-brands-filtered"
                   value={articleDraft.brand}
-                  onChange={(e) => edit("brand", e.target.value)}
+                  onChange={(e) => {
+                    // Al cambiar marca, limpiar modelo y referencia para evitar inconsistencias
+                    setArticleDraft((prev) => prev ? { ...prev, brand: e.target.value, model: "", reference: "" } : prev);
+                  }}
+                  placeholder={brandsForCategory.length > 0 ? `${brandsForCategory.length} marca(s) en esta categoría` : "Escribe o crea una marca"}
                 />
-              </div>
-              <div className="form-group">
-                <FieldHelp
-                  label="Referencia técnica"
-                  example="A24R-BF o referencia del fabricante"
-                />
-                <input
-                  list="initial-count-references"
-                  value={articleDraft.reference}
-                  onChange={(e) => edit("reference", e.target.value)}
-                />
+                <datalist id="initial-count-brands-filtered">
+                  {brandsForCategory.map((b) => <option key={b} value={b} />)}
+                </datalist>
               </div>
               <div className="form-group">
                 <FieldHelp
@@ -477,10 +545,29 @@ export function CountsWorkspace({ products }: Props) {
                   example="GWS 750-100 para una pulidora"
                 />
                 <input
-                  list="initial-count-models"
+                  list="initial-count-models-filtered"
                   value={articleDraft.model}
                   onChange={(e) => edit("model", e.target.value)}
+                  placeholder={modelsForBrand.length > 0 ? `${modelsForBrand.length} modelo(s) disponibles` : "Escribe el modelo"}
                 />
+                <datalist id="initial-count-models-filtered">
+                  {modelsForBrand.map((m) => <option key={m} value={m} />)}
+                </datalist>
+              </div>
+              <div className="form-group">
+                <FieldHelp
+                  label="Referencia técnica"
+                  example="A24R-BF o referencia del fabricante"
+                />
+                <input
+                  list="initial-count-references-filtered"
+                  value={articleDraft.reference}
+                  onChange={(e) => edit("reference", e.target.value)}
+                  placeholder={referencesForBrand.length > 0 ? `${referencesForBrand.length} referencia(s) disponibles` : "Escribe la referencia"}
+                />
+                <datalist id="initial-count-references-filtered">
+                  {referencesForBrand.map((r) => <option key={r} value={r} />)}
+                </datalist>
               </div>
               <div className="form-group">
                 <FieldHelp
@@ -498,10 +585,14 @@ export function CountsWorkspace({ products }: Props) {
                   example="unidad, metro, kilogramo o galón"
                 />
                 <input
-                  list="initial-count-units"
+                  list="initial-count-units-filtered"
                   value={articleDraft.unit}
                   onChange={(e) => edit("unit", e.target.value)}
+                  placeholder={"unidad, metro, kg, galón…"}
                 />
+                <datalist id="initial-count-units-filtered">
+                  {unitsForCategory.map((u) => <option key={u} value={u} />)}
+                </datalist>
               </div>
               <div className="form-group">
                 <FieldHelp

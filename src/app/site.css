@@ -1,8 +1,10 @@
 /* Public landing page — RFC Enterprise */
 .site-page { background: #f4f6f2; color: var(--ink); overflow-x: hidden; }
-.site-hero { background: linear-gradient(90deg, rgba(4, 21, 15, .94) 0%, rgba(5, 25, 17, .75) 40%, rgba(5, 25, 17, .18) 76%), url('/hero-caucasia-rfc.png') center/cover no-repeat; background-attachment: fixed; color: white; display: flex; flex-direction: column; min-height: max(720px, 100dvh); overflow: hidden; padding: 28px clamp(24px, 5.5vw, 88px) 24px; position: relative; }
-.site-hero::before { background-image: linear-gradient(rgba(198,144,36,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(198,144,36,.18) 1px, transparent 1px); background-size: 72px 72px; content:""; inset:0; opacity:.22; pointer-events:none; position:absolute; }
+.site-hero { background: #091a13; color: white; display: flex; flex-direction: column; min-height: max(720px, 100dvh); overflow: hidden; padding: 28px clamp(24px, 5.5vw, 88px) 24px; position: relative; }
+.site-hero::after { background: linear-gradient(90deg, rgba(4, 21, 15, .94) 0%, rgba(5, 25, 17, .76) 42%, rgba(5, 25, 17, .24) 78%), linear-gradient(rgba(198,144,36,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(198,144,36,.18) 1px, transparent 1px); background-size: auto, 72px 72px, 72px 72px; content:""; inset:0; pointer-events:none; position:absolute; z-index:0; }
 .site-hero > * { position:relative; z-index:1; }
+.site-hero-video, .site-metalmecanica-video { inset:0; overflow:hidden; pointer-events:none; position:absolute; z-index:0; }
+.site-hero-video video, .site-metalmecanica-video video { height:calc(100% + 140px); left:0; object-fit:cover; position:absolute; top:-70px; transform:translate3d(0, var(--parallax-offset, 0px), 0) scale(1.025); transition:transform .08s linear; width:100%; }
 .site-nav { align-items: center; display: flex; gap: 28px; justify-content: space-between; }
 .site-logo { align-items: center; color: inherit; display: inline-flex; flex-shrink: 0; gap: 12px; }
 .site-logo-image { height: auto; width: auto; }
@@ -18,7 +20,7 @@
 .site-hero-content { margin: auto 0; max-width: 760px; padding: 110px 0 86px; }
 .site-hero-parallax-logo { border: 1px solid rgba(255,255,255,.42); display: inline-flex; margin-bottom: 26px; padding: 16px; transform: translate3d(0, 0, 0); width: fit-content; }
 .site-hero-parallax-logo img { height: auto; opacity: .94; width: 96px; }
-@media (max-width: 700px), (prefers-reduced-motion: reduce) { .site-hero { background-attachment: scroll; } }
+@media (prefers-reduced-motion: reduce) { .site-hero-video video, .site-metalmecanica-video video { display:none; } .site-hero-video { background:url('/hero-caucasia-rfc.png') center/cover no-repeat; } .site-metalmecanica-video { background:url('/operations-oil-rfc.png') center/cover no-repeat; } }
 .site-kicker, .site-section-label { color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .13em; line-height: 1.4; text-transform: uppercase; }
 .site-hero h1, .site-intro h2, .site-work h2, .site-section-heading h2, .site-process h2, .site-contact h2 { font-family: var(--font-display, Georgia, serif); font-weight: 400; letter-spacing: -.055em; line-height: .98; }
 .site-hero h1 { font-size: clamp(3.45rem, 7.4vw, 6.9rem); margin: 22px 0 28px; max-width: 790px; }
@@ -53,6 +55,13 @@
 .site-service-line { background: var(--accent); display: block; height: 2px; width: 42px; }
 .site-service h3 { font-size: 20px; letter-spacing: -.025em; margin: 62px 0 14px; }
 .site-service p { color: rgba(255,255,255,.69); font-size: 14px; line-height: 1.62; max-width: 250px; }
+.site-metalmecanica { align-items:center; background:#0b2118; color:white; display:grid; min-height:min(760px, 84vh); overflow:hidden; padding:clamp(84px, 10vw, 144px) clamp(24px, 10vw, 160px); position:relative; }
+.site-metalmecanica::after { background:linear-gradient(90deg, rgba(5, 19, 13, .9), rgba(5, 19, 13, .64) 48%, rgba(5, 19, 13, .24)); content:""; inset:0; pointer-events:none; position:absolute; z-index:0; }
+.site-metalmecanica-copy { max-width:710px; position:relative; z-index:1; }
+.site-metalmecanica-copy h2 { font-family:var(--font-display, Georgia, serif); font-size:clamp(2.8rem, 5.3vw, 5.8rem); font-weight:400; letter-spacing:-.055em; line-height:.98; margin:19px 0 28px; }
+.site-metalmecanica-copy > p:not(.site-section-label) { color:rgba(255,255,255,.85); font-size:clamp(1rem, 1.4vw, 1.14rem); line-height:1.7; max-width:590px; }
+.site-button-light { background:#f4f6f2; color:#0b2118; margin-top:34px; }
+.site-button-light:hover { background:white; }
 .site-process { background: #f4f6f2; padding: clamp(88px, 11vw, 160px) clamp(24px, 9vw, 144px); }
 .site-process-heading { display: grid; gap: 45px; grid-template-columns: minmax(160px, .62fr) minmax(0, 1.8fr); margin: auto; max-width: 1440px; }
 .site-process-list { border-top: 1px solid var(--line); counter-reset: none; list-style: none; margin: 76px auto 0; max-width: 1440px; padding: 0; }
@@ -79,6 +88,6 @@
 .site-footer p, .site-footer > a { color: rgba(255,255,255,.62); font-size: 12px; }
 .site-footer > a { border-bottom: 1px solid rgba(255,255,255,.45); padding-bottom: 3px; }
 @media (max-width: 900px) { .site-nav-links { display: none; } .site-work { grid-template-columns: 1fr; } .site-work-media { max-height: 560px; min-height: 420px; } .site-services-grid { grid-template-columns: 1fr 1fr; } .site-service:nth-child(2) { border-right: 0; } .site-service:first-child, .site-service:nth-child(3) { padding-left: 0; } .site-service:nth-child(n + 3) { border-top: 1px solid rgba(255,255,255,.19); padding-top: 30px; } }
-@media (max-width: 700px) { .site-hero { min-height: 700px; } .site-nav-cta { display: none; } .site-portal-access { font-size: 12px; margin-left: auto; } .site-hero-content { padding: 96px 0 70px; } .site-capability-strip { align-items: flex-start; flex-direction: column; gap: 10px; padding: 28px 24px; } .site-capability-strip span { display: none; } .site-intro, .site-contact, .site-section-heading, .site-process-heading { grid-template-columns: 1fr; } .site-intro, .site-contact, .site-process { padding-bottom: 82px; padding-top: 82px; } .site-services { padding-bottom: 82px; padding-top: 82px; } .site-services-grid { margin-top: 50px; } .site-process-list { margin-top: 50px; } .site-process-list li { grid-template-columns: 46px 1fr; } .site-process-list p { grid-column: 2; } .site-form-grid { grid-template-columns: 1fr; } .site-footer { align-items: flex-start; flex-direction: column; gap: 18px; } }
+@media (max-width: 700px) { .site-hero { min-height: 700px; } .site-hero-video { background:url('/hero-caucasia-rfc.png') center/cover no-repeat; } .site-metalmecanica-video { background:url('/operations-oil-rfc.png') center/cover no-repeat; } .site-hero-video video, .site-metalmecanica-video video { transform:none; } .site-nav-cta { display: none; } .site-portal-access { font-size: 12px; margin-left: auto; } .site-hero-content { padding: 96px 0 70px; } .site-capability-strip { align-items: flex-start; flex-direction: column; gap: 10px; padding: 28px 24px; } .site-capability-strip span { display: none; } .site-intro, .site-contact, .site-section-heading, .site-process-heading { grid-template-columns: 1fr; } .site-intro, .site-contact, .site-process { padding-bottom: 82px; padding-top: 82px; } .site-services { padding-bottom: 82px; padding-top: 82px; } .site-metalmecanica { min-height:650px; padding-bottom:92px; padding-top:92px; } .site-services-grid { margin-top: 50px; } .site-process-list { margin-top: 50px; } .site-process-list li { grid-template-columns: 46px 1fr; } .site-process-list p { grid-column: 2; } .site-form-grid { grid-template-columns: 1fr; } .site-footer { align-items: flex-start; flex-direction: column; gap: 18px; } }
 @media (max-width: 480px) { .site-hero h1 { font-size: 3.2rem; } .site-nav-cta { margin-left: auto; } .site-logo b { font-size: 8px; } .site-hero-footer { font-size: 9px; gap: 15px; } .site-services-grid { grid-template-columns: 1fr; } .site-service, .site-service:nth-child(2) { border-right: 0; padding-left: 0; } .site-service:nth-child(n + 2) { border-top: 1px solid rgba(255,255,255,.19); padding-top: 30px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }

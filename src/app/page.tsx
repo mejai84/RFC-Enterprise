@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ContactForm } from "./contact-form";
+import { ParallaxVideo } from "./parallax-video";
 
 const services = [
   {
@@ -31,6 +32,7 @@ export default function Home() {
   return (
     <main className="site-page" id="main-content" tabIndex={-1}>
       <section className="site-hero" id="inicio">
+        <ParallaxVideo className="site-hero-video" poster="/hero-caucasia-rfc.png" source="/rfc-caucasia-oil-station.mp4" speed={0.1} />
         <nav className="site-nav" aria-label="Navegación principal">
           <Link className="site-logo" href="#inicio" aria-label="Representaciones Figueroa Castro, inicio">
             <Image className="site-logo-image" src="/rfc-logo.svg" alt="RFC Representaciones Figueroa Castro" width={54} height={54} priority />
@@ -105,6 +107,16 @@ export default function Home() {
               <p>{service.description}</p>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="site-metalmecanica" aria-labelledby="metalmecanica-title">
+        <ParallaxVideo className="site-metalmecanica-video" poster="/operations-oil-rfc.png" source="/rfc-metalmecanica.mp4" speed={0.075} />
+        <div className="site-metalmecanica-copy">
+          <p className="site-section-label">Capacidad de taller y campo</p>
+          <h2 id="metalmecanica-title">Fabricamos con precisión para que cada componente responda en operación.</h2>
+          <p>Desde estructuras y soportes hasta ajustes, mantenimiento y montajes, integramos fabricación metalmecánica con criterio técnico, seguridad y coordinación de obra.</p>
+          <a className="site-button site-button-light" href="#contacto">Hablemos de su necesidad <span aria-hidden="true">↘</span></a>
         </div>
       </section>
 

@@ -226,6 +226,30 @@
   color: #d33c2a;
 }
 
+.field-help-icon {
+  align-items: center;
+  color: var(--brand);
+  display: inline-flex;
+  height: 16px;
+  justify-content: center;
+  margin-left: 4px;
+  vertical-align: -3px;
+  width: 16px;
+}
+
+.field-help-icon svg {
+  display: block;
+  height: 14px;
+  width: 14px;
+}
+
+.field-help-text {
+  color: var(--ink-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+  margin-top: -2px;
+}
+
 .form-group input,
 .form-group select {
   background: #ffffff;

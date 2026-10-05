@@ -27,13 +27,16 @@ export function PrintableDispatchVoucher({ movement, project, onClose }: Props) 
     <div className="voucher-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="voucher-title">
       <div className="voucher-modal-container">
         <div className="voucher-modal-actions no-print">
-          <span className="voucher-tag">Formato Oficial Remisión Almacén</span>
+          <div className="voucher-modal-title">
+            <span className="voucher-tag">Documento operativo</span>
+            <h2 id="voucher-title">Emisión de almacén</h2>
+          </div>
           <div className="voucher-btns">
             <button className="btn-print" onClick={handlePrint} type="button">
               🖨️ Imprimir / Guardar PDF
             </button>
-            <button className="btn-close-voucher" onClick={onClose} type="button" aria-label="Cerrar">
-              ✕
+            <button className="btn-close-voucher" onClick={onClose} type="button" aria-label="Cerrar emisión de almacén" title="Cerrar">
+              <span aria-hidden="true">×</span>
             </button>
           </div>
         </div>

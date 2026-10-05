@@ -298,6 +298,20 @@
     margin: 10px;
   }
 
+  .voucher-modal-overlay {
+    align-items: flex-start;
+    padding: 8px;
+  }
+
+  .voucher-modal-actions {
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .voucher-modal-title h2 {
+    font-size: 15px;
+  }
+
   .printable-voucher-sheet {
     padding: 24px 16px;
   }

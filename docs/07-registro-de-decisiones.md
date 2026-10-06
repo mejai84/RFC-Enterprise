@@ -7,6 +7,8 @@ audiencia: Dirección, Desarrollo y Operación
 
 # Registro de decisiones arquitectónicas y de producto
 
+<!-- ADR-085 (Aceptada, 2026-10-06): la persistencia operativa de RFC Enterprise es obligatoria en Supabase. `localStorage` puede conservar preferencias de interfaz o caché no autoritativa, pero jamás confirma altas, ediciones, movimientos, conteos, préstamos, requisiciones, obras, cotizaciones o documentos. Cada módulo se migra a un repositorio con errores visibles cuando la base no esté disponible. -->
+<!-- ADR-086 (Aceptada, 2026-10-06): el alta de inventario se resuelve con una RPC transaccional con autorización explícita. La función exige sesión y rol administrador/responsable de inventario para la empresa; crea artículo, existencia y movimiento de apertura sin exponer llaves privilegiadas al navegador. -->
 <!-- ADR-084 (Aceptada, 2026-10-06): el rol laboral se asigna al crear la ficha. La membresía `user_roles`, exigida por RLS, se crea o repara en el flujo administrativo que crea/reestablece la cuenta Auth, usando la misma empresa, sede y rol; no se presentan permisos ficticios antes de existir una cuenta de acceso. -->
 <!-- ADR-083 (Aceptada, 2026-10-06): Cotizaciones y sus cambios de estado se comparten por empresa mediante `quotes` y `quote_history` en Supabase. El navegador solo conserva una caché de contingencia, nunca la confirmación de negocio. Toda alta usa UUID y toda cuenta sin membresía recibe un error accionable. -->
 

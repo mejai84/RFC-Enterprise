@@ -7,6 +7,8 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 
 # Backlog y riesgos
 
+| R-011 | Persistencia local remanente en módulos operativos | Alto | En ejecución | Migrar Inventario, Movimientos, Obras, Préstamos, Informes y Resumen a repositorios Supabase; mantener almacenamiento local solo como caché sin confirmación de guardado. | Desarrollo |
+| INV-021 | Alta parcial de artículos | Alto | Mitigado | `create_inventory_item_with_opening_balance` crea ficha, existencia y entrada inicial en una sola transacción y valida el rol de inventario del usuario autenticado. | Desarrollo |
 | R-010 | Rol laboral sin membresía Auth efectiva | Alto | Mitigado | Al crear/rehabilitar la cuenta mediante contraseña se sincroniza empresa, sede y rol específico en `user_roles`; se verificó RFC SAS como administrador. | Administración / Desarrollo |
 | R-009 | Cuenta de Auth sin empresa/rol | Alto | Mitigado en interfaz | Bloquear guardado remoto y mostrar instrucción de asignación; administrar el vínculo desde Empleados antes de operar Cotizaciones/APU | Administración |
 

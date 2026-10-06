@@ -155,3 +155,6 @@ La evolución se ejecutará en este orden para que cada fase entregue control op
 <!-- Registro 2026-10-02: Notas para la propuesta admite múltiples líneas; cada renglón guardado se imprime como una fila independiente debajo del valor en letras. -->
 <!-- Registro 2026-10-02: la relación Cotización-Obra es bidireccional: una cotización adjudicada abre su obra y la ficha de obra muestra su Cotización de origen con retorno directo al detalle comercial. -->
 <!-- Registro 2026-10-02: el historial de una cotización se presenta como línea de tiempo con eventos separados: responsable, fecha, transición de estado y nota en bloques legibles; el control de actualización se adapta a móvil. -->
+## Persistencia operativa (actualización 2026-10-06)
+
+Inventarios y Movimientos confirman altas, entradas, salidas, mínimos, ubicaciones y obras en Supabase antes de reflejarlas en pantalla. La creación de artículo usa una operación transaccional que registra ficha, existencia y movimiento de apertura como una sola unidad.

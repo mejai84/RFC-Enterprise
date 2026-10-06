@@ -1,11 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 import {
-  inventoryProducts,
-  inventoryProjects,
-  inventorySourceSummary,
-  sampleInitialMovements,
   getInventoryItemKind,
   type StockProduct,
   type Project,
@@ -17,6 +14,7 @@ import {
 } from "../index";
 import { InlineCatalogCombobox } from "./inline-catalog-combobox";
 import { CurrencyInput } from "@/shared/components/currency-input";
+import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -64,57 +62,35 @@ type Props = {
 
 export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadError, initialTab = "catalog", mode = "inventory" }: Props) {
   const isMovementsView = mode === "movements";
-  // Inicialización con persistencia en localStorage
-  const [products, setProducts] = useState<StockProduct[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_inventory_products");
-      if (saved) {
-        try {
-          return withDefaultInventoryAliases(JSON.parse(saved));
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-    return initialProducts && initialProducts.length > 0 ? initialProducts : [...inventoryProducts];
-  });
+  // El estado visible se confirma contra Supabase; no se usa almacenamiento local.
+  const [products, setProducts] = useState<StockProduct[]>(() => withDefaultInventoryAliases(initialProducts ?? []));
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [scope, setScope] = useState<{ companyId: string; branchId: string } | null>(null);
+  const supabase = useMemo(() => isSupabaseConfigured && supabaseUrl && supabasePublishableKey ? createBrowserClient(supabaseUrl, supabasePublishableKey) : null, []);
 
-  const [movements, setMovements] = useState<InventoryMovement[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_inventory_movements");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-    return [...sampleInitialMovements];
-  });
-
-  const [projects, setProjects] = useState<Project[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_inventory_projects");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-    return [...inventoryProjects];
-  });
-
-  // Guardar en localStorage
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("rfc_inventory_products", JSON.stringify(products));
-      localStorage.setItem("rfc_inventory_movements", JSON.stringify(movements));
-      localStorage.setItem("rfc_inventory_projects", JSON.stringify(projects));
-    }
-  }, [products, movements, projects]);
+    if (!supabase) return;
+    void (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+      const { data: membership } = await supabase.from("user_roles").select("company_id, branch_id").eq("user_id", auth.user.id).limit(1).maybeSingle();
+      if (!membership?.company_id || !membership.branch_id) return;
+      setScope({ companyId: membership.company_id, branchId: membership.branch_id });
+      const [{ data: remoteProjects }, { data: remoteMovements }] = await Promise.all([
+        supabase.from("projects").select("id, code, name, client, location, material_budget, status, start_date, estimated_end_date, actual_end_date, created_at").eq("company_id", membership.company_id).order("created_at", { ascending: false }),
+        supabase.from("inventory_movements").select("id, stock_id, movement_type, quantity, unit_cost, reference, notes, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)").eq("company_id", membership.company_id).order("occurred_at", { ascending: false }),
+      ]);
+      if (remoteProjects) setProjects(remoteProjects.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date, type: project.code.startsWith("MANT-") ? "mantenimiento" : project.code.startsWith("OBRA-") ? "obra" : "otro" })));
+      if (remoteMovements) setMovements(remoteMovements.map((movement) => {
+        const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock;
+        const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items);
+        const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects;
+        const type: MovementType = movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : movement.movement_type === "adjustment_in" || movement.movement_type === "adjustment_out" ? "adjustment" : "return";
+        return { id: movement.id, productId: movement.stock_id, productName: item?.name, type, quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(movement.occurred_at)), reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined };
+      }));
+    })();
+  }, [supabase]);
 
   // Estados de navegación e interfaz
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
@@ -284,7 +260,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   }
 
   // Ejecutar registro de movimiento con validaciones
-  function handleSaveMovement(e: FormEvent) {
+  async function handleSaveMovement(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
 
@@ -305,6 +281,10 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       return;
     }
 
+    if (!supabase || !scope) {
+      setFormError("No fue posible validar la empresa del usuario. Vuelve a iniciar sesión.");
+      return;
+    }
     const delta = movementType === "entry" ? qty : movementType === "exit" ? -qty : qty;
     if (movementType === "exit" && selectedProduct.available - qty < 0) {
       setFormError(
@@ -320,8 +300,19 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     }
     const totalCost = Math.abs(qty * unitCost);
 
+    const dbMovementType = movementType === "entry" || movementType === "return" ? "entry" : movementType === "exit" ? "exit" : "adjustment_in";
+    const { data: savedMovement, error } = await supabase
+      .from("inventory_movements")
+      .insert({ stock_id: selectedProduct.id, company_id: scope.companyId, branch_id: scope.branchId, movement_type: dbMovementType, quantity: qty, unit_cost: unitCost, reference: ref, notes: notesInput.trim() || null, occurred_at: new Date().toISOString(), project_id: movementType === "exit" ? project?.id ?? null : null })
+      .select("id")
+      .single();
+    if (error || !savedMovement) {
+      setFormError(error?.message ?? "No fue posible guardar el movimiento en la base de datos.");
+      return;
+    }
+
     const newMovement: InventoryMovement = {
-      id: `mov-${Date.now()}`,
+      id: savedMovement.id,
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       type: movementType,
@@ -361,28 +352,36 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   }
 
   // Crear nuevo proyecto / obra
-  function handleCreateProject(e: FormEvent) {
+  async function handleCreateProject(e: FormEvent) {
     e.preventDefault();
     if (!newProjectName.trim() || !newProjectCode.trim()) {
       showToast("Completa el código y nombre de la obra.", "error");
       return;
     }
 
-    const newPrj: Project = {
-      id: `prj-${Date.now()}`,
+    if (!supabase || !scope) {
+      showToast("No fue posible validar la empresa del usuario. Vuelve a iniciar sesión.", "error");
+      return;
+    }
+    const currentDate = new Date().toISOString().slice(0, 10);
+    const draftProject = {
       code: newProjectCode.trim().toUpperCase(),
-      type: newProjectCode.trim().toUpperCase().startsWith("MANT-")
-        ? "mantenimiento"
-        : newProjectCode.trim().toUpperCase().startsWith("OBRA-")
-          ? "obra"
-          : "otro",
       name: newProjectName.trim(),
       client: newProjectClient.trim() || "Representaciones Figueroa",
       location: newProjectLocation.trim() || "Caucasia, Antioquia",
-      budget: Number(newProjectBudget) || 10000000,
+      material_budget: Number(newProjectBudget) || 0,
       status: "active",
-      createdAt: new Date().toISOString().split("T")[0],
+      company_id: scope.companyId,
+      branch_id: scope.branchId,
+      start_date: currentDate,
+      estimated_end_date: currentDate,
     };
+    const { data: savedProject, error } = await supabase.from("projects").insert(draftProject).select("id, created_at").single();
+    if (error || !savedProject) {
+      showToast(error?.message ?? "No fue posible guardar la obra en la base de datos.", "error");
+      return;
+    }
+    const newPrj: Project = { id: savedProject.id, code: draftProject.code, type: draftProject.code.startsWith("MANT-") ? "mantenimiento" : draftProject.code.startsWith("OBRA-") ? "obra" : "otro", name: draftProject.name, client: draftProject.client, location: draftProject.location, budget: draftProject.material_budget, status: "active", createdAt: savedProject.created_at, startDate: currentDate, estimatedEndDate: currentDate };
 
     setProjects((current) => [newPrj, ...current]);
     setIsProjectModalOpen(false);
@@ -395,7 +394,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   }
 
   // Guardar nuevo stock mínimo
-  function handleSaveMinimum(e: FormEvent) {
+  async function handleSaveMinimum(e: FormEvent) {
     e.preventDefault();
     if (!editingMinimumProduct) return;
 
@@ -405,6 +404,15 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       return;
     }
 
+    if (!supabase) {
+      showToast("No fue posible conectar con la base de datos.", "error");
+      return;
+    }
+    const { error } = await supabase.from("inventory_stock").update({ minimum_quantity: parsedMin }).eq("id", editingMinimumProduct.id);
+    if (error) {
+      showToast(error.message, "error");
+      return;
+    }
     setProducts((current) =>
       current.map((p) =>
         p.id === editingMinimumProduct.id ? { ...p, minimum: parsedMin } : p
@@ -415,7 +423,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     setEditingMinimumProduct(null);
   }
 
-  function handleCreateItem(e: FormEvent) {
+  async function handleCreateItem(e: FormEvent) {
     e.preventDefault();
     const purchaseQuantity = Number(newItem.quantity);
     const unitsPerPurchase = Number(newItem.unitsPerPurchase);
@@ -425,7 +433,20 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     }
     const quantity = purchaseQuantity * unitsPerPurchase;
     const unitCost = purchaseUnitCost / unitsPerPurchase;
-    const id = `new-${Date.now()}`;
+    if (!supabase || !scope) { showToast("No fue posible validar la empresa del usuario. Vuelve a iniciar sesión.", "error"); return; }
+    const { data: stockId, error } = await supabase.rpc("create_inventory_item_with_opening_balance", {
+      p_company_id: scope.companyId, p_branch_id: scope.branchId, p_sku: newItem.sku.trim() || null,
+      p_name: newItem.name.trim(), p_category: newItem.category || null, p_brand: newItem.brand.trim() || null,
+      p_unit: newItem.unit.trim(), p_notes: newItem.aliases.trim() || null, p_inventory_group: newItem.group,
+      p_location: newItem.location.trim() || null, p_minimum_quantity: newItem.minimum === "" ? null : Number(newItem.minimum),
+      p_unit_cost: unitCost, p_quantity: quantity, p_purchase_unit: newItem.purchaseUnit.trim() || null,
+      p_units_per_purchase: unitsPerPurchase, p_purchase_unit_cost: purchaseUnitCost,
+      p_technical_reference: newItem.technicalReference.trim() || null, p_model: newItem.model.trim() || null,
+      p_serial_number: newItem.serialNumber.trim() || null, p_acquired_at: newItem.acquiredAt || null,
+      p_warranty_until: newItem.warrantyUntil || null, p_asset_condition: newItem.assetType === "material" ? null : newItem.assetCondition,
+    });
+    if (error || !stockId) { showToast(error?.message ?? "No fue posible crear el artículo en la base de datos.", "error"); return; }
+    const id = stockId;
     const location = newItem.location.trim();
     const aliases = [...new Set(newItem.aliases.split(",").map((alias) => alias.trim()).filter(Boolean))];
     const product: StockProduct = { id, sku: newItem.sku.trim() || `SKU-${Date.now()}`, name: newItem.name.trim(), aliases, category: newItem.category, brand: newItem.brand.trim() || "Sin marca", unit: newItem.unit.trim(), purchaseUnit: newItem.purchaseUnit.trim(), unitsPerPurchase, purchaseUnitCost, location, inventoryGroup: newItem.group, inventoryGroupName: newItem.group === "bodega" ? "Bodega" : newItem.group === "dotacion" ? "Dotación" : "Herramientas de trabajadores", available: quantity, minimum: newItem.minimum === "" ? null : Number(newItem.minimum), notes: null, active: true, unitCost, model: newItem.model.trim() || undefined, technicalReference: newItem.technicalReference.trim() || undefined, serialNumber: newItem.serialNumber.trim() || undefined, acquiredAt: newItem.acquiredAt || undefined, warrantyUntil: newItem.warrantyUntil || undefined, assetCondition: newItem.assetType === "material" ? undefined : newItem.assetCondition, sourceRow: 0 };
@@ -433,14 +454,16 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     setProducts(current => [product, ...current]); setMovements(current => [movement, ...current]); setIsNewItemModalOpen(false); setNewItem({ name: "", sku: "", aliases: "", category: "", brand: "", unit: "", purchaseUnit: "", unitsPerPurchase: "", location: "", warehouse: "", aisle: "", shelf: "", level: "", bin: "", group: "bodega", quantity: "", cost: "", minimum: "", assetType: "material", model: "", technicalReference: "", serialNumber: "", acquiredAt: "", warrantyUntil: "", assetCondition: "available" }); showToast(`Artículo "${product.name}" creado: ${quantity} ${product.unit} disponibles.`);
   }
 
-  function relocateProduct(product: StockProduct) {
+  async function relocateProduct(product: StockProduct) {
     const destination = window.prompt("Nueva ubicación (Almacén · Pasillo · Estante · Nivel):", product.location);
     if (!destination || destination.trim() === product.location) return;
     const reason = window.prompt("Motivo del traslado:", "Reubicación interna")?.trim();
     if (!reason) return;
     const responsible = window.prompt("Responsable del traslado:", "")?.trim();
+    if (!supabase) { showToast("No fue posible conectar con la base de datos.", "error"); return; }
+    const { error } = await supabase.from("inventory_stock").update({ location: destination.trim() }).eq("id", product.id);
+    if (error) { showToast(error.message, "error"); return; }
     setProducts(current => current.map(p => p.id === product.id ? { ...p, location: destination.trim() } : p));
-    setMovements(current => [{ id: `mov-${Date.now()}`, productId: product.id, productName: product.name, type: "adjustment", quantity: 0, unit: product.unit, unitCost: product.unitCost || 0, totalCost: 0, occurredAt: formatDateTime(), reference: `TRASLADO-${Date.now()}`, responsible, notes: `${reason}. Origen: ${product.location}. Destino: ${destination.trim()}.` }, ...current]);
     showToast(`Ubicación de "${product.name}" actualizada a ${destination.trim()}.`);
   }
 
@@ -527,13 +550,13 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       </section>
 
       {/* Aviso de Conexión */}
-      {dataSource === "demo" ? (
+      {dataSource === "database" ? (
         <p className="inventory-session-notice">
-          Modo Local Activo: Todos los movimientos, obras y ajustes se guardan en tiempo real en tu navegador.
+          Conectado a Base de Datos Supabase: Existencias sincronizadas con la nube de RFC Enterprise.
         </p>
       ) : (
         <p className="inventory-session-notice">
-          Conectado a Base de Datos Supabase: Existencias sincronizadas con la nube de RFC Enterprise.
+          Sin conexión operativa: las acciones de inventario requieren conexión a la base de datos.
         </p>
       )}
 
@@ -548,7 +571,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
         <article className="stat-card">
           <span>Artículos en Catálogo</span>
           <strong>{numberFormatter.format(products.length)}</strong>
-          <small>{inventorySourceSummary.groups.length} grupos de inventario</small>
+          <small>Catálogo sincronizado con la base de datos</small>
         </article>
         <article className="stat-card">
           <span>Unidades Disponibles</span>

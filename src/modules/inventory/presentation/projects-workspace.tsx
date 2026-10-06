@@ -145,52 +145,12 @@ export function ProjectsWorkspace({
     [],
   );
   // Sincronización con localStorage
-  const [products, setProducts] = useState<StockProduct[]>(() => {
-    prepareRealDataStorage();
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_inventory_products");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {}
-      }
-    }
-    return initialProducts;
-  });
+  const [products, setProducts] = useState<StockProduct[]>(initialProducts);
 
-  const [movements, setMovements] = useState<InventoryMovement[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_inventory_movements");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {}
-      }
-    }
-    return [];
-  });
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
 
-  const [projects, setProjects] = useState<Project[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_inventory_projects");
-      if (saved) {
-        try {
-          const storedProjects = JSON.parse(saved) as Project[];
-          const requestedProjectId = searchParams.get("projectId");
-          const requestedInitialProject = inventoryProjects.find(
-            (project) => project.id === requestedProjectId,
-          );
-          return requestedInitialProject &&
-            !storedProjects.some(
-              (project) => project.id === requestedInitialProject.id,
-            )
-            ? [...storedProjects, requestedInitialProject]
-            : storedProjects;
-        } catch {}
-      }
-    }
-    return [];
-  });
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [scope, setScope] = useState<{ companyId: string; branchId: string } | null>(null);
   const [quotes] = useState<Quote[]>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -228,6 +188,28 @@ export function ProjectsWorkspace({
     }
     return [];
   });
+
+  useEffect(() => {
+    if (!supabase) return;
+    void (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+      const { data: membership } = await supabase.from("user_roles").select("company_id, branch_id").eq("user_id", auth.user.id).limit(1).maybeSingle();
+      if (!membership?.company_id || !membership.branch_id) return;
+      setScope({ companyId: membership.company_id, branchId: membership.branch_id });
+      const [{ data: remoteProjects }, { data: remoteMovements }] = await Promise.all([
+        supabase.from("projects").select("id, code, name, client, location, material_budget, status, start_date, estimated_end_date, actual_end_date, created_at").eq("company_id", membership.company_id).order("created_at", { ascending: false }),
+        supabase.from("inventory_movements").select("id, stock_id, movement_type, quantity, unit_cost, reference, notes, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)").eq("company_id", membership.company_id).order("occurred_at", { ascending: false }),
+      ]);
+      if (remoteProjects) setProjects(remoteProjects.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date, type: project.code.startsWith("MANT-") ? "mantenimiento" : project.code.startsWith("OBRA-") ? "obra" : "otro" })));
+      if (remoteMovements) setMovements(remoteMovements.map((movement) => {
+        const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock;
+        const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items);
+        const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects;
+        return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: formatDateTime(new Date(movement.occurred_at)), reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined };
+      }));
+    })();
+  }, [supabase]);
 
   // Selected Project State
   const [selectedProjectId, setSelectedProjectId] = useState<string>(
@@ -350,26 +332,6 @@ export function ProjectsWorkspace({
       ),
     );
   }
-
-  // Persistir cambios
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("rfc_inventory_products", JSON.stringify(products));
-      localStorage.setItem(
-        "rfc_inventory_movements",
-        JSON.stringify(movements),
-      );
-      localStorage.setItem("rfc_inventory_projects", JSON.stringify(projects));
-      localStorage.setItem(
-        "rfc_inventory_requisitions",
-        JSON.stringify(requisitions),
-      );
-      localStorage.setItem(
-        "rfc_inventory_tool_loans",
-        JSON.stringify(toolLoans),
-      );
-    }
-  }, [products, movements, projects, requisitions, toolLoans]);
 
   const selectedProject = useMemo(() => {
     return projects.find((p) => p.id === selectedProjectId);
@@ -563,7 +525,7 @@ export function ProjectsWorkspace({
   }
 
   // Handle Dispatch Form Submit
-  const handleDispatchSubmit = (e: FormEvent) => {
+  const handleDispatchSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedProject)
       return alert("Seleccione una obra antes de registrar un despacho.");
@@ -577,8 +539,16 @@ export function ProjectsWorkspace({
     const unitCost = selectedProduct.unitCost || 25000;
     const totalCost = qty * unitCost;
 
+    if (!supabase || !scope) return alert("No fue posible validar la empresa del usuario. Vuelve a iniciar sesión.");
+    const reference = `VALE-${new Date().getFullYear()}-${String(movements.length + 1).padStart(3, "0")}`;
+    const { data: savedMovement, error } = await supabase.from("inventory_movements").insert({
+      stock_id: selectedProduct.id, company_id: scope.companyId, branch_id: scope.branchId,
+      movement_type: "exit", quantity: qty, unit_cost: unitCost, reference, notes: notesInput || null,
+      occurred_at: new Date().toISOString(), project_id: selectedProject.id,
+    }).select("id").single();
+    if (error || !savedMovement) return alert(error?.message ?? "No fue posible registrar el despacho en la base de datos.");
     const newMov: InventoryMovement = {
-      id: `mov-${Date.now()}`,
+      id: savedMovement.id,
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       type: "exit",
@@ -587,7 +557,7 @@ export function ProjectsWorkspace({
       unitCost,
       totalCost,
       occurredAt: formatDateTime(),
-      reference: `VALE-2026-${String(movements.length + 1).padStart(3, "0")}`,
+      reference,
       projectId: selectedProject.id,
       projectName: selectedProject.name,
       responsible: responsibleInput,
@@ -610,7 +580,7 @@ export function ProjectsWorkspace({
   };
 
   // Handle New Project Form Submit
-  const handleNewProjectSubmit = (e: FormEvent) => {
+  const handleNewProjectSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const budgetNum = parseFloat(newPrjBudget);
     if (
@@ -626,19 +596,22 @@ export function ProjectsWorkspace({
         "La fecha estimada debe ser posterior a la fecha de inicio.",
       );
 
-    const newPrj: Project = {
-      id: `prj-${Date.now()}`,
+    if (!supabase || !scope) return alert("No fue posible validar la empresa del usuario. Vuelve a iniciar sesión.");
+    const payload = {
       code: newPrjCode,
-      type: newPrjType,
       name: newPrjName,
       client: newPrjClient,
       location: newPrjLocation || "Antioquia",
-      budget: budgetNum,
+      material_budget: budgetNum,
       status: "active",
-      createdAt: new Date().toISOString().split("T")[0],
-      startDate: newPrjStartDate,
-      estimatedEndDate: newPrjEstimatedEndDate,
+      company_id: scope.companyId,
+      branch_id: scope.branchId,
+      start_date: newPrjStartDate,
+      estimated_end_date: newPrjEstimatedEndDate,
     };
+    const { data: savedProject, error } = await supabase.from("projects").insert(payload).select("id, created_at").single();
+    if (error || !savedProject) return alert(error?.message ?? "No fue posible crear la obra en la base de datos.");
+    const newPrj: Project = { id: savedProject.id, code: payload.code, type: newPrjType, name: payload.name, client: payload.client, location: payload.location, budget: payload.material_budget, status: "active", createdAt: savedProject.created_at, startDate: payload.start_date, estimatedEndDate: payload.estimated_end_date };
 
     setProjects((prev) => [...prev, newPrj]);
     setSelectedProjectId(newPrj.id);
@@ -660,7 +633,7 @@ export function ProjectsWorkspace({
     setIsEditProjectModalOpen(true);
   };
 
-  const handleEditProjectSubmit = (e: FormEvent) => {
+  const handleEditProjectSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedProject || !editStartDate || !editEstimatedEndDate)
       return alert("Indique ambas fechas.");
@@ -681,6 +654,9 @@ export function ProjectsWorkspace({
           "La fecha real de entrega no puede ser anterior al inicio de la obra.",
         );
     }
+    if (!supabase) return alert("No fue posible conectar con la base de datos.");
+    const { error } = await supabase.from("projects").update({ start_date: editStartDate, estimated_end_date: editEstimatedEndDate, actual_end_date: actualEndDate || null, status: editStatus }).eq("id", selectedProject.id);
+    if (error) return alert(error.message);
     setProjects((current) =>
       current.map((project) =>
         project.id === selectedProject.id

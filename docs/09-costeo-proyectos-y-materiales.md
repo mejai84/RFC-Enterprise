@@ -217,3 +217,6 @@ export type ToolLoan = {
 <!-- Registro 2026-10-02: cada obra adjudicada mantiene referencia a su cotización fuente; desde la ejecución se retorna al detalle comercial para consultar alcance, propuesta, valor y condiciones que originaron el presupuesto. -->
 <!-- Registro 2026-10-02: las revisiones y cambios del flujo comercial se consultan en una línea de tiempo separada, permitiendo auditar con claridad quién cambió el estado, cuándo y con qué nota. -->
 <!-- Registro 2026-10-05: se implementan márgenes de ganancia diferenciados por rubro en el APU (Materiales, Mano de obra, Equipos y Transporte). El APU calcula el Costo Directo Real para abastecimiento y nómina, calcula la Ganancia Estimada ponderada y consolida el Precio de Venta Comercial Final tanto para cotización como para la propuesta imprimible. -->
+## Persistencia de inventario y costo (2026-10-06)
+
+Las entradas y salidas se insertan en el Kardex de Supabase. El disparador de base actualiza las existencias y, cuando corresponde, aplica el costo promedio ponderado. La interfaz solo actualiza su estado después de recibir confirmación; no se considera guardado un cambio en memoria o navegador.

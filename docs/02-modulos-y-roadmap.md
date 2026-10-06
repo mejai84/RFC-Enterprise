@@ -160,3 +160,5 @@ La evolución se ejecutará en este orden para que cada fase entregue control op
 Inventarios y Movimientos confirman altas, entradas, salidas, mínimos, ubicaciones y obras en Supabase antes de reflejarlas en pantalla. La creación de artículo usa una operación transaccional que registra ficha, existencia y movimiento de apertura como una sola unidad.
 
 Resumen ejecutivo e Informes se alimentan de las tablas de Inventario, Proyectos, Requisiciones, Cotizaciones y APU; no leen ni guardan indicadores operativos en el navegador.
+
+Conversión Cotización → Obra: al 1-click el sistema crea la obra en `projects` con empresa, sede, código, presupuesto, fechas y cliente; guarda `project_id`/`project_code` en la cotización, la mueve a “En ejecución” y registra el evento en `quote_history`. Sin persistencia local de negocio; el consecutivo es por empresa y el constraint `unique(company_id, code)` garantiza no duplicados.

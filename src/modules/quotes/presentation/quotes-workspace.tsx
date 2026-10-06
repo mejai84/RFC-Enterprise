@@ -36,6 +36,8 @@ import {
 import { getNextProjectCode, type Project } from "@/modules/inventory";
 import { apuCostBreakdown, apuSellingBreakdown, type Apu } from "@/modules/apu";
 import { prepareRealDataStorage } from "@/shared/browser/real-data-storage";
+import { createBrowserClient } from "@supabase/ssr";
+import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 
 /* ── Helpers de formato ─────────────────────────────────────── */
 
@@ -315,6 +317,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [branchId, setBranchId] = useState<string | null>(null);
   const [isRemoteReady, setIsRemoteReady] = useState(false);
 
   // Auto-desvanecer aviso de acción
@@ -331,6 +334,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       .then((remote) => {
         if (!active || !remote) return;
         setCompanyId(remote.companyId);
+        setBranchId(remote.branchId ?? null);
         const remoteQuotes = remote.quotes;
         setQuotes((current) => {
           if (remoteQuotes.length) return remoteQuotes;
@@ -568,88 +572,82 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   );
 
   /* ── Conversión 1-Click a Obra / Proyecto ────────────────── */
-  const handleConvertToProject = useCallback((quote: Quote) => {
+  const handleConvertToProject = useCallback(async (quote: Quote) => {
+    if (!companyId || !branchId) {
+      setActionNotice("No fue posible validar la empresa o sede del usuario. Vuelve a iniciar sesión.");
+      return;
+    }
+    if (!isSupabaseConfigured || !supabaseUrl || !supabasePublishableKey) {
+      setActionNotice("No fue posible conectar con la base de datos.");
+      return;
+    }
     const now = new Date();
     const createdAt = now.toISOString();
     const startDate = createdAt.slice(0, 10);
     const estimatedEnd = new Date(now);
-    estimatedEnd.setDate(
-      estimatedEnd.getDate() + (quote.deliveryTimeWeeks ?? 3) * 7,
-    );
+    estimatedEnd.setDate(estimatedEnd.getDate() + (quote.deliveryTimeWeeks ?? 3) * 7);
     const estimatedEndDate = estimatedEnd.toISOString().slice(0, 10);
-    const storedProjects = (() => {
-      try {
-        const saved = localStorage.getItem("rfc_inventory_projects");
-        return saved ? (JSON.parse(saved) as Project[]) : [];
-      } catch {
-        return [] as Project[];
-      }
-    })();
-    const projectId = `prj-${crypto.randomUUID()}`;
+
+    const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
+    // Generar consecutivo por empresa a partir de los códigos reales en Supabase
+    const { data: existingProjects, error: listError } = await supabase
+      .from("projects").select("code").eq("company_id", companyId);
+    if (listError) {
+      setActionNotice(`No fue posible leer las obras existentes: ${listError.message}`);
+      return;
+    }
     const generatedProjectCode = getNextProjectCode(
-      storedProjects,
-      "obra",
-      startDate,
+      (existingProjects ?? []) as Array<{ code: string }>, "obra", startDate,
     );
-    const newProject: Project = {
-      id: projectId,
+
+    const { data: savedProject, error: createError } = await supabase.from("projects").insert({
+      company_id: companyId,
+      branch_id: branchId,
       code: generatedProjectCode,
-      type: "obra",
       name: `${getEffectiveQuoteCode(quote)} · ${quote.title}`,
       client: quote.client,
       location: "Por definir",
-      budget: quote.estimatedValue ?? 0,
-      sourceQuoteId: quote.id,
-      sourceQuoteCode: getEffectiveQuoteCode(quote),
+      material_budget: quote.estimatedValue ?? 0,
       status: "active",
-      createdAt: startDate,
-      startDate,
-      estimatedEndDate,
-    };
-    localStorage.setItem(
-      "rfc_inventory_projects",
-      JSON.stringify([...storedProjects, newProject]),
-    );
-    // Formato de código de obra
+      start_date: startDate,
+      estimated_end_date: estimatedEndDate,
+    }).select("id, created_at").single();
 
-    // Registrar en cotización
-    setQuotes((prev) =>
-      prev.map((q) => {
-        if (q.id !== quote.id) return q;
-        const entry: QuoteHistoryEntry = {
+    if (createError || !savedProject) {
+      setActionNotice(createError?.message ?? "No fue posible crear la obra en la base de datos.");
+      return;
+    }
+
+    const updatedQuote: Quote = {
+      ...quote,
+      projectId: savedProject.id,
+      projectCode: generatedProjectCode,
+      status: "in_execution",
+      updatedAt: createdAt,
+      history: [
+        ...quote.history,
+        {
           id: uid(),
-          fromStatus: q.status,
+          fromStatus: quote.status,
           toStatus: "in_execution",
-          changedBy: "Jorge Figueroa",
+          changedBy: quote.responsible || "Usuario",
           changedAt: createdAt,
           note: `Cotización convertida a Obra oficial: ${generatedProjectCode}`,
-        };
-        return {
-          ...q,
-          projectId,
-          projectCode: generatedProjectCode,
-          status: "in_execution",
-          updatedAt: createdAt,
-          history: [...q.history, entry],
-        };
-      }),
-    );
+        },
+      ],
+    };
 
-    setSelectedQuote((prev) => {
-      if (!prev || prev.id !== quote.id) return prev;
-      return {
-        ...prev,
-        projectId,
-        projectCode: generatedProjectCode,
-        status: "in_execution",
-        updatedAt: createdAt,
-      };
-    });
+    try {
+      await saveQuote(companyId, updatedQuote);
+    } catch (error) {
+      setActionNotice(error instanceof Error ? `Obra creada, pero no se actualizó la cotización: ${error.message}` : "Obra creada, pero no se pudo registrar el historial de la cotización.");
+      return;
+    }
 
-    setActionNotice(
-      `¡Proyecto creado exitosamente con código ${generatedProjectCode}!`,
-    );
-  }, []);
+    setQuotes((prev) => prev.map((q) => (q.id === quote.id ? updatedQuote : q)));
+    setSelectedQuote((prev) => (prev && prev.id === quote.id ? updatedQuote : prev));
+    setActionNotice(`¡Proyecto creado exitosamente con código ${generatedProjectCode}!`);
+  }, [companyId, branchId, quotes]);
 
   /* ── Crear nueva cotización ────────────────────────────── */
   const handleCreateQuote = useCallback(

@@ -8,7 +8,8 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 # Backlog y riesgos
 
 | INV-021 | Alta parcial de artículos | Alto | Mitigado | `create_inventory_item_with_opening_balance` crea ficha, existencia y entrada inicial en una sola transacción y valida el rol de inventario del usuario autenticado. | Desarrollo |
-| R-011 | Persistencia local remanente en módulos operativos | Alto | En ejecución | Inventario, Obras, Requisiciones, Préstamos, Resumen e Informes ya usan Supabase; se eliminan de forma progresiva los respaldos heredados de Cotizaciones/APU. | Desarrollo |
+| R-011 | Persistencia local remanente en módulos operativos | Alto | En ejecución | Inventario, Obras, Requisiciones, Préstamos, Resumen e Informes ya usan Supabase; conversiones Cotización→Obra, Alquiler Rápido y transporte APU aún tienen flujos locales. | Desarrollo |
+| INV-026 | Conversión Cotización→Obra local | Alto | Mitigado | `handleConvertToProject` crea la obra en Supabase (`projects`), actualiza la cotización (`project_id`, `project_code`, `status=in_execution`) y registra `quote_history`; ya no usa `rfc_inventory_projects` ni localStorage para negocio. | Desarrollo |
 | INV-022 | Ajustes registrados con tipo incorrecto | Alto | Mitigado | `adjustment` distingue `adjustment_in`/`adjustment_out` en UI y persistencia; el trigger descuenta existencias en `adjustment_out` y se bloquea stock negativo en interfaz. | Desarrollo |
 | INV-023 | Traslados entre ubicaciones sin trazabilidad | Alto | Mitigado | `relocateProduct` inserta movimiento `transfer` (ref. `TRASLADO-<uuid8>`, origen/destino/motivo/responsable) antes de actualizar `inventory_stock.location`. Pendiente: envolver ambos pasos en una RPC transaccional. | Desarrollo |
 | INV-025 | Unicidad global de códigos de préstamos | Medio | Pendiente | `inventory_tool_loans.code` declarado `unique` a nivel tabla; debe ser `unique (company_id, code)` para evitar colisiones entre empresas. | Desarrollo |

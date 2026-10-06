@@ -339,24 +339,9 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
         setSaveMessage(error instanceof Error ? error.message : "Guarda primero el APU para enviarlo al presupuesto.");
       }
     } else {
-      // Modo local: guardar en localStorage
-      const boqItem: ProjectBoqItem = {
-        id: crypto.randomUUID(),
-        projectId: projectToLink,
-        apuAnalysisId: selected.id,
-        apuVersionId: selected.versionId || selected.id,
-        code: selected.code,
-        description: selected.name,
-        unit: selected.unit,
-        contractQuantity: selected.workQuantity,
-        budgetTotal: apuTotal(selected),
-        status: "active",
-      };
-      const prev = JSON.parse(localStorage.getItem("rfc_apu_boq_items") || "[]") as ProjectBoqItem[];
-      const next = [...prev.filter((i) => !(i.projectId === projectToLink && i.apuAnalysisId === selected.id)), boqItem];
-      localStorage.setItem("rfc_apu_boq_items", JSON.stringify(next));
-      setBoqItems(next);
-      setSaveMessage(`${selected.code} vinculado localmente al presupuesto. Inicia sesión para sincronizar.`);
+      // Sin conexión verificada: no guardar en localStorage; exigir sesión para persistir.
+      setSaveState("error");
+      setSaveMessage(`No fue posible guardar ${selected.code}: inicia sesión en RFC Enterprise para sincronizar con Supabase.`);
     }
   }
 

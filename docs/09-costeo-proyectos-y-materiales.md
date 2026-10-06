@@ -222,3 +222,5 @@ export type ToolLoan = {
 Las entradas y salidas se insertan en el Kardex de Supabase. El disparador de base actualiza las existencias y, cuando corresponde, aplica el costo promedio ponderado. La interfaz solo actualiza su estado después de recibir confirmación; no se considera guardado un cambio en memoria o navegador.
 
 Las requisiciones se emiten mediante `create_inventory_requisition`, que conserva la obra, el solicitante y la instantánea de cantidad/unidad/costo de cada existencia solicitada.
+
+La conversión Cotización→Obra deja persistida la obra en `projects` con su presupuesto y fechas, y la cotización queda enlazada (`project_id`) con trazabilidad en `quote_history`. El costo de materiales se sigue calculando por los despachos del Kardex vinculados a la obra, sin escrituras locales.

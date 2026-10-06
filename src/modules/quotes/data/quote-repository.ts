@@ -32,29 +32,42 @@ function toQuote(row: QuoteRow, history: QuoteHistoryEntry[]): Quote {
   };
 }
 
-export async function loadQuotesWorkspaceData(): Promise<{ companyId: string; quotes: Quote[] } | null> {
+export async function loadQuotesWorkspaceData(): Promise<{ companyId: string; branchId: string | null; quotes: Quote[] } | null> {
   const supabase = client();
   if (!supabase) return null;
   const { data: auth, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;
   if (!auth.user) return null;
-  const { data: memberships, error: membershipError } = await supabase.from("user_roles").select("company_id").eq("user_id", auth.user.id).limit(1);
+  const { data: memberships, error: membershipError } = await supabase.from("user_roles").select("company_id, branch_id").eq("user_id", auth.user.id).limit(1);
   if (membershipError) throw membershipError;
   const companyId = memberships?.[0]?.company_id;
+  const branchId = memberships?.[0]?.branch_id ?? null;
   if (!companyId) throw new Error("Tu cuenta no está vinculada a una empresa y rol. Un administrador debe asignarte el acceso antes de guardar cotizaciones.");
-  const [{ data: rows, error: quoteError }, { data: historyRows, error: historyError }] = await Promise.all([
+  const [{ data: rows, error: quoteError }, { data: historyRows, error: historyError }, { data: projectRows, error: projectError }] = await Promise.all([
     supabase.from("quotes").select("*").eq("company_id", companyId).order("updated_at", { ascending: false }),
     supabase.from("quote_history").select("id,quote_id,from_status,to_status,changed_by,note,changed_at").eq("company_id", companyId).order("changed_at"),
+    supabase.from("projects").select("id, code").eq("company_id", companyId),
   ]);
   if (quoteError) throw quoteError;
   if (historyError) throw historyError;
+  if (projectError) throw projectError;
+  const projectCodeById = new Map<string, string>();
+  for (const project of projectRows ?? []) projectCodeById.set(project.id, project.code);
   const historyByQuote = new Map<string, QuoteHistoryEntry[]>();
   for (const row of historyRows ?? []) {
     const items = historyByQuote.get(row.quote_id) ?? [];
     items.push({ id: row.id, fromStatus: row.from_status as QuoteStatus | null, toStatus: row.to_status as QuoteStatus, changedBy: row.changed_by, note: row.note ?? undefined, changedAt: row.changed_at });
     historyByQuote.set(row.quote_id, items);
   }
-  return { companyId, quotes: (rows ?? []).map((row) => toQuote(row as QuoteRow, historyByQuote.get(row.id) ?? [])) };
+  return {
+    companyId,
+    branchId,
+    quotes: (rows ?? []).map((row) => {
+      const quote = toQuote(row as QuoteRow, historyByQuote.get(row.id) ?? []);
+      if (row.project_id && projectCodeById.has(row.project_id)) quote.projectCode = projectCodeById.get(row.project_id);
+      return quote;
+    }),
+  };
 }
 
 export async function saveQuote(companyId: string, quote: Quote) {

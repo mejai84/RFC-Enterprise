@@ -281,3 +281,9 @@
   .apu-resource-picker { grid-template-columns: minmax(0, 1fr); }
   .apu-resource-manual { width: 100%; }
 }
+
+/* APU: estado de existencia como referencia, no como error (2026-10-06) */
+.apu-resource-results button b.is-pending { color: #92400e; }
+.apu-resource-more { background: var(--canvas); border: 0; border-top: 1px solid var(--line); color: var(--brand-dark); cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 800; min-height: 40px; padding: 10px; width: 100%; }
+.apu-resource-more:hover { background: var(--brand-soft); }
+.apu-resource-note { color: var(--muted); font-size: 12px; grid-column: 1 / -1; margin: 0; }

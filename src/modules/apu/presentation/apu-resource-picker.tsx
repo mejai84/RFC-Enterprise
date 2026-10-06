@@ -27,12 +27,14 @@ export function ApuResourcePicker({
   const [isOpen, setIsOpen] = useState(false);
   const listId = useId();
   const showResults = isOpen && Boolean(query.trim()) && !catalogLoading && !catalogError;
+  const [showAll, setShowAll] = useState(false);
   const resourceLabel = category === "materials" ? "material" : "equipo o herramienta";
   const matches = useMemo(() => {
     if (!query.trim()) return [];
-    return rankItems(products, query, (p) => p.name, (p) => inventorySearchText(p)).slice(0, 30);
+    return rankItems(products, query, (p) => p.name, (p) => inventorySearchText(p)).slice(0, 200);
   }, [products, query]);
 
+  const visibleMatches = showAll ? matches : matches.slice(0, 8);
   const totalMatches = useMemo(() => {
     if (!query.trim()) return 0;
     return rankItems(products, query, (p) => p.name, (p) => inventorySearchText(p)).length;
@@ -89,6 +91,12 @@ export function ApuResourcePicker({
       {catalogError ? (
         <p className="apu-filter-empty">No se pudo leer el inventario: {catalogError}</p>
       ) : null}
+      {!catalogError && !catalogLoading ? (
+        <p className="apu-resource-note">
+          El APU costea lo que la obra necesitará. Si hoy no hay existencias, el material
+          se compra o ingresa al inventario y se despacha a la obra cuando se ejecute.
+        </p>
+      ) : null}
 
       {showResults && (
         <div className="apu-resource-results" id={listId} role="listbox" aria-label={`Resultados de ${resourceLabel}`}>
@@ -97,7 +105,7 @@ export function ApuResourcePicker({
               ? "Sin coincidencias en el inventario"
               : `${totalMatches} coincidencia${totalMatches === 1 ? "" : "s"}`}
           </p>
-          {matches.map((product) => (
+          {visibleMatches.map((product) => (
             <button
               key={product.id}
               role="option"
@@ -113,15 +121,26 @@ export function ApuResourcePicker({
                   {product.sku ? ` · ${product.sku}` : ""}
                 </small>
               </span>
-              <b className={product.available > 0 ? "" : "is-empty"}>
+              <b className={product.available > 0 ? "" : "is-pending"}>
                 {Number(product.available ?? 0).toLocaleString("es-CO")} {product.unit}
               </b>
             </button>
           ))}
           {matches.length === 0 && products.length > 0 ? (
             <p className="apu-resource-hint">
-              Puedes agregarlo como recurso manual; quedará marcado como no inventariado.
+              Este artículo no está en el catálogo. Agréguelo como recurso manual: quedará
+              marcado para compra o ingreso al inventario.
             </p>
+          ) : null}
+          {matches.length > visibleMatches.length ? (
+            <button
+              type="button"
+              className="apu-resource-more"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setShowAll(true)}
+            >
+              Ver los {matches.length} resultados
+            </button>
           ) : null}
         </div>
       )}

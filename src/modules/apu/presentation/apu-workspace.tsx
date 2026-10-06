@@ -252,6 +252,8 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
 
   /** Costo por unidad de la actividad: costo directo total ÷ cantidad de la obra. */
   const selectedCost = selected ? apuCostTotal(selected) : 0;
+  /** Actividades creadas pero todavía sin recursos: no aportan al total. */
+  const pendingCount = visibleApus.filter((apu) => apu.lines.length === 0).length;
   const selectedQuantity = selected ? Number(selected.workQuantity) || 0 : 0;
   const unitCost = selectedQuantity > 0 ? selectedCost / selectedQuantity : 0;
   const unitSelling = selectedQuantity > 0 && selected ? apuSellingTotal(selected) / selectedQuantity : 0;
@@ -676,6 +678,33 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
       {quoteContext?.quoteCode ? (
         <p className={`apu-quote-context ${isQuoteApuReadOnly ? "is-read-only" : ""}`}>{isQuoteApuReadOnly ? <>Estás consultando el APU de <strong>{quoteContext.quoteCode}</strong>. Se conserva como historial de la oferta; para modificarlo, crea una revisión de cotización.</> : <>Estás creando actividades para la cotización <strong>{quoteContext.quoteCode}</strong>. Guarda cada APU antes de volver a Cotizaciones.</>}</p>
       ) : null}
+      {/* Resumen del presupuesto: suma de TODAS las actividades. Va arriba del módulo,
+          no dentro de la ficha de una actividad. */}
+      {visibleApus.length > 0 ? (
+        <section className="apu-summary-bar" aria-label="Resumen del presupuesto">
+          <div className="apu-summary-title">
+            <p>Resumen del presupuesto</p>
+            <small>
+              Suma de las {analysisTotals.count} actividades
+              {pendingCount > 0 ? ` · ${pendingCount} sin cotizar` : ""}
+            </small>
+          </div>
+          <dl className="apu-summary-figures">
+            <div>
+              <dt>Costo directo</dt>
+              <dd>{formatCOP(analysisTotals.cost)}</dd>
+            </div>
+            <div>
+              <dt>Ganancia</dt>
+              <dd>+{formatCOP(analysisTotals.profit)}</dd>
+            </div>
+            <div className="is-total">
+              <dt>Precio de venta total</dt>
+              <dd>{formatCOP(analysisTotals.selling)}</dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
       <ApuActivityCatalog onCreate={createApuFromActivity} />
       <section className="apu-layout">
         <aside className="dashboard-panel apu-list">
@@ -880,44 +909,9 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 </div>
               </section>
 
-              {/* Resumen acumulado de TODAS las actividades del análisis */}
-              <section className="apu-analysis-panel" aria-label="Resumen acumulado del análisis">
-                <div className="apu-analysis-header">
-                  <div>
-                    <p>Resumen del análisis</p>
-                    <small>Suma de las {analysisTotals.count} actividades de este análisis ({analysisTotals.quantity.toLocaleString("es-CO")} unidades totales).</small>
-                  </div>
-                </div>
-                <div className="apu-analysis-grid">
-                  <div className="apu-analysis-card">
-                    <p>Costo Directo Real acumulado</p>
-                    <strong>{formatCOP(analysisTotals.cost)}</strong>
-                    <small>{formatCOP(analysisTotals.unitCost)} / unidad</small>
-                  </div>
-                  <div className="apu-analysis-card">
-                    <p>Ganancia Estimada acumulada</p>
-                    <strong>+{formatCOP(analysisTotals.profit)}</strong>
-                    <small>Suma de todas las actividades</small>
-                  </div>
-                  <div className="apu-analysis-card is-selling">
-                    <p>Precio de venta del análisis</p>
-                    <strong>{formatCOP(analysisTotals.selling)}</strong>
-                    <small>{formatCOP(analysisTotals.unitSelling)} / unidad ponderada</small>
-                  </div>
-                  <div className="apu-analysis-card">
-                    <p>Participación de la actividad seleccionada</p>
-                    <strong>{analysisTotals.selectedShare.toFixed(1)}%</strong>
-                    <small>{formatCOP(analysisTotals.selectedSelling)} de {formatCOP(analysisTotals.selling)}</small>
-                  </div>
-                </div>
-                {analysisTotals.count > 1 && (
-                  <p className="apu-analysis-hint">
-                    Este es el total que se lleva a la cotización y a la obra. El valor
-                    grande arriba ({formatCOP(apuSellingTotal(selected))}) corresponde solo a
-                    la actividad seleccionada.
-                  </p>
-                )}
-              </section>
+              {/* El resumen del presupuesto vive arriba, a nivel de módulo: es la suma de todas
+                  las actividades, no de la que se está editando. */}
+
 
               <section className="apu-budget-control" aria-label="Presupuesto de obra">
                 <div><p>Presupuesto BOQ y control de obra</p><h3>Vincular este APU al presupuesto</h3><small>{companyId ? "Guarda una versión y selecciónala como línea presupuestal de una obra." : "Modo local: selecciona una obra para vincular este APU."}</small></div>

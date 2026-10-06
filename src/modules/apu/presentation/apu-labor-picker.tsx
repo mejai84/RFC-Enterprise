@@ -48,14 +48,26 @@ export function ApuLaborPicker({ catalog, isLoading, onAdd, onAddManual }: Props
   return (
     <div className="apu-labor-picker">
       <div className="apu-labor-controls">
-        <label>
+        <label className="apu-labor-search">
           <span>Buscar cargo</span>
           <input
             type="search"
             value={query}
             onChange={(event) => { setQuery(event.target.value); setSelectedId(""); }}
             placeholder="Ej. oficial, soldador, HSE…"
+            aria-describedby="apu-labor-results-count"
           />
+          {query.trim() ? (
+            <button
+              type="button"
+              className="apu-clear-search"
+              onClick={() => { setQuery(""); setSelectedId(""); }}
+              aria-label="Limpiar búsqueda de cargos"
+              title="Limpiar búsqueda"
+            >
+              ✕
+            </button>
+          ) : null}
         </label>
         <label>
           <span>Vigencia</span>
@@ -74,8 +86,19 @@ export function ApuLaborPicker({ catalog, isLoading, onAdd, onAddManual }: Props
         </label>
         <label className="apu-labor-position-select">
           <span>Puesto de trabajo</span>
-          <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)} disabled={isLoading || !visibleMatches.length}>
-            <option value="">{isLoading ? "Cargando cargos…" : `Seleccione entre ${matches.length} cargos`}</option>
+          <select
+            id="apu-labor-results-count"
+            value={selectedId}
+            onChange={(event) => setSelectedId(event.target.value)}
+            disabled={isLoading || !visibleMatches.length}
+          >
+            <option value="">
+              {isLoading
+                ? "Cargando cargos…"
+                : matches.length === 0
+                  ? "Sin coincidencias"
+                  : `Seleccione entre ${matches.length} cargo${matches.length === 1 ? "" : "s"}`}
+            </option>
             {visibleMatches.map((position) => (
               <option key={position.id} value={position.id}>
                 {position.name} · N{position.level} · {formatCOP(position.totalDailyRate)}/día
@@ -83,12 +106,26 @@ export function ApuLaborPicker({ catalog, isLoading, onAdd, onAddManual }: Props
             ))}
           </select>
         </label>
-        <button type="button" disabled={!selected} onClick={() => selected && onAdd(selected)}>Agregar cargo</button>
-        <button type="button" className="apu-secondary-action" onClick={onAddManual}>Agregar manual</button>
+        <div className="apu-labor-actions">
+          <button type="button" disabled={!selected} onClick={() => selected && onAdd(selected)}>
+            Agregar cargo
+          </button>
+          <button type="button" className="apu-secondary-action" onClick={onAddManual}>
+            Agregar manual
+          </button>
+        </div>
       </div>
       <div className="apu-labor-status" aria-live="polite">
         <span className={`apu-source-badge is-${catalog.source}`}>{catalog.source === "database" ? "Base de datos" : "Respaldo local"}</span>
-        <small>{catalog.positions.length} cargos disponibles{matches.length > 80 ? " · refine la búsqueda para ver más resultados" : ""}</small>
+        <small>
+          {matches.length === catalog.positions.length
+            ? `${catalog.positions.length} cargos disponibles`
+            : `${matches.length} de ${catalog.positions.length} cargos coinciden`}
+          {matches.length > 80 ? " · refine la búsqueda para ver más resultados" : ""}
+        </small>
+        {matches.length === 0 && catalog.positions.length > 0 ? (
+          <small className="apu-filter-empty">Sin coincidencias: revise el texto o quite los filtros.</small>
+        ) : null}
         {catalog.warning ? <small title={catalog.warning}>No se pudo consultar la tabla en línea.</small> : null}
       </div>
       {selected ? (

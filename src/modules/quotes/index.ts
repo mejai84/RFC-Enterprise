@@ -9,13 +9,18 @@ export type {
   QuoteHistoryEntry,
   QuoteCostBreakdown,
   TechnicalVisit,
+  TechnicalVisitEntry,
   TechnicalVisitMeasurement,
   TechnicalVisitPhoto,
   TechnicalVisitChecklistItem,
+  QuoteVisits,
 } from "./domain/quote";
 
 export {
   technicalVisitChecklistTemplates,
+  getQuoteVisits,
+  nextVisitSequence,
+  appendVisit,
   quoteStatuses,
   kanbanColumns,
   getNextQuoteCode,
@@ -30,7 +35,7 @@ export {
 
 export { initialQuotes } from "./fixtures";
 
-export { loadQuotesWorkspaceData, saveQuote, convertQuoteToProject } from "./data/quote-repository";
+export { loadQuotesWorkspaceData, saveQuote, convertQuoteToProject, currentActorName } from "./data/quote-repository";
 
 export type {
   OcensaActivityType,

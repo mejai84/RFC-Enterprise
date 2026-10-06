@@ -87,6 +87,14 @@ export type TechnicalVisit = {
   linkedRequisitionCode?: string;
 };
 
+/** Una visita técnica identificada dentro de una lista de visitas */
+export type TechnicalVisitEntry = TechnicalVisit & {
+  /** Identificador estable de la visita dentro de la lista */
+  id: string;
+  /** Consecutivo legible dentro de la cotización u obra: VISITA-01, VISITA-02… */
+  sequence?: string;
+};
+
 /** Plantillas de lista de chequeo por tipo de servicio */
 export const technicalVisitChecklistTemplates: Record<string, { label: string; items: string[] }> = {
   construccion: {
@@ -122,6 +130,12 @@ export const technicalVisitChecklistTemplates: Record<string, { label: string; i
   },
 };
 
+/**
+ * Lista de visitas de una cotización u obra. Se mantiene `technicalVisit`
+ * como la última visita para no romper lecturas existentes.
+ */
+export type QuoteVisits = TechnicalVisitEntry[];
+
 export type Quote = {
   id: string;
   code: string;            // COT-{seq}-{año}-{cliente}-{obra}
@@ -140,7 +154,8 @@ export type Quote = {
   sentAt?: string;          // Fecha en que se envió al cliente ISO (YYYY-MM-DD)
   deliveryTimeWeeks?: number; // Tiempo de ejecución o entrega en semanas
   paymentTerms?: string;    // Condiciones de pago (ej. "50% anticipo, 50% contra entrega")
-  technicalVisit?: TechnicalVisit; // Visita técnica de campo previa
+  technicalVisit?: TechnicalVisit; // Última visita técnica registrada (compatibilidad)
+  technicalVisits?: QuoteVisits;   // Todas las visitas técnicas de la cotización/obra
   folderUrl?: string;       // Enlace a expediente en la nube (Drive, OneDrive, SharePoint)
   receivedAt: string;       // Fecha de recepción ISO
   deadline?: string;        // Fecha límite de entrega de cotización ISO
@@ -153,6 +168,52 @@ export type Quote = {
   createdAt: string;
   updatedAt: string;
 };
+
+/* ── Gestión de visitas técnicas ──────────────────────────── */
+
+/** Devuelve la lista de visitas, migrando la visita única legacy si hace falta. */
+export function getQuoteVisits(quote: {
+  technicalVisit?: TechnicalVisit;
+  technicalVisits?: QuoteVisits;
+}): QuoteVisits {
+  if (Array.isArray(quote.technicalVisits) && quote.technicalVisits.length) {
+    return quote.technicalVisits.map((visit, index) => ({
+      ...visit,
+      id: visit.id ?? `legacy-${index}`,
+      sequence: visit.sequence ?? `VISITA-${String(index + 1).padStart(2, "0")}`,
+    }));
+  }
+  if (quote.technicalVisit) {
+    return [
+      {
+        ...quote.technicalVisit,
+        id: "legacy-0",
+        sequence: "VISITA-01",
+      },
+    ];
+  }
+  return [];
+}
+
+/** Consecutivo de visita: VISITA-01, VISITA-02… */
+export function nextVisitSequence(visits: QuoteVisits): string {
+  return `VISITA-${String(visits.length + 1).padStart(2, "0")}`;
+}
+
+/** Crea una visita nueva al final de la lista, conservando la anterior. */
+export function appendVisit(
+  visits: QuoteVisits,
+  visit: TechnicalVisit,
+): QuoteVisits {
+  return [
+    ...visits,
+    {
+      ...visit,
+      id: crypto.randomUUID(),
+      sequence: nextVisitSequence(visits),
+    },
+  ];
+}
 
 /* ── Generador de código consecutivo ──────────────────────── */
 

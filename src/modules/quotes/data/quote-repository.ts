@@ -6,7 +6,7 @@ type QuoteRow = {
   id: string; code: string; title: string; client: string; contact_name: string | null;
   contact_email: string | null; contact_phone: string | null; email_origin: string | null;
   status: QuoteStatus; responsible: string; estimated_value: number | string | null; revision: number;
-  cost_breakdown: Quote["costBreakdown"] | null; technical_visit: Quote["technicalVisit"] | null;
+  cost_breakdown: Quote["costBreakdown"] | null; technical_visit: Quote["technicalVisit"] | null; technical_visits: Quote["technicalVisits"] | null;
   validity_days: number | null; sent_at: string | null; delivery_time_weeks: number | null;
   payment_terms: string | null; folder_url: string | null; received_at: string; deadline: string | null;
   next_action: string | null; project_id: string | null; notes: string | null; created_at: string; updated_at: string;
@@ -23,7 +23,9 @@ function toQuote(row: QuoteRow, history: QuoteHistoryEntry[]): Quote {
     contactName: row.contact_name ?? undefined, contactEmail: row.contact_email ?? undefined,
     contactPhone: row.contact_phone ?? undefined, emailOrigin: row.email_origin ?? undefined,
     status: row.status, responsible: row.responsible, estimatedValue: row.estimated_value == null ? undefined : Number(row.estimated_value),
-    revision: row.revision, costBreakdown: row.cost_breakdown ?? undefined, technicalVisit: row.technical_visit ?? undefined,
+    revision: row.revision, costBreakdown: row.cost_breakdown ?? undefined,
+    technicalVisit: row.technical_visit ?? undefined,
+    technicalVisits: row.technical_visits ?? undefined,
     validityDays: row.validity_days ?? undefined, sentAt: row.sent_at ?? undefined,
     deliveryTimeWeeks: row.delivery_time_weeks ?? undefined, paymentTerms: row.payment_terms ?? undefined,
     folderUrl: row.folder_url ?? undefined, receivedAt: row.received_at, deadline: row.deadline ?? undefined,
@@ -94,28 +96,32 @@ export async function loadQuotesWorkspaceData(): Promise<{ companyId: string; br
   };
 }
 
+/** Nombre del usuario autenticado; es el actor real de cualquier cambio. */
+export async function currentActorName(): Promise<string> {
+  const supabase = client();
+  if (!supabase) return "Usuario";
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) return "Usuario";
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name, email")
+    .eq("id", data.user.id)
+    .maybeSingle();
+  return profile?.display_name || profile?.email || "Usuario";
+}
+
+/**
+ * Guarda la cotización y su historial en una sola operación.
+ * El `changed_by` de cada evento lo define Supabase a partir de la sesión,
+ * por lo que ningún empleado puede registrar un responsable falso.
+ */
 export async function saveQuote(companyId: string, quote: Quote) {
   const supabase = client();
   if (!supabase) throw new Error("Supabase no está configurado.");
-  const { error } = await supabase.from("quotes").upsert({
-    id: quote.id, company_id: companyId, code: quote.code, title: quote.title, client: quote.client,
-    contact_name: quote.contactName || null, contact_email: quote.contactEmail || null, contact_phone: quote.contactPhone || null,
-    email_origin: quote.emailOrigin || null, status: quote.status, responsible: quote.responsible,
-    estimated_value: quote.estimatedValue ?? null, revision: quote.revision, cost_breakdown: quote.costBreakdown ?? null,
-    technical_visit: quote.technicalVisit ?? null, validity_days: quote.validityDays ?? null, sent_at: quote.sentAt ?? null,
-    delivery_time_weeks: quote.deliveryTimeWeeks ?? null, payment_terms: quote.paymentTerms ?? null,
-    folder_url: quote.folderUrl ?? null, received_at: quote.receivedAt, deadline: quote.deadline ?? null,
-    next_action: quote.nextAction ?? null, project_id: quote.projectId ?? null, notes: quote.notes ?? null,
-  }, { onConflict: "id" });
+  const { error } = await supabase.rpc("save_quote_with_history", {
+    p_company_id: companyId,
+    p_quote: quote as unknown as Record<string, unknown>,
+  });
   if (error) throw error;
-  const { data: existing, error: existingError } = await supabase.from("quote_history").select("id").eq("quote_id", quote.id);
-  if (existingError) throw existingError;
-  const known = new Set((existing ?? []).map((row) => row.id));
-  const missing = quote.history.filter((entry) => !known.has(entry.id));
-  if (!missing.length) return;
-  const { error: historyError } = await supabase.from("quote_history").insert(missing.map((entry) => ({
-    id: entry.id, quote_id: quote.id, company_id: companyId, from_status: entry.fromStatus,
-    to_status: entry.toStatus, changed_by: entry.changedBy, note: entry.note ?? null, changed_at: entry.changedAt,
-  })));
-  if (historyError) throw historyError;
 }
+

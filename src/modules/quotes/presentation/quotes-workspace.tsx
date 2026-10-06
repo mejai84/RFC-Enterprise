@@ -33,6 +33,9 @@ import {
   loadQuotesWorkspaceData,
   saveQuote,
   convertQuoteToProject,
+  currentActorName,
+  getQuoteVisits,
+  type TechnicalVisitEntry,
 } from "@/modules/quotes";
 
 import { apuCostBreakdown, apuSellingBreakdown, type Apu } from "@/modules/apu";
@@ -317,6 +320,8 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
+  /** Usuario autenticado: es quien queda registrado en el historial. */
+  const [sessionActor, setSessionActor] = useState("Usuario");
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [branchId, setBranchId] = useState<string | null>(null);
   const [isRemoteReady, setIsRemoteReady] = useState(false);
@@ -331,6 +336,9 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
 
   useEffect(() => {
     let active = true;
+    void currentActorName().then((name) => {
+      if (active && name) setSessionActor(name);
+    });
     void loadQuotesWorkspaceData()
       .then((remote) => {
         if (!active || !remote) return;
@@ -527,32 +535,46 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   }, []);
 
   /* ── Guardar actualización de Visita Técnica ─────────────── */
-  const handleSaveTechnicalVisit = useCallback(
-    (quoteId: string, visit: TechnicalVisit) => {
+  /** Guarda la lista completa de visitas de una cotización u obra. */
+  const handleSaveTechnicalVisits = useCallback(
+    (quoteId: string, visits: TechnicalVisitEntry[]) => {
       const now = new Date().toISOString();
-      setQuotes((prev) =>
-        prev.map((q) => {
-          if (q.id !== quoteId) return q;
-          return {
-            ...q,
-            technicalVisit: visit,
-            updatedAt: now,
-            history: [...q.history, { id: uid(), fromStatus: q.status, toStatus: q.status, changedBy: q.responsible || "Usuario", changedAt: now, note: `Actualización de visita técnica: fecha ${visit.scheduledDate || "—"}, responsable ${visit.responsible || "—"}.` }],
-          };
-        }),
-      );
-      setSelectedQuote((prev) => {
-        if (!prev || prev.id !== quoteId) return prev;
+      const apply = (quote: Quote): Quote => {
+        if (quote.id !== quoteId) return quote;
+        const latest = visits[visits.length - 1];
+        const note = visits.length
+          ? `Visita técnica ${latest?.sequence ?? ""} registrada/actualizada: fecha ${latest?.scheduledDate || "—"}, responsable ${latest?.responsible || "—"}.`
+          : "Se retiraron las visitas técnicas de la cotización.";
         return {
-          ...prev,
-          technicalVisit: visit,
+          ...quote,
+          technicalVisits: visits,
+          technicalVisit: latest,
           updatedAt: now,
-          history: [...prev.history, { id: uid(), fromStatus: prev.status, toStatus: prev.status, changedBy: prev.responsible || "Usuario", changedAt: now, note: `Actualización de visita técnica: fecha ${visit.scheduledDate || "—"}, responsable ${visit.responsible || "—"}.` }],
+          history: [
+            ...quote.history,
+            {
+              id: uid(),
+              fromStatus: quote.status,
+              toStatus: quote.status,
+              changedBy: sessionActor,
+              changedAt: now,
+              note,
+            },
+          ],
         };
-      });
-      setActionNotice("Datos de visita técnica guardados.");
+      };
+      setQuotes((prev) => prev.map(apply));
+      setSelectedQuote((prev) => (prev ? apply(prev) : prev));
+      setActionNotice("Visitas técnicas guardadas.");
     },
-    [],
+    [sessionActor],
+  );
+
+  /** Guarda una visita individual (compatibilidad con acciones puntuales). */
+  const handleSaveTechnicalVisit = useCallback(
+    (quoteId: string, visit: TechnicalVisit) =>
+      handleSaveTechnicalVisits(quoteId, getQuoteVisits({ technicalVisit: visit })),
+    [handleSaveTechnicalVisits],
   );
 
   /* ── Crear nueva revisión (R1, R2...) ───────────────────── */
@@ -938,6 +960,8 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           onSaveProposalNotes={handleSaveProposalNotes}
           onSaveGeneralData={handleSaveGeneralData}
           onSaveTechnicalVisit={handleSaveTechnicalVisit}
+          onSaveTechnicalVisits={handleSaveTechnicalVisits}
+          sessionActor={sessionActor}
           onCreateRevision={handleCreateRevision}
           onConvertToProject={handleConvertToProject}
           onPrintProposal={(q) => {
@@ -1380,6 +1404,8 @@ function DetailModal({
   onSaveProposalNotes,
   onSaveGeneralData,
   onSaveTechnicalVisit,
+  onSaveTechnicalVisits,
+  sessionActor,
   onCreateRevision,
   onConvertToProject,
   onPrintProposal,
@@ -1391,6 +1417,8 @@ function DetailModal({
   onSaveProposalNotes: (id: string, notes: string) => void;
   onSaveGeneralData: (id: string, changes: Pick<Quote, "title" | "client" | "contactName" | "contactEmail" | "contactPhone" | "responsible" | "deadline" | "nextAction">) => void;
   onSaveTechnicalVisit: (id: string, visit: TechnicalVisit) => void;
+  onSaveTechnicalVisits: (id: string, visits: TechnicalVisitEntry[]) => void;
+  sessionActor: string;
   onCreateRevision: (id: string, reason: string) => void;
   onConvertToProject: (quote: Quote) => Promise<void>;
   onPrintProposal: (quote: Quote) => void;
@@ -1832,8 +1860,9 @@ function DetailModal({
 
             <TechnicalVisitEditor
               quote={quote}
-              currentUser={quote.responsible || "Usuario"}
+              currentUser={sessionActor}
               onSave={(visit) => onSaveTechnicalVisit(quote.id, visit)}
+              onSaveVisits={(visits) => onSaveTechnicalVisits(quote.id, visits)}
               onSaveStatus={(status) =>
                 onSaveTechnicalVisit(quote.id, {
                   ...(quote.technicalVisit ?? { required: true }),
@@ -1977,11 +2006,8 @@ function NewQuoteModal({
   }, [existingQuotes, client, title]);
 
   return (
-    <div className="quote-modal-backdrop" onClick={onClose}>
-      <div
-        className="quote-modal quote-modal--new"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="quote-modal-backdrop is-dismissible-by-button">
+      <div className="quote-modal quote-modal--new">
         <header className="quote-modal-header">
           <div>
             <h2>Nueva Solicitud de Cotización</h2>
@@ -1993,10 +2019,15 @@ function NewQuoteModal({
             className="quote-modal-close"
             onClick={onClose}
             aria-label="Cerrar"
+            title="Cerrar sin guardar"
           >
             ✕
           </button>
         </header>
+        <p className="modal-dismiss-hint">
+          Para salir usa la <strong>✕</strong> de arriba; el formulario no se cierra al
+          hacer clic por fuera para evitar perder lo digitado.
+        </p>
 
         <form onSubmit={onSubmit} className="new-quote-form">
           <label className="form-field">

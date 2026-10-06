@@ -101,7 +101,7 @@ export function ApuTransportPicker({
   return (
     <div className="apu-labor-picker apu-transport-picker">
       <div className="apu-labor-controls apu-transport-controls">
-        <label>
+        <label className="apu-labor-search">
           <span>Buscar transporte</span>
           <input
             type="search"
@@ -112,6 +112,20 @@ export function ApuTransportPicker({
             }}
             placeholder="Ej. volqueta, cama baja, buseta, 4x4…"
           />
+          {query.trim() ? (
+            <button
+              type="button"
+              className="apu-clear-search"
+              onClick={() => {
+                setQuery("");
+                setSelectedId("");
+              }}
+              aria-label="Limpiar búsqueda de transporte"
+              title="Limpiar búsqueda"
+            >
+              ✕
+            </button>
+          ) : null}
         </label>
 
         <label>
@@ -155,35 +169,37 @@ export function ApuTransportPicker({
           </select>
         </label>
 
-        <button
-          type="button"
-          disabled={!selected}
-          onClick={() => selected && onAdd(selected)}
-          title="Agregar este transporte a la cuadrilla o análisis APU"
-        >
-          Agregar al APU
-        </button>
+        <div className="apu-labor-actions">
+          <button
+            type="button"
+            disabled={!selected}
+            onClick={() => selected && onAdd(selected)}
+            title="Agregar este transporte a la cuadrilla o análisis APU"
+          >
+            Agregar al APU
+          </button>
 
-        <button
-          type="button"
-          className="apu-secondary-action"
-          onClick={onAddManual}
-          title="Agregar un flete no catalogado para esta actividad"
-        >
-          + Manual
-        </button>
+          <button
+            type="button"
+            className="apu-secondary-action"
+            onClick={onAddManual}
+            title="Agregar un flete no catalogado para esta actividad"
+          >
+            + Manual
+          </button>
 
-        <button
-          type="button"
-          className="apu-manage-catalog-btn"
-          onClick={() => {
-            setShowManageModal(true);
-            setNotice(null);
-          }}
-          title="Administrar tarifas, editar o crear nuevos vehículos de transporte"
-        >
-          ⚙️ Catálogo
-        </button>
+          <button
+            type="button"
+            className="apu-manage-catalog-btn"
+            onClick={() => {
+              setShowManageModal(true);
+              setNotice(null);
+            }}
+            title="Administrar tarifas, editar o crear nuevos vehículos de transporte"
+          >
+            ⚙️ Catálogo
+          </button>
+        </div>
       </div>
 
       {/* Estado del catálogo y fuente de datos */}
@@ -192,9 +208,13 @@ export function ApuTransportPicker({
           {catalog.source === "database" ? "Base de datos oficial" : "Respaldo local"}
         </span>
         <small>
-          {catalog.items.length} vehículos y fletes en catálogo
-          {matches.length !== catalog.items.length ? ` (${matches.length} filtrados)` : ""}
+          {matches.length === catalog.items.length
+            ? `${catalog.items.length} vehículos y fletes en catálogo`
+            : `${matches.length} de ${catalog.items.length} unidades coinciden`}
         </small>
+        {matches.length === 0 && catalog.items.length > 0 ? (
+          <small className="apu-filter-empty">Sin coincidencias: ajuste la búsqueda o quite el filtro de categoría.</small>
+        ) : null}
         {notice ? <span className="apu-notice-inline">✓ {notice}</span> : null}
       </div>
 

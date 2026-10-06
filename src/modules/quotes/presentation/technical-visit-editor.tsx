@@ -10,10 +10,14 @@ import {
 } from "@/lib/supabase/config";
 import { SignatureCapture } from "@/shared/components/signature-capture";
 import {
+  appendVisit,
   getEffectiveQuoteCode,
+  getQuoteVisits,
+  nextVisitSequence,
   technicalVisitChecklistTemplates,
   type Quote,
   type TechnicalVisit,
+  type TechnicalVisitEntry,
   type TechnicalVisitChecklistItem,
   type TechnicalVisitMeasurement,
 } from "@/modules/quotes";
@@ -49,14 +53,24 @@ export function TechnicalVisitEditor({
   quote,
   currentUser,
   onSave,
+  onSaveVisits,
   onSaveStatus,
 }: {
   quote: Quote;
   currentUser: string;
   onSave: (visit: TechnicalVisit) => void;
+  onSaveVisits: (visits: TechnicalVisitEntry[]) => void;
   onSaveStatus: (status: TechnicalVisit["status"]) => void;
 }) {
-  const visit = quote.technicalVisit;
+  const visits = getQuoteVisits(quote);
+  const [activeId, setActiveId] = useState<string | null>(
+    visits.length === 1 ? null : null,
+  );
+  const [creating, setCreating] = useState(visits.length === 0);
+  const visit = useMemo(
+    () => visits.find((row) => row.id === activeId) ?? null,
+    [visits, activeId],
+  );
   const supabase = useMemo(() => client(), []);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -318,6 +332,118 @@ export function TechnicalVisitEditor({
 
   return (
     <div className="visit-editor">
+      {/* Lista de visitas + creación de nuevas visitas */}
+      <div className="visit-list-head">
+        <div>
+          <strong>Visitas técnicas</strong>
+          <small>
+            {visits.length === 0
+              ? "Todavía no hay visitas registradas."
+              : `${visits.length} visita(s) registrada(s) en esta cotización u obra.`}
+          </small>
+        </div>
+        <button
+          type="button"
+          className="inventory-action"
+          onClick={() => {
+            setActiveId(null);
+            setCreating(true);
+            setRequired(true);
+            setStatus("pending");
+            setScheduledDate("");
+            setScheduledTime("");
+            setResponsible(quote.responsible);
+            setFindings("");
+            setMeasurements([]);
+            setChecklist([]);
+            setChecklistTemplate("construccion");
+            setPhotos([]);
+            setGeo(undefined);
+            setGeoState("idle");
+            setMaterialsMissing("");
+            setSignatureDataUrl("");
+            setNotice(null);
+          }}
+        >
+          ➕ Nueva visita ({nextVisitSequence(visits)})
+        </button>
+      </div>
+
+      {visits.length > 0 && (
+        <ul className="visit-list">
+          {[...visits].reverse().map((row) => {
+            const overdue =
+              row.required &&
+              row.status === "pending" &&
+              Boolean(row.scheduledDate) &&
+              String(row.scheduledDate) < new Date().toISOString().slice(0, 10);
+            const evidence = [
+              row.photos?.length ? `${row.photos.length} foto(s)` : null,
+              row.geo ? "GPS" : null,
+              row.signaturePath ? "firmada" : null,
+              row.measurements?.length ? `${row.measurements.length} medición(es)` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ");
+            return (
+              <li key={row.id} className={`visit-list-item is-${row.status}`}>
+                <button
+                  type="button"
+                  className="visit-list-open"
+                  onClick={() => {
+                    setActiveId(row.id);
+                    setCreating(false);
+                  }}
+                >
+                  <span className="visit-list-sequence">
+                    {row.sequence ?? "VISITA"}
+                  </span>
+                  <span className="visit-list-body">
+                    <strong>
+                      {row.scheduledDate ?? "Sin fecha"}
+                      {row.scheduledTime ? ` · ${row.scheduledTime}` : ""}
+                    </strong>
+                    <small>
+                      {row.responsible ?? "Sin responsable"}
+                      {evidence ? ` · ${evidence}` : ""}
+                    </small>
+                  </span>
+                  <span className={`visit-list-status is-${row.status}`}>
+                    {row.status === "completed"
+                      ? "✓ Ejecutada"
+                      : row.status === "not_required"
+                        ? "✕ No requerida"
+                        : overdue
+                          ? "⏰ Vencida"
+                          : "⏳ Pendiente"}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="visit-list-delete"
+                  title={`Eliminar ${row.sequence ?? "esta visita"}`}
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        `¿Eliminar ${row.sequence ?? "esta visita"}? Los datos de esa visita se borran del historial.`,
+                      )
+                    )
+                      return;
+                    onSaveVisits(visits.filter((item) => item.id !== row.id));
+                    setActiveId(null);
+                    setCreating(false);
+                  }}
+                >
+                  🗑️
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {(creating || visit) && (
+        <>
       {isOverdue && (
         <p className="visit-alert" role="status">
           ⏰ Visita técnica vencida: fue programada para el {scheduledDate} y sigue
@@ -582,6 +708,19 @@ export function TechnicalVisitEditor({
           </section>
 
           <div className="visit-actions">
+            {visit && !creating && (
+              <button
+                type="button"
+                className="btn-cancel"
+                onClick={() => {
+                  setActiveId(null);
+                  setCreating(false);
+                  setNotice(null);
+                }}
+              >
+                ← Volver a la lista
+              </button>
+            )}
             <button
               type="button"
               className="btn-cancel"
@@ -600,13 +739,26 @@ export function TechnicalVisitEditor({
               type="button"
               className="quotes-new-btn"
               onClick={() => {
-                onSave(buildVisit());
-                setNotice("Visita técnica guardada.");
+                const next = visit
+                  ? visits.map((row) => (row.id === visit.id ? { ...buildVisit(), id: row.id, sequence: row.sequence } : row))
+                  : appendVisit(visits, buildVisit());
+                onSaveVisits(next);
+                if (!visit) {
+                  setCreating(false);
+                  setActiveId(next[next.length - 1]?.id ?? null);
+                }
+                setNotice(
+                  visit
+                    ? `${visit.sequence ?? "Visita"} actualizada.`
+                    : `Visita ${next[next.length - 1]?.sequence ?? ""} registrada.`,
+                );
               }}
             >
-              Guardar Datos de Visita
+              {visit && !creating ? "Guardar cambios" : "Guardar visita"}
             </button>
           </div>
+        </>
+      )}
         </>
       )}
 

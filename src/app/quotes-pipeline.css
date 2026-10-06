@@ -555,9 +555,30 @@
 
 .quote-modal-header {
   align-items: center;
+  background: #ffffff;
   display: flex;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin: -28px -32px 14px;
+  padding: 20px 32px 14px;
+  position: sticky;
+  top: -28px;
+  z-index: 12;
+  box-shadow: 0 1px 0 var(--line), 0 10px 18px rgba(16, 49, 35, 0.07);
+}
+/* Barra de acciones fija al pie de los modales largos */
+.modal-actions,
+.apu-actions-bar,
+.tab-actions-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 11;
+}
+.modal-actions {
+  background: #ffffff;
+  border-top: 1px solid var(--line);
+  margin: 20px -32px -28px;
+  padding: 14px 32px;
+  box-shadow: 0 -10px 18px rgba(16, 49, 35, 0.07);
 }
 .quote-modal-header > div {
   align-items: center;
@@ -854,7 +875,8 @@
   margin: auto;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  overflow: hidden;
+  /* `clip` recorta sin crear contenedor de scroll: mantiene la barra fija. */
+  overflow: clip;
 }
 
 .print-controls {
@@ -866,7 +888,8 @@
   align-items: center;
   position: sticky;
   top: 0;
-  z-index: 3;
+  z-index: 30;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.28);
 }
 
 .print-controls-left {
@@ -1236,3 +1259,63 @@
 .visit-requisition-candidates small { color: var(--muted); font-size: 11.5px; }
 .visit-requisition-empty { color: #92400e; font-size: 12.5px; margin: 10px 0 0; }
 @media (max-width: 760px) { .visit-requisition-head { align-items: stretch; flex-direction: column; } .visit-requisition-head input { width: 100%; } }
+
+/* Lista de visitas tecnicas (2026-10-06) */
+.visit-list-head { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
+.visit-list-head strong { color: var(--brand-dark); display: block; font-size: 13px; font-weight: 850; letter-spacing: .05em; text-transform: uppercase; }
+.visit-list-head small { color: var(--muted); display: block; font-size: 12.5px; margin-top: 2px; }
+.visit-list { display: grid; gap: 10px; list-style: none; margin: 14px 0 0; padding: 0; }
+.visit-list-item { align-items: stretch; border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 10px; display: flex; gap: 6px; justify-content: space-between; overflow: hidden; }
+.visit-list-item.is-completed { border-left-color: var(--brand); }
+.visit-list-item.is-pending { border-left-color: #d97706; }
+.visit-list-item.is-not_required { border-left-color: var(--subtle); }
+.visit-list-open { align-items: center; background: transparent; border: 0; cursor: pointer; display: grid; flex: 1; gap: 10px; grid-template-columns: 96px minmax(0, 1fr) auto; min-width: 0; padding: 11px 12px; text-align: left; }
+.visit-list-open:hover { background: var(--canvas); }
+.visit-list-sequence { color: var(--brand-dark); font-size: 11.5px; font-weight: 900; letter-spacing: .06em; }
+.visit-list-body { min-width: 0; }
+.visit-list-body strong { color: var(--ink); display: block; font-size: 13.5px; }
+.visit-list-body small { color: var(--muted); display: block; font-size: 11.5px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.visit-list-status { border-radius: 999px; font-size: 11px; font-weight: 800; padding: 4px 9px; white-space: nowrap; }
+.visit-list-status.is-completed { background: var(--brand-soft); color: var(--brand-dark); }
+.visit-list-status.is-pending { background: #fffbeb; color: #92400e; }
+.visit-list-status.is-not_required { background: var(--canvas); color: var(--muted); }
+.visit-list-delete { background: transparent; border: 0; border-left: 1px solid var(--line); cursor: pointer; font-size: 14px; padding: 0 13px; }
+.visit-list-delete:hover { background: #fff1f2; color: #b91c1c; }
+@media (max-width: 760px) {
+  .visit-list-head { align-items: stretch; flex-direction: column; }
+  .visit-list-head button { width: 100%; }
+  .visit-list-open { gap: 8px; grid-template-columns: 1fr auto; grid-template-areas: "seq status" "body body"; }
+  .visit-list-sequence { grid-area: seq; }
+  .visit-list-status { grid-area: status; }
+  .visit-list-body { grid-area: body; white-space: normal; }
+  .visit-list-body small { white-space: normal; }
+}
+
+/* Modales: cabecera y acciones fijas al desplazar (2026-10-06) */
+.quote-modal-header { position: sticky; top: 0; }
+.quote-modal-backdrop .modal-card { position: relative; }
+.modal-header { position: sticky; top: 0; z-index: 12; }
+.modal-card > .modal-actions,
+.modal-card > form + .modal-actions { position: sticky; bottom: 0; background: #fff; border-top: 1px solid var(--line); margin-left: -24px; margin-right: -24px; padding: 14px 24px; z-index: 11; }
+.modal-header button, .quote-modal-close, .btn-close-modal { position: relative; z-index: 13; }
+@media print {
+  .modal-header, .quote-modal-header, .modal-actions, .apu-actions-bar, .tab-actions-bar { position: static !important; box-shadow: none !important; }
+}
+@media (max-width: 640px) {
+  .quote-modal-header { margin: -18px -18px 12px; padding: 16px 18px 12px; top: 0; }
+  .quote-modal { padding: 18px; }
+  .modal-actions { margin: 18px -18px -18px; padding: 12px 18px; }
+}
+
+/* Modales que solo se cierran con su boton (nueva cotizacion) - 2026-10-06 */
+.quote-modal-backdrop.is-dismissible-by-button { cursor: default; }
+.modal-dismiss-hint {
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  margin: 0 0 16px;
+  padding: 9px 12px;
+}
+.modal-dismiss-hint strong { color: var(--brand-dark); }

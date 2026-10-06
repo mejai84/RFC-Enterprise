@@ -271,19 +271,9 @@ type ViewMode = "kanban" | "list";
 
 export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   const searchParams = useSearchParams();
-  const [quotes, setQuotes] = useState<Quote[]>(() => {
-    if (typeof window === "undefined") return initialQuotes;
-    prepareRealDataStorage();
-    try {
-      const storedQuotes = localStorage.getItem("rfc_quotes");
-      const baseQuotes = storedQuotes
-        ? (JSON.parse(storedQuotes) as Quote[])
-        : initialQuotes;
-      const apus = JSON.parse(
-        localStorage.getItem("rfc_apus") || "[]",
-      ) as Apu[];
-      if (!apus.length) return baseQuotes;
-      return baseQuotes.map((quote) => {
+  const [quotes, setQuotes] = useState<Quote[]>(initialQuotes);
+  /*
+      return initialQuotes.map((quote) => {
         const linkedApus = apus.filter((apu) => apu.quoteId === quote.id);
         if (!linkedApus.length) return quote;
         const directCosts = apuCostBreakdown(linkedApus);
@@ -310,8 +300,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       });
     } catch {
       return initialQuotes;
-    }
-  });
+  */
 
   const [view, setView] = useState<ViewMode>("kanban");
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(() => {
@@ -335,9 +324,6 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     return () => clearTimeout(t);
   }, [actionNotice]);
 
-  useEffect(() => {
-    localStorage.setItem("rfc_quotes", JSON.stringify(quotes));
-  }, [quotes]);
 
   useEffect(() => {
     let active = true;

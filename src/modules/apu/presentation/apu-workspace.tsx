@@ -98,13 +98,12 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     const seedFallback: ApuProject[] = seedProjects.filter((p) => p.status === "active" || p.status === "pending").map((p) => ({ id: p.id, code: p.code, name: p.name }));
     async function loadWorkspace() {
       try {
-        setProducts(JSON.parse(localStorage.getItem("rfc_inventory_products") || "[]"));
         const remote = await loadApuWorkspaceData();
         if (remote) {
           if (!active) return;
           setCompanyId(remote.companyId);
           // Fusionar proyectos remotos con locales + seed para que nunca quede vacío
-          setProjects(mergeProjects(remote.projects, loadFallbackProjects(), seedFallback));
+          setProjects(mergeProjects(remote.projects));
           setBoqItems(remote.boqItems);
           setBoqCosts(remote.boqCosts);
           setApus(remote.apus);
@@ -304,7 +303,6 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
         const next = { ...selected, versionId: saved.versionId, revision: saved.revision, updatedAt: new Date().toISOString() };
         const nextApus = apus.map((apu) => apu.id === next.id ? next : apu);
         setApus(nextApus);
-        localStorage.setItem("rfc_apus", JSON.stringify(nextApus));
         setSaveState("database");
         setSaveMessage(`${selected.code} guardado como versión ${saved.revision} en la base de datos.`);
       } else {
@@ -325,7 +323,6 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     const nextVisible = quoteContext?.quoteId ? nextApus.filter((apu) => apu.quoteId === quoteContext.quoteId) : nextApus;
     setApus(nextApus);
     setSelectedId(nextVisible[0]?.id || "");
-    localStorage.setItem("rfc_apus", JSON.stringify(nextApus));
     setSaveMessage(`${selected.code} fue eliminado. Los demás APUs no se modificaron.`);
   }
 

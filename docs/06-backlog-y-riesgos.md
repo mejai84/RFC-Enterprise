@@ -8,7 +8,11 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 # Backlog y riesgos
 
 | INV-021 | Alta parcial de artículos | Alto | Mitigado | `create_inventory_item_with_opening_balance` crea ficha, existencia y entrada inicial en una sola transacción y valida el rol de inventario del usuario autenticado. | Desarrollo |
-| R-011 | Persistencia local remanente en módulos operativos | Alto | En ejecución | Inventario, Obras, Resumen e Informes ya consumen Supabase; faltan convertir préstamos de herramientas y los respaldos locales residuales dentro de Cotizaciones/APU. | Desarrollo |
+| R-011 | Persistencia local remanente en módulos operativos | Alto | En ejecución | Inventario, Obras, Requisiciones, Préstamos, Resumen e Informes ya usan Supabase; se eliminan de forma progresiva los respaldos heredados de Cotizaciones/APU. | Desarrollo |
+| INV-022 | Ajustes registrados con tipo incorrecto | Alto | Mitigado | `adjustment` distingue `adjustment_in`/`adjustment_out` en UI y persistencia; el trigger descuenta existencias en `adjustment_out` y se bloquea stock negativo en interfaz. | Desarrollo |
+| INV-023 | Traslados entre ubicaciones sin trazabilidad | Alto | Mitigado | `relocateProduct` inserta movimiento `transfer` (ref. `TRASLADO-<uuid8>`, origen/destino/motivo/responsable) antes de actualizar `inventory_stock.location`. Pendiente: envolver ambos pasos en una RPC transaccional. | Desarrollo |
+| INV-025 | Unicidad global de códigos de préstamos | Medio | Pendiente | `inventory_tool_loans.code` declarado `unique` a nivel tabla; debe ser `unique (company_id, code)` para evitar colisiones entre empresas. | Desarrollo |
+| INV-024 | Referencias con contador local duplicables | Medio | Pendiente | Consecutivos tipo `VALE-YYYY-N` e `ING-APERTURA-<timestamp>` pueden colisionar con dos usuarios/pestañas; usar consecutivo por empresa o sufijo único. | Desarrollo |
 | R-010 | Rol laboral sin membresía Auth efectiva | Alto | Mitigado | Al crear/rehabilitar la cuenta mediante contraseña se sincroniza empresa, sede y rol específico en `user_roles`; se verificó RFC SAS como administrador. | Administración / Desarrollo |
 | R-009 | Cuenta de Auth sin empresa/rol | Alto | Mitigado en interfaz | Bloquear guardado remoto y mostrar instrucción de asignación; administrar el vínculo desde Empleados antes de operar Cotizaciones/APU | Administración |
 

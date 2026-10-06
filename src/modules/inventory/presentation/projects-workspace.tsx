@@ -163,31 +163,9 @@ export function ProjectsWorkspace({
     return [];
   });
 
-  const [requisitions, setRequisitions] = useState<MaterialRequisition[]>(
-    () => {
-      if (typeof window !== "undefined") {
-        const saved = localStorage.getItem("rfc_inventory_requisitions");
-        if (saved) {
-          try {
-            return JSON.parse(saved);
-          } catch {}
-        }
-      }
-      return [];
-    },
-  );
+  const [requisitions, setRequisitions] = useState<MaterialRequisition[]>([]);
 
-  const [toolLoans, setToolLoans] = useState<ToolLoan[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_inventory_tool_loans");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {}
-      }
-    }
-    return [];
-  });
+  const [toolLoans, setToolLoans] = useState<ToolLoan[]>([]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -197,9 +175,11 @@ export function ProjectsWorkspace({
       const { data: membership } = await supabase.from("user_roles").select("company_id, branch_id").eq("user_id", auth.user.id).limit(1).maybeSingle();
       if (!membership?.company_id || !membership.branch_id) return;
       setScope({ companyId: membership.company_id, branchId: membership.branch_id });
-      const [{ data: remoteProjects }, { data: remoteMovements }] = await Promise.all([
+      const [{ data: remoteProjects }, { data: remoteMovements }, { data: remoteLoans }, { data: remoteReqs }] = await Promise.all([
         supabase.from("projects").select("id, code, name, client, location, material_budget, status, start_date, estimated_end_date, actual_end_date, created_at").eq("company_id", membership.company_id).order("created_at", { ascending: false }),
         supabase.from("inventory_movements").select("id, stock_id, movement_type, quantity, unit_cost, reference, notes, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)").eq("company_id", membership.company_id).order("occurred_at", { ascending: false }),
+        supabase.from("inventory_tool_loans").select("id,code,stock_id,worker_name,project_id,status,notes,created_at,expected_return_date,returned_at,inventory_stock!inner(inventory_items!inner(name)),projects(name)").eq("company_id",membership.company_id).order("created_at",{ascending:false}),
+        supabase.from("inventory_requisitions").select("id,code,project_id,requested_by_name,status,created_at,notes,projects(name)").eq("company_id",membership.company_id).order("created_at",{ascending:false}),
       ]);
       if (remoteProjects) setProjects(remoteProjects.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date, type: project.code.startsWith("MANT-") ? "mantenimiento" : project.code.startsWith("OBRA-") ? "obra" : "otro" })));
       if (remoteMovements) setMovements(remoteMovements.map((movement) => {
@@ -208,6 +188,8 @@ export function ProjectsWorkspace({
         const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects;
         return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: formatDateTime(new Date(movement.occurred_at)), reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined };
       }));
+      if (remoteLoans) setToolLoans(remoteLoans.map((loan) => { const stock=Array.isArray(loan.inventory_stock)?loan.inventory_stock[0]:loan.inventory_stock; const item=stock && (Array.isArray(stock.inventory_items)?stock.inventory_items[0]:stock.inventory_items); const project=Array.isArray(loan.projects)?loan.projects[0]:loan.projects; return {id:loan.id,code:loan.code,toolId:loan.stock_id,toolName:item?.name??"Herramienta",workerName:loan.worker_name,projectId:loan.project_id??"",projectName:project?.name??"Sin obra",loanDate:loan.created_at,expectedReturnDate:loan.expected_return_date??undefined,actualReturnDate:loan.returned_at??undefined,status:loan.status as ToolLoan["status"],notes:loan.notes??undefined}; }));
+      if (remoteReqs) setRequisitions(remoteReqs.map((row) => { const project=Array.isArray(row.projects)?row.projects[0]:row.projects; return {id:row.id,code:row.code,projectId:row.project_id,projectName:project?.name??"Obra",requestedBy:row.requested_by_name,status:row.status === "submitted" ? "pending" : row.status as MaterialRequisition["status"],createdAt:row.created_at,notes:row.notes??undefined,items:[]}; }));
     })();
   }, [supabase]);
 
@@ -432,7 +414,7 @@ export function ProjectsWorkspace({
       .slice(0, 12);
   }, [availableTools, toolSearch]);
 
-  function handleToolLoanSubmit(event: FormEvent) {
+  async function handleToolLoanSubmit(event: FormEvent) {
     event.preventDefault();
     if (!selectedProject) return;
     const tool = availableTools.find((product) => product.id === toolProductId);
@@ -444,15 +426,19 @@ export function ProjectsWorkspace({
         "Seleccione una herramienta disponible y la persona responsable.",
       );
 
+    if (!supabase || !scope) return alert("No fue posible validar la empresa.");
+    const code = `PRST-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+    const { data: saved, error } = await supabase.from("inventory_tool_loans").insert({company_id:scope.companyId,branch_id:scope.branchId,project_id:selectedProject.id,stock_id:tool.id,code,worker_name:`${responsible.name}${responsible.title ? ` (${responsible.title})` : ""}`,expected_return_date:toolExpectedReturnDate||null,notes:toolLoanNotes.trim()||null}).select("id,created_at").single();
+    if(error||!saved)return alert(error?.message??"No fue posible guardar el préstamo.");
     const newLoan: ToolLoan = {
-      id: `loan-${Date.now()}`,
-      code: `PRST-${new Date().getFullYear()}-${String(toolLoans.length + 1).padStart(3, "0")}`,
+      id: saved.id,
+      code,
       toolId: tool.id,
       toolName: tool.name,
       workerName: `${responsible.name}${responsible.title ? ` (${responsible.title})` : ""}`,
       projectId: selectedProject.id,
       projectName: selectedProject.name,
-      loanDate: formatDateTime(),
+      loanDate: saved.created_at,
       expectedReturnDate: toolExpectedReturnDate || undefined,
       status: "active",
       notes: toolLoanNotes.trim() || undefined,
@@ -474,13 +460,16 @@ export function ProjectsWorkspace({
     setIsToolLoanFormOpen(false);
   }
 
-  function cancelToolAssignment(loan: ToolLoan) {
+  async function cancelToolAssignment(loan: ToolLoan) {
     if (
       !window.confirm(
         `¿Anular la asignación de ${loan.toolName}? La herramienta volverá a estar disponible.`,
       )
     )
       return;
+    if (!supabase) return;
+    const { error } = await supabase.from("inventory_tool_loans").update({status:"cancelled"}).eq("id",loan.id);
+    if (error) return alert(error.message);
     setToolLoans((current) => current.filter((item) => item.id !== loan.id));
     setProducts((current) =>
       current.map((product) =>
@@ -491,10 +480,13 @@ export function ProjectsWorkspace({
     );
   }
 
-  function handleToolReturnSubmit(event: FormEvent) {
+  async function handleToolReturnSubmit(event: FormEvent) {
     event.preventDefault();
     if (!toolLoanToReturn) return;
     const returnedAt = formatDateTime();
+    if (!supabase) return;
+    const { error } = await supabase.from("inventory_tool_loans").update({status:toolReturnStatus,returned_at:new Date().toISOString(),notes:[toolLoanToReturn.notes,toolReturnNotes.trim()].filter(Boolean).join("\n")||null}).eq("id",toolLoanToReturn.id);
+    if (error) return alert(error.message);
     setToolLoans((current) =>
       current.map((loan) =>
         loan.id === toolLoanToReturn.id

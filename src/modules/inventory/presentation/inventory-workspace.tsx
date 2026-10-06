@@ -118,6 +118,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [movementType, setMovementType] = useState<MovementType>("exit");
+  const [adjustmentDirection, setAdjustmentDirection] = useState<"increase" | "decrease">("increase");
   const [quantityInput, setQuantityInput] = useState<string>("1");
   const [unitCostInput, setUnitCostInput] = useState<string>("");
   const [referenceInput, setReferenceInput] = useState<string>("");
@@ -285,8 +286,9 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       setFormError("No fue posible validar la empresa del usuario. Vuelve a iniciar sesión.");
       return;
     }
-    const delta = movementType === "entry" ? qty : movementType === "exit" ? -qty : qty;
-    if (movementType === "exit" && selectedProduct.available - qty < 0) {
+    const decreasesStock = movementType === "exit" || (movementType === "adjustment" && adjustmentDirection === "decrease");
+    const delta = decreasesStock ? -qty : qty;
+    if (decreasesStock && selectedProduct.available - qty < 0) {
       setFormError(
         `No hay existencias suficientes. Stock actual: ${selectedProduct.available} ${selectedProduct.unit}, intentas retirar: ${qty} ${selectedProduct.unit}.`
       );
@@ -300,7 +302,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     }
     const totalCost = Math.abs(qty * unitCost);
 
-    const dbMovementType = movementType === "entry" || movementType === "return" ? "entry" : movementType === "exit" ? "exit" : "adjustment_in";
+    const dbMovementType = movementType === "entry" || movementType === "return" ? "entry" : movementType === "exit" ? "exit" : adjustmentDirection === "increase" ? "adjustment_in" : "adjustment_out";
     const { data: savedMovement, error } = await supabase
       .from("inventory_movements")
       .insert({ stock_id: selectedProduct.id, company_id: scope.companyId, branch_id: scope.branchId, movement_type: dbMovementType, quantity: qty, unit_cost: unitCost, reference: ref, notes: notesInput.trim() || null, occurred_at: new Date().toISOString(), project_id: movementType === "exit" ? project?.id ?? null : null })
@@ -460,7 +462,11 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     const reason = window.prompt("Motivo del traslado:", "Reubicación interna")?.trim();
     if (!reason) return;
     const responsible = window.prompt("Responsable del traslado:", "")?.trim();
-    if (!supabase) { showToast("No fue posible conectar con la base de datos.", "error"); return; }
+    if (!supabase || !scope) { showToast("No fue posible conectar con la base de datos.", "error"); return; }
+    const reference = `TRASLADO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+    const notes = `${reason}. Origen: ${product.location}. Destino: ${destination.trim()}. Responsable: ${responsible || "No indicado"}.`;
+    const { error: movementError } = await supabase.from("inventory_movements").insert({ stock_id: product.id, company_id: scope.companyId, branch_id: scope.branchId, movement_type: "transfer", quantity: 0, unit_cost: product.unitCost || 0, reference, notes, occurred_at: new Date().toISOString() });
+    if (movementError) { showToast(movementError.message, "error"); return; }
     const { error } = await supabase.from("inventory_stock").update({ location: destination.trim() }).eq("id", product.id);
     if (error) { showToast(error.message, "error"); return; }
     setProducts(current => current.map(p => p.id === product.id ? { ...p, location: destination.trim() } : p));
@@ -1227,6 +1233,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
               </div>
 
               {/* Buscador Rápido de Artículo */}
+              {movementType === "adjustment" && <div className="form-group"><label>Resultado del ajuste</label><select value={adjustmentDirection} onChange={(event) => setAdjustmentDirection(event.target.value as "increase" | "decrease")}><option value="increase">Aumento de existencia</option><option value="decrease">Disminución / merma</option></select></div>}
               <div className="form-group" style={{ position: "relative" }}>
                 <label>
                   {movementType === "entry" ? "Artículo a ingresar" : "Artículo a mover"} <span className="req">*</span>

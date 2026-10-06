@@ -1,9 +1,9 @@
-/* ─────────────────────────────────────────────────────────────
- * Módulo de Cotizaciones – Workspace (Presentación)
+﻿/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * MÃ³dulo de Cotizaciones â€“ Workspace (PresentaciÃ³n)
  * Tablero Kanban + Vista de lista + Detalle de ficha +
- * Pre-costeo por 3 rubros + Visita técnica + Revisiones R1/R2 +
- * Conversión a Obra 1-Click + Propuesta Comercial Imprimible en PDF
- * ───────────────────────────────────────────────────────────── */
+ * Pre-costeo por 3 rubros + Visita tÃ©cnica + Revisiones R1/R2 +
+ * ConversiÃ³n a Obra 1-Click + Propuesta Comercial Imprimible en PDF
+ * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 "use client";
 
 import {
@@ -37,16 +37,17 @@ import {
 
 import { apuCostBreakdown, apuSellingBreakdown, type Apu } from "@/modules/apu";
 import { prepareRealDataStorage } from "@/shared/browser/real-data-storage";
+import { TechnicalVisitEditor } from "@/modules/quotes/presentation/technical-visit-editor";
 
-/* ── Helpers de formato ─────────────────────────────────────── */
+/* â”€â”€ Helpers de formato â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function formatCOP(value: number | undefined): string {
-  if (value == null) return "—";
+  if (value == null) return "â€”";
   return "$" + value.toLocaleString("es-CO");
 }
 
 function formatCompactCOP(value: number | undefined): string {
-  if (value == null || value === 0) return "—";
+  if (value == null || value === 0) return "â€”";
   if (value >= 1_000_000) {
     const mill = (value / 1_000_000).toFixed(1).replace(".0", "");
     return `$${mill}M`;
@@ -58,7 +59,7 @@ function formatCompactCOP(value: number | undefined): string {
 }
 
 function formatDate(iso: string | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "â€”";
   const d = new Date(iso);
   return d.toLocaleDateString("es-CO", {
     day: "2-digit",
@@ -99,7 +100,7 @@ function amountInColombianPesos(value: number): string {
     "TRECE",
     "CATORCE",
     "QUINCE",
-    "DIECISÉIS",
+    "DIECISÃ‰IS",
     "DIECISIETE",
     "DIECIOCHO",
     "DIECINUEVE",
@@ -152,7 +153,7 @@ function amountInColombianPesos(value: number): string {
   };
   const amount = Math.max(0, Math.round(value));
   if (amount === 0) return "CERO PESOS COLOMBIANOS M/L";
-  const groups = ["", "MIL", "MILLÓN", "MIL MILLONES", "BILLÓN"];
+  const groups = ["", "MIL", "MILLÃ“N", "MIL MILLONES", "BILLÃ“N"];
   let remaining = amount;
   let index = 0;
   const parts: string[] = [];
@@ -163,7 +164,7 @@ function amountInColombianPesos(value: number): string {
       if (index === 1) words = group === 1 ? "MIL" : `${words} MIL`;
       else if (index === 2)
         words =
-          group === 1 ? "UN MILLÓN" : `${words.replace(/UNO$/, "UN")} MILLONES`;
+          group === 1 ? "UN MILLÃ“N" : `${words.replace(/UNO$/, "UN")} MILLONES`;
       else if (index > 2)
         words =
           group === 1
@@ -193,24 +194,24 @@ const statusHelp: Record<QuoteStatus, string> = {
   received:
     "Radica la solicitud, el contacto y los documentos o planos recibidos.",
   in_review:
-    "Valida alcance, requisitos, documentación y si se necesita visita técnica.",
-  estimating: "Elabora o ajusta el APU y prepara la propuesta económica.",
+    "Valida alcance, requisitos, documentaciÃ³n y si se necesita visita tÃ©cnica.",
+  estimating: "Elabora o ajusta el APU y prepara la propuesta econÃ³mica.",
   sent: "La propuesta ya fue enviada al cliente; verifica vigencia y seguimiento.",
   awaiting_response:
-    "Esperando decisión del cliente. Haz seguimiento si supera 3 días.",
+    "Esperando decisiÃ³n del cliente. Haz seguimiento si supera 3 dÃ­as.",
   revision_requested:
-    "El cliente pidió cambios: ajusta APU, alcance o propuesta antes de reenviar.",
+    "El cliente pidiÃ³ cambios: ajusta APU, alcance o propuesta antes de reenviar.",
   confirmed:
-    "Oferta aceptada. Convierte la cotización en Obra para iniciar la ejecución.",
+    "Oferta aceptada. Convierte la cotizaciÃ³n en Obra para iniciar la ejecuciÃ³n.",
   in_execution:
-    "La obra está activa: registra avances, costos y consumo de recursos.",
+    "La obra estÃ¡ activa: registra avances, costos y consumo de recursos.",
   work_completed:
-    "Trabajo terminado: valida entrega, acta y soportes para facturación.",
+    "Trabajo terminado: valida entrega, acta y soportes para facturaciÃ³n.",
   billing_pending:
-    "Pendiente de facturación o cobro según las condiciones acordadas.",
+    "Pendiente de facturaciÃ³n o cobro segÃºn las condiciones acordadas.",
   closed:
     "Ciclo comercial y de cobro finalizado. Se conserva para consulta y trazabilidad.",
-  lost: "No adjudicada. Registra el motivo para análisis comercial futuro.",
+  lost: "No adjudicada. Registra el motivo para anÃ¡lisis comercial futuro.",
 };
 
 function QuoteStatusHelp({
@@ -225,26 +226,26 @@ function QuoteStatusHelp({
       <button
         type="button"
         className="quote-help-trigger"
-        aria-label="Ayuda sobre los estados de cotización"
+        aria-label="Ayuda sobre los estados de cotizaciÃ³n"
       >
         ?
       </button>
       <span className="quote-help-popover" role="tooltip">
         <strong>
           {status
-            ? `${getStatusMeta(status).label}: qué hacer`
-            : "Flujo de cotización"}
+            ? `${getStatusMeta(status).label}: quÃ© hacer`
+            : "Flujo de cotizaciÃ³n"}
         </strong>
         {status ? (
           <span>{statusHelp[status]}</span>
         ) : (
           <>
             <span>
-              <b>1. Recibido / En revisión:</b> registra solicitud, planos,
+              <b>1. Recibido / En revisiÃ³n:</b> registra solicitud, planos,
               alcance y visita.
             </span>
             <span>
-              <b>2. Cotización en proceso:</b> crea o modifica el APU y la
+              <b>2. CotizaciÃ³n en proceso:</b> crea o modifica el APU y la
               propuesta.
             </span>
             <span>
@@ -252,8 +253,8 @@ function QuoteStatusHelp({
               cliente.
             </span>
             <span>
-              <b>4. Confirmada:</b> conviértela en Obra; luego continúa
-              Ejecución, Terminada y Pago.
+              <b>4. Confirmada:</b> conviÃ©rtela en Obra; luego continÃºa
+              EjecuciÃ³n, Terminada y Pago.
             </span>
             <span>
               <b>Por modificar:</b> habilita ajustar el APU tras comentarios del
@@ -266,7 +267,7 @@ function QuoteStatusHelp({
   );
 }
 
-/* ── Componente principal ────────────────────────────────────── */
+/* â”€â”€ Componente principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 type ViewMode = "kanban" | "list";
 
@@ -320,7 +321,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   const [branchId, setBranchId] = useState<string | null>(null);
   const [isRemoteReady, setIsRemoteReady] = useState(false);
 
-  // Auto-desvanecer aviso de acción
+  // Auto-desvanecer aviso de acciÃ³n
   useEffect(() => {
     if (!actionNotice) return;
     const t = setTimeout(() => setActionNotice(null), 4500);
@@ -338,8 +339,8 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         const remoteQuotes = remote.quotes;
         setQuotes((current) => {
           if (remoteQuotes.length) return remoteQuotes;
-          // Primera sincronización: conservar únicamente registros locales reales y
-          // reemplazar sus IDs históricos cortos por UUIDs válidos para Supabase.
+          // Primera sincronizaciÃ³n: conservar Ãºnicamente registros locales reales y
+          // reemplazar sus IDs histÃ³ricos cortos por UUIDs vÃ¡lidos para Supabase.
           return current.map((quote) => ({
             ...quote,
             id: crypto.randomUUID(),
@@ -362,7 +363,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     });
   }, [companyId, isRemoteReady, quotes]);
 
-  /* ── Resumen ────────────────────────────────────────────── */
+  /* â”€â”€ Resumen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const summary = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const q of quotes) counts[q.status] = (counts[q.status] || 0) + 1;
@@ -375,7 +376,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       .reduce((sum, q) => sum + (q.estimatedValue ?? 0), 0);
   }, [quotes]);
 
-  /* ── Filtrado ───────────────────────────────────────────── */
+  /* â”€â”€ Filtrado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const filtered = useMemo(() => {
     let result = quotes;
     if (filterStatus !== "all")
@@ -393,7 +394,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     return result;
   }, [quotes, filterStatus, searchTerm]);
 
-  /* ── Cambiar estado con nota ─────────────────────────────── */
+  /* â”€â”€ Cambiar estado con nota â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const changeStatus = useCallback(
     (quoteId: string, newStatus: QuoteStatus, note?: string) => {
       const now = new Date().toISOString();
@@ -441,12 +442,12 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     [],
   );
 
-  /* ── Guardar actualización de Pre-costeo ─────────────────── */
+  /* â”€â”€ Guardar actualizaciÃ³n de Pre-costeo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleSaveCostBreakdown = useCallback(
     (quoteId: string, breakdown: QuoteCostBreakdown) => {
       const total = calculateTotalCost(breakdown);
       const now = new Date().toISOString();
-      const historyNote = `Actualización de pre-costeo: materiales ${breakdown.materials?.toLocaleString("es-CO") ?? 0}, mano de obra ${breakdown.labor?.toLocaleString("es-CO") ?? 0}, equipos ${breakdown.equipment?.toLocaleString("es-CO") ?? 0}, transporte ${breakdown.transport?.toLocaleString("es-CO") ?? 0}. Total estimado: ${total.toLocaleString("es-CO")}`;
+      const historyNote = `ActualizaciÃ³n de pre-costeo: materiales ${breakdown.materials?.toLocaleString("es-CO") ?? 0}, mano de obra ${breakdown.labor?.toLocaleString("es-CO") ?? 0}, equipos ${breakdown.equipment?.toLocaleString("es-CO") ?? 0}, transporte ${breakdown.transport?.toLocaleString("es-CO") ?? 0}. Total estimado: ${total.toLocaleString("es-CO")}`;
       setQuotes((prev) =>
         prev.map((q) => {
           if (q.id !== quoteId) return q;
@@ -469,7 +470,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           history: [...prev.history, { id: uid(), fromStatus: prev.status, toStatus: prev.status, changedBy: prev.responsible || "Usuario", changedAt: now, note: historyNote }],
         };
       });
-      setActionNotice("Pre-costeo de 3 rubros actualizado con éxito.");
+      setActionNotice("Pre-costeo de 3 rubros actualizado con Ã©xito.");
     },
     [],
   );
@@ -510,22 +511,22 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       if (quote.id !== quoteId) return quote;
       const changedFields = Object.entries(changes)
         .filter(([key, value]) => value !== undefined && quote[key as keyof Quote] !== value)
-        .map(([key]) => ({ title: "título", client: "cliente", contactName: "contacto", contactEmail: "email", contactPhone: "teléfono", responsible: "responsable", deadline: "fecha límite", nextAction: "próxima acción" }[key] ?? key));
+        .map(([key]) => ({ title: "tÃ­tulo", client: "cliente", contactName: "contacto", contactEmail: "email", contactPhone: "telÃ©fono", responsible: "responsable", deadline: "fecha lÃ­mite", nextAction: "prÃ³xima acciÃ³n" }[key] ?? key));
       const entry: QuoteHistoryEntry = {
         id: uid(),
         fromStatus: quote.status,
         toStatus: quote.status,
         changedBy: quote.responsible || "Usuario",
         changedAt: updatedAt,
-        note: `Actualización de datos generales: ${changedFields.join(", ") || "sin cambios"}.`,
+        note: `ActualizaciÃ³n de datos generales: ${changedFields.join(", ") || "sin cambios"}.`,
       };
       return { ...quote, ...changes, updatedAt, history: [...quote.history, entry] };
     }));
-    setSelectedQuote((previous) => previous?.id === quoteId ? { ...previous, ...changes, updatedAt, history: [...previous.history, { id: uid(), fromStatus: previous.status, toStatus: previous.status, changedBy: previous.responsible || "Usuario", changedAt: updatedAt, note: `Actualización de datos generales.` }] } : previous);
-    setActionNotice("Datos de la cotización actualizados y sincronizados.");
+    setSelectedQuote((previous) => previous?.id === quoteId ? { ...previous, ...changes, updatedAt, history: [...previous.history, { id: uid(), fromStatus: previous.status, toStatus: previous.status, changedBy: previous.responsible || "Usuario", changedAt: updatedAt, note: `ActualizaciÃ³n de datos generales.` }] } : previous);
+    setActionNotice("Datos de la cotizaciÃ³n actualizados y sincronizados.");
   }, []);
 
-  /* ── Guardar actualización de Visita Técnica ─────────────── */
+  /* â”€â”€ Guardar actualizaciÃ³n de Visita TÃ©cnica â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleSaveTechnicalVisit = useCallback(
     (quoteId: string, visit: TechnicalVisit) => {
       const now = new Date().toISOString();
@@ -536,7 +537,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
             ...q,
             technicalVisit: visit,
             updatedAt: now,
-            history: [...q.history, { id: uid(), fromStatus: q.status, toStatus: q.status, changedBy: q.responsible || "Usuario", changedAt: now, note: `Actualización de visita técnica: fecha ${visit.scheduledDate || "—"}, responsable ${visit.responsible || "—"}.` }],
+            history: [...q.history, { id: uid(), fromStatus: q.status, toStatus: q.status, changedBy: q.responsible || "Usuario", changedAt: now, note: `ActualizaciÃ³n de visita tÃ©cnica: fecha ${visit.scheduledDate || "â€”"}, responsable ${visit.responsible || "â€”"}.` }],
           };
         }),
       );
@@ -546,15 +547,15 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           ...prev,
           technicalVisit: visit,
           updatedAt: now,
-          history: [...prev.history, { id: uid(), fromStatus: prev.status, toStatus: prev.status, changedBy: prev.responsible || "Usuario", changedAt: now, note: `Actualización de visita técnica: fecha ${visit.scheduledDate || "—"}, responsable ${visit.responsible || "—"}.` }],
+          history: [...prev.history, { id: uid(), fromStatus: prev.status, toStatus: prev.status, changedBy: prev.responsible || "Usuario", changedAt: now, note: `ActualizaciÃ³n de visita tÃ©cnica: fecha ${visit.scheduledDate || "â€”"}, responsable ${visit.responsible || "â€”"}.` }],
         };
       });
-      setActionNotice("Datos de visita técnica guardados.");
+      setActionNotice("Datos de visita tÃ©cnica guardados.");
     },
     [],
   );
 
-  /* ── Crear nueva revisión (R1, R2...) ───────────────────── */
+  /* â”€â”€ Crear nueva revisiÃ³n (R1, R2...) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleCreateRevision = useCallback(
     (quoteId: string, reason: string) => {
       const now = new Date().toISOString();
@@ -568,7 +569,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
             toStatus: "revision_requested",
             changedBy: "Jorge Figueroa",
             changedAt: now,
-            note: `Creación de Revisión R${nextRev}: ${reason}`,
+            note: `CreaciÃ³n de RevisiÃ³n R${nextRev}: ${reason}`,
           };
           return {
             ...q,
@@ -588,7 +589,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           toStatus: "revision_requested",
           changedBy: "Jorge Figueroa",
           changedAt: now,
-          note: `Creación de Revisión R${nextRev}: ${reason}`,
+          note: `CreaciÃ³n de RevisiÃ³n R${nextRev}: ${reason}`,
         };
         return {
           ...prev,
@@ -598,15 +599,15 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           history: [...prev.history, entry],
         };
       });
-      setActionNotice("Nueva revisión generada con éxito.");
+      setActionNotice("Nueva revisiÃ³n generada con Ã©xito.");
     },
     [],
   );
 
-  /* ── Conversión 1-Click a Obra / Proyecto ────────────────── */
+  /* â”€â”€ ConversiÃ³n 1-Click a Obra / Proyecto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleConvertToProject = useCallback(async (quote: Quote) => {
     if (!companyId || !branchId) {
-      setActionNotice("No fue posible validar la empresa o sede del usuario. Vuelve a iniciar sesión.");
+      setActionNotice("No fue posible validar la empresa o sede del usuario. Vuelve a iniciar sesiÃ³n.");
       return;
     }
     const now = new Date();
@@ -620,13 +621,13 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     try {
       const result = await convertQuoteToProject(companyId, branchId, quote.id, {
         projectType: "obra",
-        projectName: `${getEffectiveQuoteCode(quote)} · ${quote.title}`,
+        projectName: `${getEffectiveQuoteCode(quote)} Â· ${quote.title}`,
         client: quote.client,
         location: "Por definir",
         materialBudget: quote.estimatedValue ?? 0,
         startDate,
         estimatedEndDate,
-        note: `Cotización convertida a Obra oficial.`,
+        note: `CotizaciÃ³n convertida a Obra oficial.`,
       });
       const updatedQuote: Quote = {
         ...quote,
@@ -642,21 +643,21 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
             toStatus: "in_execution",
             changedBy: quote.responsible || "Usuario",
             changedAt: createdAt,
-            note: `Cotización convertida a Obra oficial: ${result.code}`,
+            note: `CotizaciÃ³n convertida a Obra oficial: ${result.code}`,
           },
         ],
       };
       setQuotes((prev) => prev.map((q) => (q.id === quote.id ? updatedQuote : q)));
       setSelectedQuote((prev) => (prev && prev.id === quote.id ? updatedQuote : prev));
-      setActionNotice(`¡Proyecto creado exitosamente con código ${result.code}!`);
+      setActionNotice(`Â¡Proyecto creado exitosamente con cÃ³digo ${result.code}!`);
     } catch (error) {
-      setActionNotice(error instanceof Error ? error.message : "No fue posible convertir la cotización a obra.");
+      setActionNotice(error instanceof Error ? error.message : "No fue posible convertir la cotizaciÃ³n a obra.");
     } finally {
       setIsConverting(false);
     }
   }, [companyId, branchId, isConverting]);
 
-  /* ── Crear nueva cotización ────────────────────────────── */
+  /* â”€â”€ Crear nueva cotizaciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleCreateQuote = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
@@ -723,7 +724,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
               required: true,
               status: "pending",
               findings:
-                "Visita de inspección requerida antes de fijar APU final.",
+                "Visita de inspecciÃ³n requerida antes de fijar APU final.",
             }
           : undefined,
         folderUrl: folderUrl || undefined,
@@ -731,8 +732,8 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         deadline: deadline || undefined,
         notes: notes || undefined,
         nextAction: reqVisit
-          ? "Programar visita técnica al sitio de la obra"
-          : "Revisar alcance y documentación técnica",
+          ? "Programar visita tÃ©cnica al sitio de la obra"
+          : "Revisar alcance y documentaciÃ³n tÃ©cnica",
         history: [
           {
             id: uid(),
@@ -741,7 +742,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
             changedBy: "Jorge Figueroa",
             changedAt: now,
             note: emailOrigin
-              ? `Recibido vía: ${emailOrigin}`
+              ? `Recibido vÃ­a: ${emailOrigin}`
               : "Registro manual en el sistema",
           },
         ],
@@ -752,22 +753,22 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       setQuotes((prev) => [newQuote, ...prev]);
       setShowNewForm(false);
       setSelectedQuote(newQuote);
-      setActionNotice(`Cotización ${code} registrada exitosamente.`);
+      setActionNotice(`CotizaciÃ³n ${code} registrada exitosamente.`);
     },
     [quotes],
   );
 
   return (
     <div className="quotes-workspace">
-      {/* ── Aviso flotante de acción ────────────────────────────── */}
+      {/* â”€â”€ Aviso flotante de acciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {actionNotice && (
         <div className="quote-action-toast">
-          <span>✓ {actionNotice}</span>
-          <button onClick={() => setActionNotice(null)}>✕</button>
+          <span>âœ“ {actionNotice}</span>
+          <button onClick={() => setActionNotice(null)}>âœ•</button>
         </div>
       )}
 
-      {/* ── Header ────────────────────────────────────────────── */}
+      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <header className="quotes-header">
         <div className="quotes-header-left">
           <div className="quotes-title-with-help">
@@ -775,8 +776,8 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
             <QuoteStatusHelp />
           </div>
           <p className="quotes-subtitle">
-            Flujo comercial continuo: desde la recepción de la solicitud hasta
-            la adjudicación y obra en ejecución.
+            Flujo comercial continuo: desde la recepciÃ³n de la solicitud hasta
+            la adjudicaciÃ³n y obra en ejecuciÃ³n.
           </p>
         </div>
         <div className="quotes-header-actions">
@@ -835,7 +836,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         </div>
       </header>
 
-      {/* ── Resumen / KPI Pipeline ─────────────────────────────── */}
+      {/* â”€â”€ Resumen / KPI Pipeline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="quotes-pipeline-kpi">
         <div className="kpi-block">
           <span className="kpi-label">Pipeline Activo Estimado</span>
@@ -846,7 +847,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           <span className="kpi-value">{quotes.length}</span>
         </div>
         <div className="kpi-block">
-          <span className="kpi-label">En Cotización / Negociación</span>
+          <span className="kpi-label">En CotizaciÃ³n / NegociaciÃ³n</span>
           <span className="kpi-value">
             {(summary.estimating || 0) +
               (summary.sent || 0) +
@@ -861,7 +862,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         </div>
       </div>
 
-      {/* ── Chips de filtrado rápido ───────────────────────────── */}
+      {/* â”€â”€ Chips de filtrado rÃ¡pido â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="quotes-summary-bar">
         <button
           className={`quotes-summary-chip ${filterStatus === "all" ? "active" : ""}`}
@@ -891,11 +892,11 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         })}
       </div>
 
-      {/* ── Buscador en vivo ───────────────────────────────────── */}
+      {/* â”€â”€ Buscador en vivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="quotes-search-bar">
         <input
           type="search"
-          placeholder="Buscar por obra, código COT, cliente o responsable..."
+          placeholder="Buscar por obra, cÃ³digo COT, cliente o responsable..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="quotes-search-input"
@@ -905,12 +906,12 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
             className="quotes-clear-filter"
             onClick={() => setSearchTerm("")}
           >
-            Limpiar búsqueda ({filtered.length})
+            Limpiar bÃºsqueda ({filtered.length})
           </button>
         )}
       </div>
 
-      {/* ── Vistas: Kanban o Lista ─────────────────────────────── */}
+      {/* â”€â”€ Vistas: Kanban o Lista â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {view === "kanban" ? (
         <KanbanView
           quotes={filtered}
@@ -927,7 +928,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         />
       )}
 
-      {/* ── Modal de Detalle con Pestañas y Acciones ────────────── */}
+      {/* â”€â”€ Modal de Detalle con PestaÃ±as y Acciones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {selectedQuote && (
         <DetailModal
           quote={selectedQuote}
@@ -945,7 +946,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         />
       )}
 
-      {/* ── Modal Nueva Solicitud ──────────────────────────────── */}
+      {/* â”€â”€ Modal Nueva Solicitud â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showNewForm && (
         <NewQuoteModal
           existingQuotes={quotes}
@@ -954,7 +955,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         />
       )}
 
-      {/* ── Modal de Propuesta Comercial Imprimible (PDF) ──────── */}
+      {/* â”€â”€ Modal de Propuesta Comercial Imprimible (PDF) â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {quoteToPrint && (
         <FormalProposalModal
           quote={quoteToPrint}
@@ -965,9 +966,9 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
  * KANBAN VIEW
- * ═══════════════════════════════════════════════════════════════ */
+ * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 function KanbanView({
   quotes,
@@ -1020,7 +1021,7 @@ function KanbanView({
   );
 }
 
-/* ── Tarjeta Kanban Enriquecida ──────────────────────────────── */
+/* â”€â”€ Tarjeta Kanban Enriquecida â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function KanbanCard({
   quote,
@@ -1066,23 +1067,23 @@ function KanbanCard({
               onPrint();
             }}
           >
-            🖨️
+            ðŸ–¨ï¸
           </button>
           {stale && (
             <span
               className="kanban-stale-badge"
-              title="Más de 3 días esperando respuesta"
+              title="MÃ¡s de 3 dÃ­as esperando respuesta"
             >
-              ⚠️
+              âš ï¸
             </span>
           )}
         </div>
       </div>
 
       <h4 className="kanban-card-title">{quote.title}</h4>
-      <p className="kanban-card-client">🏢 {quote.client}</p>
+      <p className="kanban-card-client">ðŸ¢ {quote.client}</p>
 
-      {/* ── Etiquetas de estado: Vigencia y Visita ── */}
+      {/* â”€â”€ Etiquetas de estado: Vigencia y Visita â”€â”€ */}
       <div className="kanban-card-tags">
         {expiry && (
           <span
@@ -1096,10 +1097,10 @@ function KanbanCard({
             title={`Vence: ${expiry.expiryDateStr}`}
           >
             {expiry.isExpired
-              ? `⚠️ Vencida hace ${Math.abs(expiry.daysLeft)}d`
+              ? `âš ï¸ Vencida hace ${Math.abs(expiry.daysLeft)}d`
               : expiry.isExpiringSoon
-                ? `⏰ Vence en ${expiry.daysLeft}d`
-                : `⏳ Vigente (${expiry.daysLeft}d)`}
+                ? `â° Vence en ${expiry.daysLeft}d`
+                : `â³ Vigente (${expiry.daysLeft}d)`}
           </span>
         )}
 
@@ -1110,11 +1111,11 @@ function KanbanCard({
                 ? "quote-tag--visit-done"
                 : "quote-tag--visit-pending"
             }`}
-            title={quote.technicalVisit.findings || "Visita técnica requerida"}
+            title={quote.technicalVisit.findings || "Visita tÃ©cnica requerida"}
           >
             {quote.technicalVisit.status === "completed"
-              ? "✓ Visita OK"
-              : "🚜 Visita pend."}
+              ? "âœ“ Visita OK"
+              : "ðŸšœ Visita pend."}
           </span>
         )}
 
@@ -1127,25 +1128,25 @@ function KanbanCard({
             onClick={(e) => e.stopPropagation()}
             title="Abrir expediente de planos"
           >
-            📂 Planos
+            ðŸ“‚ Planos
           </a>
         )}
       </div>
 
-      {/* ── Mini desglose de 3 rubros si existe ── */}
+      {/* â”€â”€ Mini desglose de 3 rubros si existe â”€â”€ */}
       {quote.costBreakdown && (
         <div
           className="kanban-mini-breakdown"
           title="Materiales | Cuadrilla | Equipos"
         >
           <span className="mini-bk-item">
-            🧱 Mat: {formatCompactCOP(quote.costBreakdown.materials)}
+            ðŸ§± Mat: {formatCompactCOP(quote.costBreakdown.materials)}
           </span>
           <span className="mini-bk-item">
-            👷 MO: {formatCompactCOP(quote.costBreakdown.labor)}
+            ðŸ‘· MO: {formatCompactCOP(quote.costBreakdown.labor)}
           </span>
           <span className="mini-bk-item">
-            🚜 Eq: {formatCompactCOP(quote.costBreakdown.equipment)}
+            ðŸšœ Eq: {formatCompactCOP(quote.costBreakdown.equipment)}
           </span>
         </div>
       )}
@@ -1160,18 +1161,18 @@ function KanbanCard({
       {quote.projectCode && (
         <div className="kanban-linked-project">
           <span>
-            🏗️ Obra: <strong>{quote.projectCode}</strong>
+            ðŸ—ï¸ Obra: <strong>{quote.projectCode}</strong>
           </span>
         </div>
       )}
 
       {quote.nextAction && (
         <div className="kanban-card-action" title={quote.nextAction}>
-          → {quote.nextAction}
+          â†’ {quote.nextAction}
         </div>
       )}
 
-      {/* Botón rápido para avanzar al siguiente estado operativo */}
+      {/* BotÃ³n rÃ¡pido para avanzar al siguiente estado operativo */}
       {getNextQuickStatus(quote.status) && (
         <button
           className="kanban-card-advance"
@@ -1187,7 +1188,7 @@ function KanbanCard({
             onStatusChange(
               quote.id,
               next,
-              `Avanzado rápidamente a ${getStatusMeta(next).label}`,
+              `Avanzado rÃ¡pidamente a ${getStatusMeta(next).label}`,
             );
           }}
         >
@@ -1217,9 +1218,9 @@ function getNextQuickStatus(current: QuoteStatus): QuoteStatus | null {
   return flow[current];
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
  * LIST VIEW
- * ═══════════════════════════════════════════════════════════════ */
+ * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 function ListView({
   quotes,
@@ -1237,7 +1238,7 @@ function ListView({
       <table className="quotes-list-table">
         <thead>
           <tr>
-            <th>Código</th>
+            <th>CÃ³digo</th>
             <th>Obra / Solicitud</th>
             <th>Cliente</th>
             <th>Estado</th>
@@ -1306,11 +1307,11 @@ function ListView({
                         }
                       >
                         {q.technicalVisit.status === "completed"
-                          ? "✓ Realizada"
-                          : "⏳ Pendiente"}
+                          ? "âœ“ Realizada"
+                          : "â³ Pendiente"}
                       </span>
                     ) : (
-                      <span style={{ color: "var(--subtle)" }}>—</span>
+                      <span style={{ color: "var(--subtle)" }}>â€”</span>
                     )}
                   </td>
                   <td>
@@ -1327,7 +1328,7 @@ function ListView({
                         {expiry.isExpired ? "Vencida" : `${expiry.daysLeft}d`}
                       </span>
                     ) : (
-                      <span style={{ color: "var(--subtle)" }}>—</span>
+                      <span style={{ color: "var(--subtle)" }}>â€”</span>
                     )}
                   </td>
                   <td>{formatDate(q.receivedAt)}</td>
@@ -1338,7 +1339,7 @@ function ListView({
                         onClick={() => onPrintProposal(q)}
                         title="Imprimir Propuesta / PDF"
                       >
-                        🖨️
+                        ðŸ–¨ï¸
                       </button>
                       <select
                         className="status-select"
@@ -1365,9 +1366,9 @@ function ListView({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
- * DETAIL MODAL CON PESTAÑAS, COSTEO Y ACCIONES
- * ═══════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+ * DETAIL MODAL CON PESTAÃ‘AS, COSTEO Y ACCIONES
+ * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 type ModalTab = "general" | "breakdown" | "visit" | "history";
 
@@ -1399,7 +1400,7 @@ function DetailModal({
   const [showRevPrompt, setShowRevPrompt] = useState(false);
   const [revReason, setRevReason] = useState("");
 
-  // Estado local para edición de Pre-costeo
+  // Estado local para ediciÃ³n de Pre-costeo
   const [materials, setMaterials] = useState(
     quote.costBreakdown?.materials ?? 0,
   );
@@ -1419,23 +1420,6 @@ function DetailModal({
     title: quote.title, client: quote.client, contactName: quote.contactName ?? "", contactEmail: quote.contactEmail ?? "",
     contactPhone: quote.contactPhone ?? "", responsible: quote.responsible, deadline: quote.deadline?.slice(0, 10) ?? "", nextAction: quote.nextAction ?? "",
   });
-
-  // Estado local para edición de Visita Técnica
-  const [visitReq, setVisitReq] = useState(
-    quote.technicalVisit?.required ?? false,
-  );
-  const [visitDate, setVisitDate] = useState(
-    quote.technicalVisit?.scheduledDate ?? "",
-  );
-  const [visitResp, setVisitResp] = useState(
-    quote.technicalVisit?.responsible ?? quote.responsible,
-  );
-  const [visitStatus, setVisitStatus] = useState<
-    "pending" | "completed" | "not_required"
-  >(quote.technicalVisit?.status ?? "pending");
-  const [visitFindings, setVisitFindings] = useState(
-    quote.technicalVisit?.findings ?? "",
-  );
 
   const meta = getStatusMeta(quote.status);
   const effectiveCode = getEffectiveQuoteCode(quote);
@@ -1466,12 +1450,12 @@ function DetailModal({
         className="quote-modal quote-modal--detailed"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Header con Consecutivo y Botones Superiores ── */}
+        {/* â”€â”€ Header con Consecutivo y Botones Superiores â”€â”€ */}
         <header className="quote-modal-header">
           <div>
             <span className="quote-modal-code">{effectiveCode}</span>
             {quote.revision > 0 && (
-              <span className="badge-revision">Revisión R{quote.revision}</span>
+              <span className="badge-revision">RevisiÃ³n R{quote.revision}</span>
             )}
             <span
               className="status-badge"
@@ -1485,41 +1469,41 @@ function DetailModal({
             onClick={onClose}
             aria-label="Cerrar"
           >
-            ✕
+            âœ•
           </button>
         </header>
 
         <h2 className="quote-modal-title">{quote.title}</h2>
 
-        {/* ── Barra de Acciones Rápidas (Convertir, Revisión, Imprimir) ── */}
+        {/* â”€â”€ Barra de Acciones RÃ¡pidas (Convertir, RevisiÃ³n, Imprimir) â”€â”€ */}
         <div className="quote-modal-action-bar">
           <button
             className="action-pill-btn btn-print"
             onClick={() => onPrintProposal(quote)}
             title="Abrir hoja de propuesta formal para imprimir o guardar PDF"
           >
-            🖨️ Imprimir Propuesta / PDF
+            ðŸ–¨ï¸ Imprimir Propuesta / PDF
           </button>
 
           {canManageApu ? (
             <Link
               className="action-pill-btn btn-apu"
               href={apuHref}
-              title="Crear y editar las actividades APU de esta cotización"
+              title="Crear y editar las actividades APU de esta cotizaciÃ³n"
             >
-              Gestionar APU de esta cotización
+              Gestionar APU de esta cotizaciÃ³n
             </Link>
           ) : hasExistingApu ? (
             <Link
               className="action-pill-btn btn-apu btn-apu-readonly"
               href={apuHref}
-              title="Consultar el APU histórico; solo se habilita edición al crear una revisión."
+              title="Consultar el APU histÃ³rico; solo se habilita ediciÃ³n al crear una revisiÃ³n."
             >
               Consultar APU (solo lectura)
             </Link>
           ) : (
             <span className="quote-apu-guidance">
-              No hay APU creado. Solo se puede crear o editar durante Cotización
+              No hay APU creado. Solo se puede crear o editar durante CotizaciÃ³n
               en proceso o Por modificar.
             </span>
           )}
@@ -1527,20 +1511,20 @@ function DetailModal({
           <button
             className="action-pill-btn btn-revision"
             onClick={() => setShowRevPrompt(!showRevPrompt)}
-            title="Crear nueva versión revisada (R1, R2...)"
+            title="Crear nueva versiÃ³n revisada (R1, R2...)"
           >
-            🔄 Crear Revisión (R{quote.revision + 1})
+            ðŸ”„ Crear RevisiÃ³n (R{quote.revision + 1})
           </button>
 
-          {/* Botón de conversión a obra disponible si está confirmado o en ejecución */}
+          {/* BotÃ³n de conversiÃ³n a obra disponible si estÃ¡ confirmado o en ejecuciÃ³n */}
           {["confirmed", "in_execution"].includes(quote.status) &&
             !quote.projectCode && (
               <button
                 className="action-pill-btn btn-convert"
                 onClick={() => onConvertToProject(quote)}
-                title="Crea automáticamente el centro de costos en el módulo de Proyectos"
+                title="Crea automÃ¡ticamente el centro de costos en el mÃ³dulo de Proyectos"
               >
-                🏗️ Convertir a Obra / Proyecto 1-Click
+                ðŸ—ï¸ Convertir a Obra / Proyecto 1-Click
               </button>
             )}
 
@@ -1549,15 +1533,15 @@ function DetailModal({
               href={`/projects?projectId=${encodeURIComponent(quote.projectId ?? "")}`}
               className="action-pill-btn btn-view-project"
             >
-              ✓ Ver Obra: {quote.projectCode} →
+              âœ“ Ver Obra: {quote.projectCode} â†’
             </Link>
           )}
         </div>
 
-        {/* Formulario desplegable para nueva revisión */}
+        {/* Formulario desplegable para nueva revisiÃ³n */}
         {showRevPrompt && (
           <div className="revision-prompt-box">
-            <h4>Crear Revisión R{quote.revision + 1}</h4>
+            <h4>Crear RevisiÃ³n R{quote.revision + 1}</h4>
             <p>
               Registra el motivo del ajuste solicitado por el cliente
               (descuento, alcance, cantidades):
@@ -1591,40 +1575,40 @@ function DetailModal({
           </div>
         )}
 
-        {/* ── Navegación de Pestañas Internas ── */}
+        {/* â”€â”€ NavegaciÃ³n de PestaÃ±as Internas â”€â”€ */}
         <div className="quote-modal-tabs">
           <button
             className={`quote-tab-btn ${activeTab === "general" ? "active" : ""}`}
             onClick={() => setActiveTab("general")}
           >
-            📌 Datos Generales
+            ðŸ“Œ Datos Generales
           </button>
           <button
             className={`quote-tab-btn ${activeTab === "breakdown" ? "active" : ""}`}
             onClick={() => setActiveTab("breakdown")}
           >
-            💰 Pre-costeo (3 Rubros)
+            ðŸ’° Pre-costeo (3 Rubros)
           </button>
           <button
             className={`quote-tab-btn ${activeTab === "visit" ? "active" : ""}`}
             onClick={() => setActiveTab("visit")}
           >
-            🚜 Visita Técnica de Campo
+            ðŸšœ Visita TÃ©cnica de Campo
           </button>
           <button
             className={`quote-tab-btn ${activeTab === "history" ? "active" : ""}`}
             onClick={() => setActiveTab("history")}
           >
-            📜 Historial & Estados
+            ðŸ“œ Historial & Estados
           </button>
         </div>
 
-        {/* ── TAB 1: DATOS GENERALES ── */}
+        {/* â”€â”€ TAB 1: DATOS GENERALES â”€â”€ */}
         {activeTab === "general" && (
           <div className="quote-tab-content">
             <div className="quote-modal-action-bar">
               <button className="action-pill-btn btn-apu" type="button" onClick={() => setIsEditingGeneral((current) => !current)}>
-                {isEditingGeneral ? "Cancelar edición" : "Editar datos de cotización"}
+                {isEditingGeneral ? "Cancelar ediciÃ³n" : "Editar datos de cotizaciÃ³n"}
               </button>
             </div>
             {isEditingGeneral ? (
@@ -1633,10 +1617,10 @@ function DetailModal({
                 <label className="form-field">Cliente<input value={generalDraft.client} onChange={(event) => setGeneralDraft({ ...generalDraft, client: event.target.value })} required /></label>
                 <label className="form-field">Contacto<input value={generalDraft.contactName} onChange={(event) => setGeneralDraft({ ...generalDraft, contactName: event.target.value })} /></label>
                 <label className="form-field">Correo del contacto<input type="email" value={generalDraft.contactEmail} onChange={(event) => setGeneralDraft({ ...generalDraft, contactEmail: event.target.value })} /></label>
-                <label className="form-field">Teléfono<input value={generalDraft.contactPhone} onChange={(event) => setGeneralDraft({ ...generalDraft, contactPhone: event.target.value })} /></label>
+                <label className="form-field">TelÃ©fono<input value={generalDraft.contactPhone} onChange={(event) => setGeneralDraft({ ...generalDraft, contactPhone: event.target.value })} /></label>
                 <label className="form-field">Responsable RFC<input value={generalDraft.responsible} onChange={(event) => setGeneralDraft({ ...generalDraft, responsible: event.target.value })} required /></label>
-                <label className="form-field">Fecha límite<input type="date" value={generalDraft.deadline} onChange={(event) => setGeneralDraft({ ...generalDraft, deadline: event.target.value })} /></label>
-                <label className="form-field">Próxima acción<input value={generalDraft.nextAction} onChange={(event) => setGeneralDraft({ ...generalDraft, nextAction: event.target.value })} /></label>
+                <label className="form-field">Fecha lÃ­mite<input type="date" value={generalDraft.deadline} onChange={(event) => setGeneralDraft({ ...generalDraft, deadline: event.target.value })} /></label>
+                <label className="form-field">PrÃ³xima acciÃ³n<input value={generalDraft.nextAction} onChange={(event) => setGeneralDraft({ ...generalDraft, nextAction: event.target.value })} /></label>
                 <button className="quotes-new-btn" type="submit">Guardar cambios</button>
               </form>
             ) : null}
@@ -1644,7 +1628,7 @@ function DetailModal({
               <Field label="Cliente" value={quote.client} />
               <Field label="Contacto" value={quote.contactName} />
               <Field label="Correo Contacto" value={quote.contactEmail} />
-              <Field label="Teléfono" value={quote.contactPhone} />
+              <Field label="TelÃ©fono" value={quote.contactPhone} />
               <Field label="Responsable RFC" value={quote.responsible} />
               <Field
                 label="Valor Estimado"
@@ -1652,12 +1636,12 @@ function DetailModal({
               />
               <Field label="Recibido el" value={formatDate(quote.receivedAt)} />
               <Field
-                label="Fecha Límite Entrega"
+                label="Fecha LÃ­mite Entrega"
                 value={formatDate(quote.deadline)}
               />
               <Field
                 label="Validez Comercial"
-                value={`${quote.validityDays ?? 30} días`}
+                value={`${quote.validityDays ?? 30} dÃ­as`}
               />
               <Field
                 label="Tiempo de Entrega"
@@ -1675,7 +1659,7 @@ function DetailModal({
                     rel="noopener noreferrer"
                     className="link-folder"
                   >
-                    📂 Abrir carpeta de planos y pliegos ↗
+                    ðŸ“‚ Abrir carpeta de planos y pliegos â†—
                   </a>
                 </div>
               )}
@@ -1683,14 +1667,14 @@ function DetailModal({
 
             {quote.emailOrigin && (
               <div className="quote-info-banner">
-                <strong>📧 Correo de Solicitud Original:</strong>{" "}
+                <strong>ðŸ“§ Correo de Solicitud Original:</strong>{" "}
                 {quote.emailOrigin}
               </div>
             )}
 
             {quote.nextAction && (
               <div className="quote-modal-next-action">
-                <strong>→ Próxima acción requerida:</strong> {quote.nextAction}
+                <strong>â†’ PrÃ³xima acciÃ³n requerida:</strong> {quote.nextAction}
               </div>
             )}
 
@@ -1698,7 +1682,7 @@ function DetailModal({
               <label htmlFor="quote-proposal-notes">
                 <strong>Notas para la propuesta</strong>
                 <small>
-                  Escribe una nota por renglón; cada una se imprimirá en su
+                  Escribe una nota por renglÃ³n; cada una se imprimirÃ¡ en su
                   propia fila debajo del valor en letras.
                 </small>
               </label>
@@ -1708,7 +1692,7 @@ function DetailModal({
                 value={proposalNotes}
                 onChange={(event) => setProposalNotes(event.target.value)}
                 placeholder={
-                  "Ej. valor incluye transporte\nEj. no incluye IVA\nEj. vigencia según oferta"
+                  "Ej. valor incluye transporte\nEj. no incluye IVA\nEj. vigencia segÃºn oferta"
                 }
               />
               <button
@@ -1722,20 +1706,20 @@ function DetailModal({
           </div>
         )}
 
-        {/* ── TAB 2: PRE-COSTEO POR 3 RUBROS ── */}
+        {/* â”€â”€ TAB 2: PRE-COSTEO POR 3 RUBROS â”€â”€ */}
         {activeTab === "breakdown" && (
           <div className="quote-tab-content">
             <p className="tab-intro">
-              Estructura paramétrica de costos preliminares. Al aprobarse la
-              cotización, estos valores se trasladarán al presupuesto base de la
+              Estructura paramÃ©trica de costos preliminares. Al aprobarse la
+              cotizaciÃ³n, estos valores se trasladarÃ¡n al presupuesto base de la
               obra.
             </p>
 
             <div className="cost-breakdown-editor">
               <div className="cost-row">
                 <label>
-                  <span>🧱 1. Materiales e Insumos</span>
-                  <small>Acero, tubería, cemento, agregados, soldadura</small>
+                  <span>ðŸ§± 1. Materiales e Insumos</span>
+                  <small>Acero, tuberÃ­a, cemento, agregados, soldadura</small>
                 </label>
                 <div className="input-currency">
                   <span>$</span>
@@ -1750,7 +1734,7 @@ function DetailModal({
 
               <div className="cost-row">
                 <label>
-                  <span>👷 2. Mano de Obra y Cuadrillas</span>
+                  <span>ðŸ‘· 2. Mano de Obra y Cuadrillas</span>
                   <small>Oficiales, soldadores 6G, armadores, ayudantes</small>
                 </label>
                 <div className="input-currency">
@@ -1766,8 +1750,8 @@ function DetailModal({
 
               <div className="cost-row">
                 <label>
-                  <span>🚜 3. Equipos, Maquinaria y Herramientas</span>
-                  <small>Grúas, retroexcavadora, compresor, andamios</small>
+                  <span>ðŸšœ 3. Equipos, Maquinaria y Herramientas</span>
+                  <small>GrÃºas, retroexcavadora, compresor, andamios</small>
                 </label>
                 <div className="input-currency">
                   <span>$</span>
@@ -1782,8 +1766,8 @@ function DetailModal({
 
               <div className="cost-row">
                 <label>
-                  <span>🚛 4. Transporte y Fletes</span>
-                  <small>Logística Caucasia - frente de obra</small>
+                  <span>ðŸš› 4. Transporte y Fletes</span>
+                  <small>LogÃ­stica Caucasia - frente de obra</small>
                 </label>
                 <div className="input-currency">
                   <span>$</span>
@@ -1798,8 +1782,8 @@ function DetailModal({
 
               <div className="cost-row">
                 <label>
-                  <span>📋 5. Imprevistos / AIU</span>
-                  <small>Administración, imprevistos y utilidad</small>
+                  <span>ðŸ“‹ 5. Imprevistos / AIU</span>
+                  <small>AdministraciÃ³n, imprevistos y utilidad</small>
                 </label>
                 <div className="input-currency">
                   <span>$</span>
@@ -1813,7 +1797,7 @@ function DetailModal({
               </div>
 
               <div className="cost-total-row">
-                <span>Total Estimado Cotización (COP):</span>
+                <span>Total Estimado CotizaciÃ³n (COP):</span>
                 <strong>{formatCOP(currentCostSum)}</strong>
               </div>
 
@@ -1837,106 +1821,39 @@ function DetailModal({
           </div>
         )}
 
-        {/* ── TAB 3: VISITA TÉCNICA DE CAMPO ── */}
+        {/* â”€â”€ TAB 3: VISITA TÃ‰CNICA DE CAMPO â”€â”€ */}
         {activeTab === "visit" && (
           <div className="quote-tab-content">
             <p className="tab-intro">
-              Control de inspección previa en sitio para levantamiento de
+              Control de inspecciÃ³n previa en sitio para levantamiento de
               medidas, estado de accesos fluviales/terrestres y condiciones de
               seguridad.
             </p>
 
-            <div className="visit-editor">
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={visitReq}
-                  onChange={(e) => setVisitReq(e.target.checked)}
-                />
-                <span>Requiere visita técnica de inspección en campo</span>
-              </label>
-
-              {visitReq && (
-                <>
-                  <div className="new-quote-row" style={{ marginTop: "14px" }}>
-                    <label className="form-field">
-                      Fecha programada
-                      <input
-                        type="date"
-                        value={visitDate}
-                        onChange={(e) => setVisitDate(e.target.value)}
-                      />
-                    </label>
-                    <label className="form-field">
-                      Ingeniero / Inspector responsable
-                      <input
-                        type="text"
-                        value={visitResp}
-                        onChange={(e) => setVisitResp(e.target.value)}
-                        placeholder="Ej: Ing. Jorge Figueroa"
-                      />
-                    </label>
-                  </div>
-
-                  <label className="form-field" style={{ marginTop: "14px" }}>
-                    Estado de la visita
-                    <select
-                      value={visitStatus}
-                      onChange={(e) =>
-                        setVisitStatus(
-                          e.target.value as NonNullable<
-                            TechnicalVisit["status"]
-                          >,
-                        )
-                      }
-                      className="status-select"
-                      style={{ padding: "10px" }}
-                    >
-                      <option value="pending">
-                        ⏳ Visita pendiente de realización
-                      </option>
-                      <option value="completed">
-                        ✓ Visita técnica ejecutada a satisfacción
-                      </option>
-                      <option value="not_required">
-                        ✕ No requerida / Cancelada
-                      </option>
-                    </select>
-                  </label>
-
-                  <label className="form-field" style={{ marginTop: "14px" }}>
-                    Hallazgos, mediciones y observaciones de campo
-                    <textarea
-                      rows={4}
-                      value={visitFindings}
-                      onChange={(e) => setVisitFindings(e.target.value)}
-                      placeholder="Indicar estado del terreno, accesos, requerimientos de andamiaje, redes eléctricas..."
-                    />
-                  </label>
-                </>
-              )}
-
-              <div style={{ textAlign: "right", marginTop: "16px" }}>
-                <button
-                  className="quotes-new-btn"
-                  onClick={() => {
-                    onSaveTechnicalVisit(quote.id, {
-                      required: visitReq,
-                      scheduledDate: visitDate || undefined,
-                      responsible: visitResp || undefined,
-                      status: visitStatus,
-                      findings: visitFindings || undefined,
-                    });
-                  }}
-                >
-                  Guardar Datos de Visita
-                </button>
-              </div>
-            </div>
+            <TechnicalVisitEditor
+              quote={quote}
+              currentUser={quote.responsible || "Usuario"}
+              onSave={(visit) => onSaveTechnicalVisit(quote.id, visit)}
+              onSaveStatus={(status) =>
+                onSaveTechnicalVisit(quote.id, {
+                  ...(quote.technicalVisit ?? { required: true }),
+                  required: true,
+                  status,
+                })
+              }
+              onCreateRequisition={(materialsMissing) =>
+                onSaveTechnicalVisit(quote.id, {
+                  required: true,
+                  status: quote.technicalVisit?.status ?? "pending",
+                  ...(quote.technicalVisit ?? {}),
+                  materialsMissing,
+                })
+              }
+            />
           </div>
         )}
 
-        {/* ── TAB 4: HISTORIAL & CAMBIO DE ESTADO ── */}
+        {/* â”€â”€ TAB 4: HISTORIAL & CAMBIO DE ESTADO â”€â”€ */}
         {activeTab === "history" && (
           <div className="quote-tab-content">
             {/* Cambiar estado */}
@@ -1982,9 +1899,9 @@ function DetailModal({
               </div>
             </div>
 
-            {/* Línea de tiempo cronológica */}
+            {/* LÃ­nea de tiempo cronolÃ³gica */}
             <div className="quote-modal-history">
-              <h3>Historial cronológico de cambios</h3>
+              <h3>Historial cronolÃ³gico de cambios</h3>
               <div className="quote-history-timeline">
                 {[...quote.history].reverse().map((entry) => {
                   const toMeta = getStatusMeta(entry.toStatus);
@@ -2007,7 +1924,7 @@ function DetailModal({
                         <p className="history-change">
                           {fromMeta ? (
                             <>
-                              {fromMeta.icon} {fromMeta.label} → {toMeta.icon}{" "}
+                              {fromMeta.icon} {fromMeta.label} â†’ {toMeta.icon}{" "}
                               {toMeta.label}
                             </>
                           ) : (
@@ -2036,14 +1953,14 @@ function Field({ label, value }: { label: string; value?: string }) {
   return (
     <div className="quote-field">
       <span className="quote-field-label">{label}:</span>
-      <span className="quote-field-value"> {value || "—"}</span>
+      <span className="quote-field-value"> {value || "â€”"}</span>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
  * NEW QUOTE MODAL (CON PRE-COSTEO Y VISTA PREVIA DE CONSECUTIVO)
- * ═══════════════════════════════════════════════════════════════ */
+ * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 function NewQuoteModal({
   existingQuotes,
@@ -2058,7 +1975,7 @@ function NewQuoteModal({
   const [client, setClient] = useState("");
   const [reqVisit, setReqVisit] = useState(false);
 
-  // Vista previa en vivo del código que se generará
+  // Vista previa en vivo del cÃ³digo que se generarÃ¡
   const previewCode = useMemo(() => {
     return getNextQuoteCode(
       existingQuotes,
@@ -2075,7 +1992,7 @@ function NewQuoteModal({
       >
         <header className="quote-modal-header">
           <div>
-            <h2>Nueva Solicitud de Cotización</h2>
+            <h2>Nueva Solicitud de CotizaciÃ³n</h2>
             <div className="live-preview-code">
               Consecutivo generado: <strong>{previewCode}</strong>
             </div>
@@ -2085,18 +2002,18 @@ function NewQuoteModal({
             onClick={onClose}
             aria-label="Cerrar"
           >
-            ✕
+            âœ•
           </button>
         </header>
 
         <form onSubmit={onSubmit} className="new-quote-form">
           <label className="form-field">
-            Título / Obra a cotizar *
+            TÃ­tulo / Obra a cotizar *
             <input
               name="title"
               type="text"
               required
-              placeholder="Ej: Reparación chimenea CCM Caucasia"
+              placeholder="Ej: ReparaciÃ³n chimenea CCM Caucasia"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
@@ -2119,7 +2036,7 @@ function NewQuoteModal({
               <input
                 name="emailOrigin"
                 type="text"
-                placeholder="Ej: agomez@ocensa.com – Solicitud de cotización"
+                placeholder="Ej: agomez@ocensa.com â€“ Solicitud de cotizaciÃ³n"
               />
             </label>
           </div>
@@ -2130,11 +2047,11 @@ function NewQuoteModal({
               <input
                 name="contactName"
                 type="text"
-                placeholder="Ej: Ing. Andrés Gómez"
+                placeholder="Ej: Ing. AndrÃ©s GÃ³mez"
               />
             </label>
             <label className="form-field">
-              Correo electrónico
+              Correo electrÃ³nico
               <input
                 name="contactEmail"
                 type="email"
@@ -2145,7 +2062,7 @@ function NewQuoteModal({
 
           <div className="new-quote-row">
             <label className="form-field">
-              Teléfono de contacto
+              TelÃ©fono de contacto
               <input
                 name="contactPhone"
                 type="tel"
@@ -2153,7 +2070,7 @@ function NewQuoteModal({
               />
             </label>
             <label className="form-field">
-              Fecha límite para cotizar
+              Fecha lÃ­mite para cotizar
               <input name="deadline" type="date" />
             </label>
           </div>
@@ -2161,11 +2078,11 @@ function NewQuoteModal({
           {/* Pre-costeo preliminar */}
           <div className="new-quote-subgroup">
             <span className="subgroup-title">
-              💰 Pre-costeo estimado inicial (Opcional)
+              ðŸ’° Pre-costeo estimado inicial (Opcional)
             </span>
             <div className="new-quote-row">
               <label className="form-field">
-                🧱 Materiales (COP)
+                ðŸ§± Materiales (COP)
                 <input
                   name="matValue"
                   type="text"
@@ -2173,7 +2090,7 @@ function NewQuoteModal({
                 />
               </label>
               <label className="form-field">
-                👷 Mano de obra (COP)
+                ðŸ‘· Mano de obra (COP)
                 <input
                   name="labValue"
                   type="text"
@@ -2183,11 +2100,11 @@ function NewQuoteModal({
             </div>
             <div className="new-quote-row">
               <label className="form-field">
-                🚜 Equipos / Maquinaria (COP)
+                ðŸšœ Equipos / Maquinaria (COP)
                 <input name="eqValue" type="text" placeholder="Ej: 2.100.000" />
               </label>
               <label className="form-field">
-                ⏳ Validez oferta (días)
+                â³ Validez oferta (dÃ­as)
                 <input
                   name="validityDays"
                   type="number"
@@ -2222,7 +2139,7 @@ function NewQuoteModal({
             <label className="form-field">
               Escala salarial para mano de obra (APUs)
               <select name="laborScale" defaultValue="rfc_standard">
-                <option value="rfc_standard">Estándar RFC (General)</option>
+                <option value="rfc_standard">EstÃ¡ndar RFC (General)</option>
                 <option value="ocensa">
                   Tabla Salarial Sectorial (Ej: OCENSA)
                 </option>
@@ -2247,7 +2164,7 @@ function NewQuoteModal({
               onChange={(e) => setReqVisit(e.target.checked)}
             />
             <span>
-              Requiere visita técnica de campo previa a elaboración de oferta
+              Requiere visita tÃ©cnica de campo previa a elaboraciÃ³n de oferta
             </span>
           </label>
 
@@ -2257,7 +2174,7 @@ function NewQuoteModal({
               name="notes"
               rows={3}
               placeholder={
-                "Ej. valor incluye transporte\nEj. no incluye IVA\nEj. vigencia según oferta"
+                "Ej. valor incluye transporte\nEj. no incluye IVA\nEj. vigencia segÃºn oferta"
               }
             />
           </label>
@@ -2280,9 +2197,9 @@ function NewQuoteModal({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
  * MODAL DE PROPUESTA COMERCIAL MEMBRETADA IMPRIMIBLE (PDF)
- * ═══════════════════════════════════════════════════════════════ */
+ * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 function PremiumProposalSheet({ quote }: { quote: Quote }) {
   const effectiveCode = getEffectiveQuoteCode(quote);
@@ -2296,11 +2213,11 @@ function PremiumProposalSheet({ quote }: { quote: Quote }) {
   const costRows: Array<[string, number]> = quote.costBreakdown
     ? [
         ["Materiales e insumos", quote.costBreakdown.materials],
-        ["Mano de obra y cuadrillas técnicas", quote.costBreakdown.labor],
+        ["Mano de obra y cuadrillas tÃ©cnicas", quote.costBreakdown.labor],
         ["Equipos, maquinaria y herramientas", quote.costBreakdown.equipment],
-        ["Transporte, fletes y logística", quote.costBreakdown.transport ?? 0],
+        ["Transporte, fletes y logÃ­stica", quote.costBreakdown.transport ?? 0],
         [
-          "Administración, imprevistos y utilidad",
+          "AdministraciÃ³n, imprevistos y utilidad",
           quote.costBreakdown.indirects ?? 0,
         ],
       ]
@@ -2324,7 +2241,7 @@ function PremiumProposalSheet({ quote }: { quote: Quote }) {
       </header>
       <section className="premium-recipient">
         <div>
-          <strong>SEÑORES</strong>
+          <strong>SEÃ‘ORES</strong>
           <span>
             {quote.client.toUpperCase()}
             {quote.contactName ? ` / ${quote.contactName.toUpperCase()}` : ""}
@@ -2342,8 +2259,8 @@ function PremiumProposalSheet({ quote }: { quote: Quote }) {
       <table className="premium-quote-table">
         <thead>
           <tr>
-            <th>ÍTEM</th>
-            <th>DESCRIPCIÓN</th>
+            <th>ÃTEM</th>
+            <th>DESCRIPCIÃ“N</th>
             <th>UNIDAD</th>
             <th>CANTIDAD</th>
             <th>VALOR UNITARIO</th>
@@ -2394,12 +2311,12 @@ function PremiumProposalSheet({ quote }: { quote: Quote }) {
           <strong>FORMA DE PAGO:</strong>{" "}
           {(
             quote.paymentTerms ||
-            "30 días calendario después de radicada la factura"
+            "30 dÃ­as calendario despuÃ©s de radicada la factura"
           ).toUpperCase()}
         </p>
         <p>
-          <strong>COTIZACIÓN VÁLIDA POR:</strong> {quote.validityDays ?? 30}{" "}
-          DÍAS CALENDARIO
+          <strong>COTIZACIÃ“N VÃLIDA POR:</strong> {quote.validityDays ?? 30}{" "}
+          DÃAS CALENDARIO
         </p>
       </section>
       <footer className="premium-signature-row">
@@ -2438,7 +2355,7 @@ function FormalProposalModal({
   const deliveryWeeks = quote.deliveryTimeWeeks ?? 3;
   const paymentTerms =
     quote.paymentTerms ??
-    "50% de anticipo y 50% contra acta de entrega final a satisfacción.";
+    "50% de anticipo y 50% contra acta de entrega final a satisfacciÃ³n.";
 
   return (
     <div className="quote-modal-backdrop printable-backdrop" onClick={onClose}>
@@ -2449,12 +2366,12 @@ function FormalProposalModal({
         {/* Barra superior de control (se oculta al imprimir) */}
         <div className="print-controls no-print">
           <div className="print-controls-left">
-            <strong>Vista Previa de Oferta Económica</strong>
+            <strong>Vista Previa de Oferta EconÃ³mica</strong>
             <span>{effectiveCode}</span>
           </div>
           <div className="print-controls-right">
             <button className="quotes-new-btn" onClick={() => window.print()}>
-              🖨️ Imprimir / Guardar en PDF
+              ðŸ–¨ï¸ Imprimir / Guardar en PDF
             </button>
             <button className="quotes-cancel-btn" onClick={onClose}>
               Cerrar
@@ -2462,7 +2379,7 @@ function FormalProposalModal({
           </div>
         </div>
 
-        {/* ── Documento Membretado RFC ── */}
+        {/* â”€â”€ Documento Membretado RFC â”€â”€ */}
         <PremiumProposalSheet quote={quote} />
         <div className="formal-proposal-sheet proposal-legacy">
           <header className="proposal-header">
@@ -2471,16 +2388,16 @@ function FormalProposalModal({
                 REPRESENTACIONES FIGUEROA CASTRO S.A.S.
               </h1>
               <p className="company-sub">
-                Obras Civiles · Montajes Mecánicos · Dragados · Suministros
+                Obras Civiles Â· Montajes MecÃ¡nicos Â· Dragados Â· Suministros
                 Industriales
               </p>
               <p className="company-meta">
-                Caucasia, Antioquia · Tel: (+57) 310 445 7821 ·
+                Caucasia, Antioquia Â· Tel: (+57) 310 445 7821 Â·
                 contacto@representacionesfigueroa.com
               </p>
             </div>
             <div className="proposal-meta-box">
-              <div className="proposal-badge">PROPUESTA TÉCNICO-ECONÓMICA</div>
+              <div className="proposal-badge">PROPUESTA TÃ‰CNICO-ECONÃ“MICA</div>
               <div className="proposal-code">{effectiveCode}</div>
               <div className="proposal-date">
                 Fecha: {formatDate(quote.sentAt || quote.updatedAt)}
@@ -2490,16 +2407,16 @@ function FormalProposalModal({
 
           <hr className="proposal-divider" />
 
-          {/* Información de destinatario */}
+          {/* InformaciÃ³n de destinatario */}
           <div className="proposal-client-info">
             <div className="client-info-col">
               <p>
-                <strong>SEÑORES:</strong>
+                <strong>SEÃ‘ORES:</strong>
               </p>
               <p className="client-name">{quote.client.toUpperCase()}</p>
               {quote.contactName && (
                 <p>
-                  <strong>Atención:</strong> {quote.contactName}
+                  <strong>AtenciÃ³n:</strong> {quote.contactName}
                 </p>
               )}
               {quote.contactEmail && (
@@ -2509,16 +2426,16 @@ function FormalProposalModal({
               )}
               {quote.contactPhone && (
                 <p>
-                  <strong>Teléfono:</strong> {quote.contactPhone}
+                  <strong>TelÃ©fono:</strong> {quote.contactPhone}
                 </p>
               )}
             </div>
             <div className="client-info-col">
               <p>
-                <strong>Lugar de ejecución:</strong> Bajo Cauca Antioqueño
+                <strong>Lugar de ejecuciÃ³n:</strong> Bajo Cauca AntioqueÃ±o
               </p>
               <p>
-                <strong>Validez de la oferta:</strong> {validityDays} días
+                <strong>Validez de la oferta:</strong> {validityDays} dÃ­as
                 calendario
               </p>
               <p>
@@ -2538,9 +2455,9 @@ function FormalProposalModal({
             </h3>
             <p className="proposal-description">
               Representaciones Figueroa Castro S.A.S. se complace en someter a
-              su consideración la propuesta técnico-económica para la ejecución
+              su consideraciÃ³n la propuesta tÃ©cnico-econÃ³mica para la ejecuciÃ³n
               de: <strong>{quote.title}</strong>, de conformidad con las
-              especificaciones técnicas suministradas y las normas de ingeniería
+              especificaciones tÃ©cnicas suministradas y las normas de ingenierÃ­a
               aplicables.
             </p>
             {notes.length > 0 && (
@@ -2555,15 +2472,15 @@ function FormalProposalModal({
             )}
           </div>
 
-          {/* Resumen económico */}
+          {/* Resumen econÃ³mico */}
           <div className="proposal-section">
             <h3 className="section-title">
-              2. PRESUPUESTO ECONÓMICO DISCRIMINADO
+              2. PRESUPUESTO ECONÃ“MICO DISCRIMINADO
             </h3>
             <table className="proposal-cost-table">
               <thead>
                 <tr>
-                  <th>Ítem</th>
+                  <th>Ãtem</th>
                   <th>Concepto / Rubro Operativo</th>
                   <th style={{ textAlign: "right" }}>Valor Estimado (COP)</th>
                 </tr>
@@ -2584,7 +2501,7 @@ function FormalProposalModal({
                     <tr>
                       <td>02</td>
                       <td>
-                        Mano de Obra Especializada y Cuadrillas Técnicas con ARL
+                        Mano de Obra Especializada y Cuadrillas TÃ©cnicas con ARL
                       </td>
                       <td style={{ textAlign: "right" }}>
                         {formatCOP(quote.costBreakdown.labor)}
@@ -2594,7 +2511,7 @@ function FormalProposalModal({
                       <td>03</td>
                       <td>
                         Equipos, Maquinaria, Herramientas Certificadas y
-                        Operación
+                        OperaciÃ³n
                       </td>
                       <td style={{ textAlign: "right" }}>
                         {formatCOP(quote.costBreakdown.equipment)}
@@ -2604,7 +2521,7 @@ function FormalProposalModal({
                       <tr>
                         <td>04</td>
                         <td>
-                          Transporte Fluvial / Terrestre y Logística a Frente de
+                          Transporte Fluvial / Terrestre y LogÃ­stica a Frente de
                           Obra
                         </td>
                         <td style={{ textAlign: "right" }}>
@@ -2616,7 +2533,7 @@ function FormalProposalModal({
                       <tr>
                         <td>05</td>
                         <td>
-                          Costos de Administración, Imprevistos y Contingencias
+                          Costos de AdministraciÃ³n, Imprevistos y Contingencias
                           (AIU)
                         </td>
                         <td style={{ textAlign: "right" }}>
@@ -2629,7 +2546,7 @@ function FormalProposalModal({
                   <tr>
                     <td>01</td>
                     <td>
-                      Ejecución integral de la obra según alcance especificado
+                      EjecuciÃ³n integral de la obra segÃºn alcance especificado
                     </td>
                     <td style={{ textAlign: "right" }}>
                       {formatCOP(quote.estimatedValue)}
@@ -2662,30 +2579,30 @@ function FormalProposalModal({
                 lo contrario.
               </li>
               <li>
-                La presente oferta económica tiene una validez de {validityDays}{" "}
-                días calendario a partir de su emisión.
+                La presente oferta econÃ³mica tiene una validez de {validityDays}{" "}
+                dÃ­as calendario a partir de su emisiÃ³n.
               </li>
               <li>
-                El tiempo de ejecución estimado es de {deliveryWeeks} semanas
+                El tiempo de ejecuciÃ³n estimado es de {deliveryWeeks} semanas
                 tras la firma del acta de inicio y pago del anticipo
                 correspondiente.
               </li>
               <li>
                 Representaciones Figueroa Castro S.A.S. garantiza el
-                cumplimiento estricto de las normas SG-SST, dotación EPP y
-                pólizas de ley.
+                cumplimiento estricto de las normas SG-SST, dotaciÃ³n EPP y
+                pÃ³lizas de ley.
               </li>
             </ul>
           </div>
 
-          {/* Firmas de aceptación */}
+          {/* Firmas de aceptaciÃ³n */}
           <div className="proposal-signatures">
             <div className="sig-box">
               <div className="sig-line" />
               <p>
                 <strong>Jorge Figueroa Castro</strong>
               </p>
-              <p>Representante Legal / Gerencia Técnica</p>
+              <p>Representante Legal / Gerencia TÃ©cnica</p>
               <p>Representaciones Figueroa Castro S.A.S.</p>
             </div>
             <div className="sig-box">

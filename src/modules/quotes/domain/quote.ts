@@ -42,13 +42,84 @@ export type QuoteCostBreakdown = {
   indirects?: number;  // Imprevistos, administración o AIU COP
 };
 
+/** Medición u ítem verificado durante la visita técnica de campo */
+export type TechnicalVisitMeasurement = {
+  concept: string;
+  quantity?: number;
+  unit?: string;
+  notes?: string;
+};
+
+/** Evidencia fotográfica de la visita técnica */
+export type TechnicalVisitPhoto = {
+  storagePath: string;
+  fileName: string;
+  uploadedAt: string;
+};
+
+/** Punto de control de la lista de chequeo técnica */
+export type TechnicalVisitChecklistItem = {
+  label: string;
+  done: boolean;
+};
+
 /** Registro de visita técnica de inspección en campo previa a cotizar */
 export type TechnicalVisit = {
   required: boolean;
   scheduledDate?: string; // YYYY-MM-DD
+  scheduledTime?: string; // HH:MM
   responsible?: string;
   status: "pending" | "completed" | "not_required";
-  findings?: string;     // Observaciones, mediciones o alcance en campo
+  findings?: string;     // Observaciones o alcance en campo
+  measurements?: TechnicalVisitMeasurement[];
+  photos?: TechnicalVisitPhoto[];
+  checklist?: TechnicalVisitChecklistItem[];
+  checklistTemplate?: string;
+  signaturePath?: string;
+  signedByName?: string;
+  signedByRole?: string;
+  signedAt?: string;
+  geo?: { latitude: number; longitude: number; accuracy?: number };
+  executedAt?: string;
+  closedBy?: string;
+  materialsMissing?: string;
+  linkedRequisitionId?: string;
+  linkedRequisitionCode?: string;
+};
+
+/** Plantillas de lista de chequeo por tipo de servicio */
+export const technicalVisitChecklistTemplates: Record<string, { label: string; items: string[] }> = {
+  construccion: {
+    label: "Construcción / montaje",
+    items: [
+      "Accesos y rutas de ingreso verificados",
+      "Nivelación y replanteo comprobado",
+      "Estado del terreno y taludes revisado",
+      "Disponibilidad de agua y energía en sitio",
+      "Áreas de trabajo delimitadas y señalizadas",
+      "Seguridad, señalización y EPP disponibles",
+    ],
+  },
+  mantenimiento: {
+    label: "Mantenimiento correctivo",
+    items: [
+      "Equipo detenido y bloqueado (LOTO)",
+      "Alcance del daño identificado y documentado",
+      "Herramientas y repuestos necesarios verificados",
+      "Reparación tentativa y tiempo estimado",
+      "Riesgos de reignición o arranque accidental",
+    ],
+  },
+  instalacion: {
+    label: "Instalación / interconexión",
+    items: [
+      "Punto de instalación verificado en sitio",
+      "Mediciones de campo tomadas y registradas",
+      "Accesibilidad para maniobra y mantenimiento",
+      "Aislamiento, tierra y pruebas previas",
+      "Interferencias con redes existentes revisadas",
+    ],
+  },
 };
 
 export type Quote = {

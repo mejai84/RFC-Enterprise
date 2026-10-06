@@ -79,6 +79,27 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     () => quoteContext?.quoteId ? apus.filter((apu) => apu.quoteId === quoteContext.quoteId) : apus,
     [apus, quoteContext],
   );
+  /** Totales del análisis: suma de todas las actividades (no solo la seleccionada). */
+  const analysisTotals = useMemo(() => {
+    const quantity = visibleApus.reduce(
+      (total, apu) => total + (Number(apu.workQuantity) || 0),
+      0,
+    );
+    const cost = visibleApus.reduce((total, apu) => total + apuCostTotal(apu), 0);
+    const profit = visibleApus.reduce((total, apu) => total + apuProfitAmount(apu), 0);
+    const selling = visibleApus.reduce((total, apu) => total + apuSellingTotal(apu), 0);
+    return {
+      count: visibleApus.length,
+      quantity,
+      cost,
+      profit,
+      selling,
+      unitCost: quantity > 0 ? cost / quantity : 0,
+      unitSelling: quantity > 0 ? selling / quantity : 0,
+      selectedSelling: selected ? apuSellingTotal(selected) : 0,
+      selectedShare: selling > 0 && selected ? (apuSellingTotal(selected) / selling) * 100 : 0,
+    };
+  }, [visibleApus, selected]);
 
   useEffect(() => {
     let active = true;
@@ -369,6 +390,13 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
       <section className="apu-layout">
         <aside className="dashboard-panel apu-list">
           <div className="panel-title"><div><p>APUs</p><h2>{visibleApus.length} análisis</h2></div></div>
+          <div className="apu-analysis-total" aria-label="Total del análisis">
+            <span>Total de las {analysisTotals.count} actividades</span>
+            <strong>{formatCOP(analysisTotals.selling)}</strong>
+            <small>
+              Costo {formatCOP(analysisTotals.cost)} · Ganancia +{formatCOP(analysisTotals.profit)}
+            </small>
+          </div>
           {visibleApus.map((apu) => (
             <button type="button" key={apu.id} className={`apu-row ${apu.id === selectedId ? "is-selected" : ""}`} onClick={() => setSelectedId(apu.id)}>
               <strong>{apu.code}</strong>
@@ -394,13 +422,27 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 <strong className="apu-total">
                   {formatCOP(apuSellingTotal(selected))}
                   <small>Precio de venta ({formatCOP(apuSellingTotal(selected) / selected.workQuantity)} / {selected.unit})</small>
+                  <small className="apu-total-share">
+                    {analysisTotals.selectedShare.toFixed(1)}% del total del análisis
+                  </small>
                 </strong>
               </div>
               <div className="apu-selected-toolbar">
                 <label><span>Actividad</span><input value={selected.name} onChange={(event) => updateApu({ ...selected, name: event.target.value })} /></label>
                 <label><span>Unidad</span><input value={selected.unit} onChange={(event) => updateApu({ ...selected, unit: event.target.value })} /></label>
                 <label><span>Cantidad de obra</span><input type="number" min="0.01" step="any" value={selected.workQuantity} onChange={(event) => updateApu({ ...selected, workQuantity: Number(event.target.value) || 1 })} /></label>
-                <div className="apu-selected-actions"><button type="button" className="inventory-action" onClick={() => void saveSelectedApu()}>Guardar APU</button><button type="button" className="apu-print-btn" onClick={() => setPrintingApu(selected)}>🖨️ Imprimir APU</button><button type="button" className="apu-delete-apu" onClick={() => void deleteSelectedApu()}>Eliminar este APU</button></div>
+              </div>
+              <div className="apu-actions-bar" role="group" aria-label="Acciones del APU seleccionado">
+                <button type="button" className="inventory-action apu-action-primary" onClick={() => void saveSelectedApu()} title="Guarda esta actividad en Supabase">
+                  💾 Guardar APU
+                </button>
+                <button type="button" className="apu-print-btn apu-action-secondary" onClick={() => setPrintingApu(selected)} title="Abre el formato imprimible de esta actividad">
+                  🖨️ Imprimir APU
+                </button>
+                <span className="apu-actions-spacer" />
+                <button type="button" className="apu-delete-apu apu-action-danger" onClick={() => void deleteSelectedApu()} title="Elimina únicamente esta actividad; las demás no se modifican">
+                  🗑️ Eliminar APU
+                </button>
               </div>
               {saveMessage ? <p className={`apu-save-message is-${saveState}`} role="status" aria-live="polite">{saveMessage}</p> : null}
 
@@ -449,6 +491,45 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                     <small>{formatCOP(apuSellingTotal(selected) / selected.workQuantity)} / {selected.unit} (unitario)</small>
                   </div>
                 </div>
+              </section>
+
+              {/* Resumen acumulado de TODAS las actividades del análisis */}
+              <section className="apu-analysis-panel" aria-label="Resumen acumulado del análisis">
+                <div className="apu-analysis-header">
+                  <div>
+                    <p>Resumen del análisis</p>
+                    <small>Suma de las {analysisTotals.count} actividades de este análisis ({analysisTotals.quantity.toLocaleString("es-CO")} unidades totales).</small>
+                  </div>
+                </div>
+                <div className="apu-analysis-grid">
+                  <div className="apu-analysis-card">
+                    <p>Costo Directo Real acumulado</p>
+                    <strong>{formatCOP(analysisTotals.cost)}</strong>
+                    <small>{formatCOP(analysisTotals.unitCost)} / unidad</small>
+                  </div>
+                  <div className="apu-analysis-card">
+                    <p>Ganancia Estimada acumulada</p>
+                    <strong>+{formatCOP(analysisTotals.profit)}</strong>
+                    <small>Suma de todas las actividades</small>
+                  </div>
+                  <div className="apu-analysis-card is-selling">
+                    <p>Precio de venta del análisis</p>
+                    <strong>{formatCOP(analysisTotals.selling)}</strong>
+                    <small>{formatCOP(analysisTotals.unitSelling)} / unidad ponderada</small>
+                  </div>
+                  <div className="apu-analysis-card">
+                    <p>Participación de la actividad seleccionada</p>
+                    <strong>{analysisTotals.selectedShare.toFixed(1)}%</strong>
+                    <small>{formatCOP(analysisTotals.selectedSelling)} de {formatCOP(analysisTotals.selling)}</small>
+                  </div>
+                </div>
+                {analysisTotals.count > 1 && (
+                  <p className="apu-analysis-hint">
+                    Este es el total que se lleva a la cotización y a la obra. El valor
+                    grande arriba ({formatCOP(apuSellingTotal(selected))}) corresponde solo a
+                    la actividad seleccionada.
+                  </p>
+                )}
               </section>
 
               <section className="apu-budget-control" aria-label="Presupuesto de obra">

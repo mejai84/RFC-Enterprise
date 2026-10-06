@@ -40,6 +40,7 @@ import { initialProjects as seedProjects, type StockProduct } from "@/modules/in
 import { ApuActivityCatalog } from "./apu-activity-catalog";
 import { ApuLaborPicker } from "./apu-labor-picker";
 import { ApuPrintModal } from "./apu-print-modal";
+import { ApuImportModal } from "./apu-import-modal";
 import { exportApuToXlsx } from "./apu-xlsx-export";
 import { ApuResourcePicker } from "./apu-resource-picker";
 import { ApuTransportPicker } from "./apu-transport-picker";
@@ -215,6 +216,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   const [costReference, setCostReference] = useState("");
   const [printingApu, setPrintingApu] = useState<Apu | null>(null);
   const [newApuUnit, setNewApuUnit] = useState("m²");
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const selected = useMemo(() => apus.find((apu) => apu.id === selectedId), [apus, selectedId]);
   const visibleApus = useMemo(
     () => quoteContext?.quoteId ? apus.filter((apu) => apu.quoteId === quoteContext.quoteId) : apus,
@@ -366,6 +368,37 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     setApus((current) => [apu, ...current]);
     setSelectedId(apu.id);
     setSaveMessage("APU creado desde el catálogo. Pulsa Guardar APU al terminar.");
+  }
+
+  /** Crea una actividad a partir de la vista previa de un archivo de Excel. */
+  function createApuFromImport(draft: {
+    code: string;
+    name: string;
+    unit: string;
+    workQuantity: number;
+    lines: ApuLine[];
+    importedCount: number;
+  }) {
+    const now = new Date().toISOString();
+    const generated = `APU-${String(apus.length + 1).padStart(3, "0")}`;
+    const apu: Apu = {
+      id: newId(),
+      // El código del archivo solo se respeta si no está repetido en el sistema.
+      code: draft.code && !apus.some((item) => item.code === draft.code) ? draft.code : generated,
+      name: draft.name || "Actividad importada",
+      unit: draft.unit || "und",
+      workQuantity: draft.workQuantity > 0 ? draft.workQuantity : 1,
+      lines: draft.lines,
+      quoteId: quoteContext?.quoteId,
+      quoteCode: quoteContext?.quoteCode,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setApus((current) => [apu, ...current]);
+    setSelectedId(apu.id);
+    setIsImportOpen(false);
+    setSaveState("saving");
+    setSaveMessage(`Importadas ${draft.importedCount} líneas desde Excel. Revísalas y pulsa Guardar APU para confirmarlas en la base de datos.`);
   }
 
   function updateApu(apu: Apu) {
@@ -630,6 +663,14 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
             <div><ApuUnitCombobox name="unit" value={newApuUnit} onChange={setNewApuUnit} /><input name="quantity" type="number" min="0.01" step="any" defaultValue="1" aria-label="Cantidad de obra" /></div>
             <button className="inventory-action" type="submit">Nuevo APU</button>
           </form>
+          <button
+            type="button"
+            className="inventory-action secondary apu-import-launch"
+            onClick={() => setIsImportOpen(true)}
+            title="Cargar un APU desde un archivo de Excel con el formato de RFC"
+          >
+            📥 Importar desde Excel
+          </button>
         </aside>
         <section className="dashboard-panel apu-editor">
           {selected ? (
@@ -668,6 +709,14 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                   title="Descarga el APU en Excel conservando columnas, estilos e impresión"
                 >
                   {isExporting ? "⏳ Generando…" : "📊 Exportar XLSX"}
+                </button>
+                <button
+                  type="button"
+                  className="apu-print-btn apu-action-secondary"
+                  onClick={() => setIsImportOpen(true)}
+                  title="Cargar un APU desde un archivo de Excel con el formato de RFC"
+                >
+                  📥 Importar XLSX
                 </button>
                 <span className="apu-actions-spacer" />
                 <button type="button" className="apu-delete-apu apu-action-danger" onClick={() => void deleteSelectedApu()} title="Elimina únicamente esta actividad; las demás no se modifican">
@@ -895,6 +944,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
         </section>
       </section>
       {printingApu ? <ApuPrintModal apu={printingApu} onClose={() => setPrintingApu(null)} /> : null}
+      {isImportOpen ? <ApuImportModal onClose={() => setIsImportOpen(false)} onConfirm={createApuFromImport} /> : null}
     </main>
   );
 }

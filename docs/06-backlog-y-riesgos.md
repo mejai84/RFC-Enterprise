@@ -43,8 +43,7 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 | INV-011 | Media | Inteligencia e importación de inventario | Indicadores de rotación e inmovilizado, carga masiva con validación |
 | ALQ-001 | Alta | Proyecto tipo Alquiler | Consecutivo `ALQ`, periodo de entrega y devolución, asignación de equipo, cargos por extensión o daños y enlace a facturación |
 | ALQ-003 | Alta | Persistencia del alquiler rápido | Almacenamiento empresarial, adjuntos de cédula, fotos y firma, y facturación |
-| APU-012 | Media | Compras y requisiciones desde líneas APU | Enviar faltantes del APU a requisición y alimentar el compromiso y el real desde compras, inventario y nómina |
-| APU-005 | Media | Exportación del APU a XLSX | Conservar dimensiones, celdas, fórmulas, estilos y configuración de impresión del formato original |
+| APU-012 | Media | Compras y requisiciones desde líneas APU | Panel de faltantes y generación de la requisición al almacén implementados; falta alimentar el compromiso y el real desde compras, inventario y nómina |
 | APU-009 | Media | Clasificación configurable | RFC, CSI, UniFormat o ICMS configurables; no se incorporan catálogos licenciados sin autorización |
 | APU-010 | Media | Historial de precios y vigencias | Proveedores, ciudades o sedes y alerta de variación de materiales y equipos |
 | APU-011 | Media | Cuadrillas reutilizables | Productividad presupuestada contra real, factor prestacional y horas extra |

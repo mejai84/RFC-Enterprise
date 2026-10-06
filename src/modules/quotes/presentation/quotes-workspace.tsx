@@ -446,6 +446,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     (quoteId: string, breakdown: QuoteCostBreakdown) => {
       const total = calculateTotalCost(breakdown);
       const now = new Date().toISOString();
+      const historyNote = `Actualización de pre-costeo: materiales ${breakdown.materials?.toLocaleString("es-CO") ?? 0}, mano de obra ${breakdown.labor?.toLocaleString("es-CO") ?? 0}, equipos ${breakdown.equipment?.toLocaleString("es-CO") ?? 0}, transporte ${breakdown.transport?.toLocaleString("es-CO") ?? 0}. Total estimado: ${total.toLocaleString("es-CO")}`;
       setQuotes((prev) =>
         prev.map((q) => {
           if (q.id !== quoteId) return q;
@@ -454,6 +455,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
             costBreakdown: breakdown,
             estimatedValue: total > 0 ? total : q.estimatedValue,
             updatedAt: now,
+            history: [...q.history, { id: uid(), fromStatus: q.status, toStatus: q.status, changedBy: q.responsible || "Usuario", changedAt: now, note: historyNote }],
           };
         }),
       );
@@ -464,6 +466,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           costBreakdown: breakdown,
           estimatedValue: total > 0 ? total : prev.estimatedValue,
           updatedAt: now,
+          history: [...prev.history, { id: uid(), fromStatus: prev.status, toStatus: prev.status, changedBy: prev.responsible || "Usuario", changedAt: now, note: historyNote }],
         };
       });
       setActionNotice("Pre-costeo de 3 rubros actualizado con éxito.");
@@ -478,13 +481,18 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       setQuotes((previous) =>
         previous.map((quote) =>
           quote.id === quoteId
-            ? { ...quote, notes: nextNotes, updatedAt }
+            ? {
+                ...quote,
+                notes: nextNotes,
+                updatedAt,
+                history: [...quote.history, { id: uid(), fromStatus: quote.status, toStatus: quote.status, changedBy: quote.responsible || "Usuario", changedAt: updatedAt, note: nextNotes ? "Notas de propuesta actualizadas." : "Notas de propuesta eliminadas." }],
+              }
             : quote,
         ),
       );
       setSelectedQuote((previous) =>
         previous?.id === quoteId
-          ? { ...previous, notes: nextNotes, updatedAt }
+          ? { ...previous, notes: nextNotes, updatedAt, history: [...previous.history, { id: uid(), fromStatus: previous.status, toStatus: previous.status, changedBy: previous.responsible || "Usuario", changedAt: updatedAt, note: nextNotes ? "Notas de propuesta actualizadas." : "Notas de propuesta eliminadas." }] }
           : previous,
       );
       setActionNotice(
@@ -524,12 +532,22 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       setQuotes((prev) =>
         prev.map((q) => {
           if (q.id !== quoteId) return q;
-          return { ...q, technicalVisit: visit, updatedAt: now };
+          return {
+            ...q,
+            technicalVisit: visit,
+            updatedAt: now,
+            history: [...q.history, { id: uid(), fromStatus: q.status, toStatus: q.status, changedBy: q.responsible || "Usuario", changedAt: now, note: `Actualización de visita técnica: fecha ${visit.scheduledDate || "—"}, responsable ${visit.responsible || "—"}.` }],
+          };
         }),
       );
       setSelectedQuote((prev) => {
         if (!prev || prev.id !== quoteId) return prev;
-        return { ...prev, technicalVisit: visit, updatedAt: now };
+        return {
+          ...prev,
+          technicalVisit: visit,
+          updatedAt: now,
+          history: [...prev.history, { id: uid(), fromStatus: prev.status, toStatus: prev.status, changedBy: prev.responsible || "Usuario", changedAt: now, note: `Actualización de visita técnica: fecha ${visit.scheduledDate || "—"}, responsable ${visit.responsible || "—"}.` }],
+        };
       });
       setActionNotice("Datos de visita técnica guardados.");
     },

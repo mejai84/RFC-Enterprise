@@ -2579,3 +2579,25 @@
   .project-status-filter select { width: 100%; }
   .metric-box strong { font-size: 19px; }
 }
+
+/* Evitar desplazamiento horizontal del documento (2026-10-06) */
+html, body { overflow-x: clip; max-width: 100vw; }
+@supports not (overflow: clip) {
+  html, body { overflow-x: hidden; }
+}
+
+/* Ayuda emergente alineada dentro del viewport (2026-10-06) */
+@media (max-width: 768px) {
+  .project-help-popover {
+    left: 16px;
+    right: 16px;
+    top: auto;
+    bottom: 16px;
+    transform: translateY(-4px);
+    width: auto;
+    max-width: calc(100vw - 32px);
+  }
+  .project-help:hover .project-help-popover,.project-help:focus-within .project-help-popover {
+    transform: translateY(0);
+  }
+}

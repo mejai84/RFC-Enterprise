@@ -7,6 +7,8 @@ audiencia: Dirección, Operaciones, Almacén, Contabilidad y Desarrollo
 
 # Ficha de Módulo: Costeo de Materiales por Obra y Control de Inventarios
 
+> Actualización 2026-10-06: el APU ofrece un catálogo filtrable de unidades de medida. La actividad guarda la abreviatura normalizada (`und`, `kg`, `m²`, `m³`, `L`, `HH`, etc.) para que el costeo y sus documentos usen una sola convención.
+
 <!-- Registro 2026-10-06: en móvil las fichas de proyecto, sus métricas, pestañas y tablas de historial se ajustan a una sola columna o contenedor interno, sin forzar desplazamiento horizontal de la pantalla. -->
 <!-- Registro 2026-10-06: los valores de cantidad, rendimiento por día y tarifa de las líneas APU admiten decimales escritos con coma o punto. El total de costo y venta se recalcula al confirmar el campo y se conserva en la nueva versión del APU. -->
 

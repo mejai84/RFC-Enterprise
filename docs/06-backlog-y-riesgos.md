@@ -7,6 +7,8 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 
 # Backlog y riesgos
 
+> Actualización 2026-10-06: se reduce el riesgo de unidades inconsistentes en APU mediante selección normalizada; el catálogo mantiene nombres de consulta y persiste únicamente abreviaturas.
+
 Este documento contiene **únicamente el trabajo pendiente y los riesgos abiertos**.
 Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 [07 · Registro de decisiones](07-registro-de-decisiones.md).

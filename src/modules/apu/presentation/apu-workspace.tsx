@@ -14,6 +14,7 @@ import {
   lineSellingTotal,
   lineTotal,
   loadApuWorkspaceData,
+  loadApuInventoryCatalog,
   publishApuToBoq,
   registerBoqCost,
   saveApuAnalysis,
@@ -57,6 +58,11 @@ type QuoteContext = { quoteId?: string; quoteCode?: string; quoteTitle?: string;
 export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) {
   const isQuoteApuReadOnly = Boolean(quoteContext?.quoteId && !["estimating", "revision_requested"].includes(quoteContext.quoteStatus ?? "estimating"));
   const [products, setProducts] = useState<StockProduct[]>([]);
+  const [catalogStatus, setCatalogStatus] = useState<{
+    count: number;
+    error?: string;
+    loading: boolean;
+  }>({ count: 0, loading: true });
   const [apus, setApus] = useState<Apu[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [laborCatalog, setLaborCatalog] = useState<LaborPositionCatalog>(emptyLaborCatalog);
@@ -117,6 +123,16 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
       } catch { return []; }
     }
     const seedFallback: ApuProject[] = seedProjects.filter((p) => p.status === "active" || p.status === "pending").map((p) => ({ id: p.id, code: p.code, name: p.name }));
+    /** Catálogo de inventario para materiales y equipos (viene de Supabase). */
+    void loadApuInventoryCatalog().then((result) => {
+      if (!active) return;
+      setProducts(result.products);
+      setCatalogStatus({
+        count: result.products.length,
+        error: result.error,
+        loading: false,
+      });
+    });
     async function loadWorkspace() {
       try {
         const remote = await loadApuWorkspaceData();
@@ -557,6 +573,8 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                         <ApuResourcePicker
                           category={category}
                           products={inventoryChoices}
+                          catalogLoading={catalogStatus.loading}
+                          catalogError={catalogStatus.error}
                           onAdd={(product) => addLine(category, product)}
                         />
                       ) : (

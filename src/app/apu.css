@@ -260,3 +260,24 @@
   .apu-labor-controls { grid-template-columns: 1fr; }
   .apu-clear-search { top: 24px; }
 }
+
+/* APU: buscador incremental + grilla que nunca desborda (2026-10-06) */
+.apu-labor-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.apu-labor-controls > label { display: grid; gap: 5px; flex: 1 1 150px; min-width: 130px; max-width: 100%; position: relative; }
+.apu-labor-controls .apu-labor-position-select { flex: 2 1 260px; }
+.apu-labor-actions { display: flex; gap: 8px; flex: 1 1 100%; width: 100%; }
+.apu-labor-actions button { flex: 1 1 0; min-width: 0; min-height: 42px; white-space: nowrap; }
+.apu-labor-controls > button { flex: 0 0 auto; }
+
+/* Resultados del buscador de inventario */
+.apu-resource-picker { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; position: relative; width: 100%; }
+.apu-resource-search input { padding-right: 34px; }
+.apu-resource-count { color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .04em; margin: 0; padding: 8px 10px 4px; text-transform: uppercase; }
+.apu-resource-results button b.is-empty { color: #b91c1c; }
+.apu-resource-hint { color: #92400e; font-size: 12px; margin: 0; padding: 8px 10px 10px; }
+@media (max-width: 640px) {
+  .apu-labor-controls > label { flex: 1 1 100%; }
+  .apu-labor-actions { flex-direction: column; }
+  .apu-resource-picker { grid-template-columns: minmax(0, 1fr); }
+  .apu-resource-manual { width: 100%; }
+}

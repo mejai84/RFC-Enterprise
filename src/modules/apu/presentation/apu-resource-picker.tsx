@@ -11,22 +11,31 @@ const formatCOP = (value: number) => value.toLocaleString("es-CO", { style: "cur
 type Props = {
   category: Extract<ApuCategory, "materials" | "equipment">;
   products: StockProduct[];
+  catalogLoading?: boolean;
+  catalogError?: string;
   onAdd: (product?: StockProduct) => void;
 };
 
-export function ApuResourcePicker({ category, products, onAdd }: Props) {
+export function ApuResourcePicker({
+  category,
+  products,
+  catalogLoading = false,
+  catalogError,
+  onAdd,
+}: Props) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const listId = useId();
+  const showResults = isOpen && Boolean(query.trim()) && !catalogLoading && !catalogError;
   const resourceLabel = category === "materials" ? "material" : "equipo o herramienta";
   const matches = useMemo(() => {
     if (!query.trim()) return [];
-    return rankItems(
-      products,
-      query,
-      (p) => p.name,
-      (p) => inventorySearchText(p)
-    ).slice(0, 8);
+    return rankItems(products, query, (p) => p.name, (p) => inventorySearchText(p)).slice(0, 30);
+  }, [products, query]);
+
+  const totalMatches = useMemo(() => {
+    if (!query.trim()) return 0;
+    return rankItems(products, query, (p) => p.name, (p) => inventorySearchText(p)).length;
   }, [products, query]);
 
   function addProduct(product: StockProduct) {
@@ -43,26 +52,79 @@ export function ApuResourcePicker({ category, products, onAdd }: Props) {
         <input
           aria-autocomplete="list"
           aria-controls={listId}
-          aria-expanded={isOpen && Boolean(query.trim())}
-          placeholder={`Buscar ${resourceLabel} en inventario`}
+          aria-expanded={showResults}
+          aria-label={`Buscar ${resourceLabel} en inventario`}
+          placeholder={
+            catalogLoading
+              ? "Cargando inventario…"
+              : catalogError
+                ? "Inventario no disponible"
+                : `Buscar ${resourceLabel} en inventario`
+          }
           type="search"
           value={query}
+          disabled={catalogLoading || Boolean(catalogError)}
           onChange={(event) => { setQuery(event.target.value); setIsOpen(true); }}
           onFocus={() => setIsOpen(true)}
+          onBlur={() => window.setTimeout(() => setIsOpen(false), 150)}
           onKeyDown={(event) => { if (event.key === "Escape") setIsOpen(false); }}
         />
+        {query ? (
+          <button
+            type="button"
+            className="apu-clear-search"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => { setQuery(""); setIsOpen(false); }}
+            aria-label={`Limpiar búsqueda de ${resourceLabel}`}
+            title="Limpiar búsqueda"
+          >
+            ✕
+          </button>
+        ) : null}
       </label>
-      <button type="button" className="apu-resource-manual" onClick={() => onAdd()}>+ Manual</button>
-      {isOpen && query.trim() ? (
-        <div className="apu-resource-results" id={listId} role="listbox" aria-label={`Resultados de ${resourceLabel}`}>
-          {matches.length ? matches.map((product) => (
-            <button key={product.id} role="option" type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => addProduct(product)}>
-              <span><strong>{product.name}</strong><small>{product.sku || product.category || "Sin código"} · {product.unit}</small></span>
-              <b>{formatCOP(product.unitCost || 0)}</b>
-            </button>
-          )) : <p>No hay coincidencias. Puedes agregarlo como recurso manual.</p>}
-        </div>
+      <button type="button" className="apu-resource-manual" onClick={() => onAdd()} disabled={catalogLoading}>
+        + Manual
+      </button>
+
+      {catalogError ? (
+        <p className="apu-filter-empty">No se pudo leer el inventario: {catalogError}</p>
       ) : null}
+
+      {showResults && (
+        <div className="apu-resource-results" id={listId} role="listbox" aria-label={`Resultados de ${resourceLabel}`}>
+          <p className="apu-resource-count" aria-live="polite">
+            {totalMatches === 0
+              ? "Sin coincidencias en el inventario"
+              : `${totalMatches} coincidencia${totalMatches === 1 ? "" : "s"}`}
+          </p>
+          {matches.map((product) => (
+            <button
+              key={product.id}
+              role="option"
+              type="button"
+              aria-selected={false}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => addProduct(product)}
+            >
+              <span>
+                <strong>{product.name}</strong>
+                <small>
+                  {product.category || "Sin categoría"}
+                  {product.sku ? ` · ${product.sku}` : ""}
+                </small>
+              </span>
+              <b className={product.available > 0 ? "" : "is-empty"}>
+                {Number(product.available ?? 0).toLocaleString("es-CO")} {product.unit}
+              </b>
+            </button>
+          ))}
+          {matches.length === 0 && products.length > 0 ? (
+            <p className="apu-resource-hint">
+              Puedes agregarlo como recurso manual; quedará marcado como no inventariado.
+            </p>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

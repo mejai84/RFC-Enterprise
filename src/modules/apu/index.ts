@@ -20,6 +20,7 @@ export type { LaborActivityType, LaborPosition, LaborPositionCatalog } from "./d
 export { getLaborPositionCatalog } from "./data/labor-position-repository";
 export { archiveApuAnalysis, loadApuWorkspaceData, publishApuToBoq, registerBoqCost, saveApuAnalysis, type ApuProject, type ProjectBoqCost, type ProjectBoqItem } from "./data/apu-repository";
 export { loadApuInventoryCatalog } from "./data/inventory-catalog";
+export { getSupabaseBrowser } from "./data/supabase-browser";
 export {
   defaultTransportCatalog,
   transportCategoryLabels,

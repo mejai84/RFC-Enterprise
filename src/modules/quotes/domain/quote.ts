@@ -157,6 +157,7 @@ export type Quote = {
   technicalVisit?: TechnicalVisit; // Última visita técnica registrada (compatibilidad)
   technicalVisits?: QuoteVisits;   // Todas las visitas técnicas de la cotización/obra
   folderUrl?: string;       // Enlace a expediente en la nube (Drive, OneDrive, SharePoint)
+  requestBody?: string;     // Cuerpo del correo o mensaje original de la solicitud
   receivedAt: string;       // Fecha de recepción ISO
   deadline?: string;        // Fecha límite de entrega de cotización ISO
   nextAction?: string;      // Próxima acción pendiente

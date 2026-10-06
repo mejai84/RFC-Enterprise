@@ -15,6 +15,7 @@ import {
   lineTotal,
   loadApuWorkspaceData,
   loadApuInventoryCatalog,
+  getSupabaseBrowser,
   publishApuToBoq,
   registerBoqCost,
   saveApuAnalysis,
@@ -39,6 +40,7 @@ import { initialProjects as seedProjects, type StockProduct } from "@/modules/in
 import { ApuActivityCatalog } from "./apu-activity-catalog";
 import { ApuLaborPicker } from "./apu-labor-picker";
 import { ApuPrintModal } from "./apu-print-modal";
+import { exportApuToXlsx } from "./apu-xlsx-export";
 import { ApuResourcePicker } from "./apu-resource-picker";
 import { ApuTransportPicker } from "./apu-transport-picker";
 
@@ -63,6 +65,9 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     error?: string;
     loading: boolean;
   }>({ count: 0, loading: true });
+  const [isSendingRequisition, setIsSendingRequisition] = useState(false);
+  const [requisitionCode, setRequisitionCode] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
   const [apus, setApus] = useState<Apu[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [laborCatalog, setLaborCatalog] = useState<LaborPositionCatalog>(emptyLaborCatalog);
@@ -363,6 +368,75 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     setSaveMessage(`${selected.code} fue eliminado. Los demás APUs no se modificaron.`);
   }
 
+  /** Faltantes de este APU: lo que el análisis necesita y el inventario no tiene. */
+  const shortages = useMemo(() => {
+    if (!selected) return [];
+    const byId = new Map(products.map((p) => [p.id, p]));
+    return selected.lines
+      .filter((line) => line.category === "materials" || line.category === "equipment")
+      .filter((line) => Boolean(line.inventoryProductId))
+      .map((line) => {
+        const product = byId.get(line.inventoryProductId!);
+        if (!product) return null;
+        const required = Number(line.quantity) || 0;
+        const available = Number(product.available ?? 0);
+        const missing = Math.max(0, required - available);
+        return { line, product, required, available, missing };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+      .filter((row) => row.missing > 0);
+  }, [selected, products]);
+
+  /** Envía los faltantes del APU al almacén como requisición de la obra vinculada. */
+  async function generateRequisitionFromApu() {
+    if (!selected || !companyId || !projectToLink) {
+      setSaveState("error");
+      setSaveMessage("Guarda el APU y selecciona la obra destino antes de generar la requisición.");
+      return;
+    }
+    if (isQuoteApuReadOnly) {
+      setSaveState("error");
+      setSaveMessage("El APU está en consulta; la requisición se genera desde la ficha de la obra.");
+      return;
+    }
+    if (!shortages.length) {
+      setSaveState("database");
+      setSaveMessage("No hay faltantes: el inventario cubre lo que este APU necesita.");
+      return;
+    }
+    setIsSendingRequisition(true);
+    const db = await getSupabaseBrowser();
+    if (!db) {
+      setIsSendingRequisition(false);
+      setSaveState("error");
+      setSaveMessage("No fue posible conectar con la base de datos.");
+      return;
+    }
+    const { data, error } = await db.rpc("create_inventory_requisition", {
+      target_project: projectToLink,
+      requester_name: selected.name,
+      target_needed_by: null,
+      request_notes: `Generada desde el APU ${selected.code} · ${selected.name}.`,
+      request_lines: shortages.map((row) => ({
+        stock_id: row.product.id,
+        quantity: row.missing,
+        notes: `Requerido ${row.required}, en inventario ${row.available}.`,
+      })),
+    });
+    setIsSendingRequisition(false);
+    if (error) {
+      setSaveState("error");
+      setSaveMessage(`No fue posible crear la requisición: ${error.message}`);
+      return;
+    }
+    const created = Array.isArray(data) ? data[0] : data;
+    setRequisitionCode(created?.requisition_code ?? created?.code ?? "");
+    setSaveState("database");
+    setSaveMessage(
+      `Requisición ${created?.requisition_code ?? created?.code ?? ""} enviada al almacén con ${shortages.length} línea(s) faltante(s).`,
+    );
+  }
+
   async function sendSelectedToBoq() {
     if (!selected || !projectToLink) return;
     if (isQuoteApuReadOnly) { setSaveState("error"); setSaveMessage("El APU está en consulta. El presupuesto de la obra se controla desde Obras y Proyectos."); return; }
@@ -454,6 +528,15 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 </button>
                 <button type="button" className="apu-print-btn apu-action-secondary" onClick={() => setPrintingApu(selected)} title="Abre el formato imprimible de esta actividad">
                   🖨️ Imprimir APU
+                </button>
+                <button
+                  type="button"
+                  className="apu-print-btn apu-action-secondary"
+                  onClick={() => void exportApuToXlsx(selected)}
+                  disabled={isExporting}
+                  title="Descarga el APU en Excel conservando columnas, estilos e impresión"
+                >
+                  {isExporting ? "⏳ Generando…" : "📊 Exportar XLSX"}
                 </button>
                 <span className="apu-actions-spacer" />
                 <button type="button" className="apu-delete-apu apu-action-danger" onClick={() => void deleteSelectedApu()} title="Elimina únicamente esta actividad; las demás no se modifican">
@@ -551,6 +634,56 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
               <section className="apu-budget-control" aria-label="Presupuesto de obra">
                 <div><p>Presupuesto BOQ y control de obra</p><h3>Vincular este APU al presupuesto</h3><small>{companyId ? "Guarda una versión y selecciónala como línea presupuestal de una obra." : "Modo local: selecciona una obra para vincular este APU."}</small></div>
                 <div className="apu-budget-link"><select value={projectToLink} onChange={(event) => setProjectToLink(event.target.value)} aria-label="Obra destino"><option value="">Seleccione obra activa…</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}</select><button type="button" onClick={() => void sendSelectedToBoq()} disabled={(!selected.versionId && !!companyId) || !projectToLink}>Enviar a presupuesto</button></div>
+              </section>
+
+              {/* Faltantes del APU → requisición al almacén (APU-012) */}
+              <section className="apu-shortage-panel" aria-label="Faltantes de materiales y equipos">
+                <div className="apu-analysis-header">
+                  <div>
+                    <p>Faltantes para ejecutar este APU</p>
+                    <small>
+                      {shortages.length === 0
+                        ? "El inventario cubre todo lo que este análisis necesita."
+                        : `${shortages.length} recurso(s) deben comprarse o ingresar al almacén antes de iniciar la obra.`}
+                    </small>
+                  </div>
+                  <button
+                    type="button"
+                    className="inventory-action"
+                    onClick={() => void generateRequisitionFromApu()}
+                    disabled={isSendingRequisition || !projectToLink || isQuoteApuReadOnly}
+                    title={projectToLink ? "Envía los faltantes al almacén de la obra seleccionada" : "Selecciona primero la obra destino"}
+                  >
+                    {isSendingRequisition ? "⏳ Enviando…" : "📦 Generar requisición"}
+                  </button>
+                </div>
+                {shortages.length > 0 ? (
+                  <div className="apu-table-wrap">
+                    <table className="apu-section table">
+                      <thead>
+                        <tr>
+                          <th>Recurso</th>
+                          <th>Requerido</th>
+                          <th>En inventario</th>
+                          <th>Falta comprar</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shortages.map((row) => (
+                          <tr key={row.line.id}>
+                            <td>{row.product.name}</td>
+                            <td>{row.required.toLocaleString("es-CO")} {row.product.unit}</td>
+                            <td>{row.available.toLocaleString("es-CO")} {row.product.unit}</td>
+                            <td><strong>{row.missing.toLocaleString("es-CO")} {row.product.unit}</strong></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+                {requisitionCode ? (
+                  <p className="apu-notice-inline">✓ Requisición {requisitionCode} enviada al almacén.</p>
+                ) : null}
               </section>
               {companyId && boqItems.filter((item) => item.apuAnalysisId === selected.id).map((item) => {
                 const committed = boqCosts.filter((cost) => cost.boqItemId === item.id && cost.costType === "committed").reduce((sum, cost) => sum + cost.amount, 0);

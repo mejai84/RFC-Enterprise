@@ -31,6 +31,7 @@ export function ApuTransportPicker({
   onDeleteItem,
 }: Props) {
   const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<"all" | TransportCategory>("all");
   const [selectedId, setSelectedId] = useState("");
   const [showManageModal, setShowManageModal] = useState(false);
@@ -57,6 +58,15 @@ export function ApuTransportPicker({
   }, [catalog.items, categoryFilter, query]);
 
   const selected = catalog.items.find((item) => item.id === selectedId);
+  const showResults = isOpen && !isLoading && matches.length > 0;
+  const visibleMatches = matches.slice(0, 40);
+
+  function pick(item: TransportItem) {
+    setSelectedId(item.id);
+    onAdd(item);
+    setQuery("");
+    setIsOpen(false);
+  }
 
   async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -109,8 +119,17 @@ export function ApuTransportPicker({
             onChange={(e) => {
               setQuery(e.target.value);
               setSelectedId("");
+              setIsOpen(true);
             }}
-            placeholder="Ej. volqueta, cama baja, buseta, 4x4…"
+            aria-autocomplete="list"
+            aria-controls={selectId}
+            aria-expanded={showResults}
+            aria-label="Buscar transporte en el catálogo"
+            placeholder={isLoading ? "Cargando transportes…" : "Ej. volqueta, cama baja, buseta, 4x4…"}
+            disabled={isLoading}
+            onFocus={() => setIsOpen(true)}
+            onBlur={() => window.setTimeout(() => setIsOpen(false), 150)}
+            onKeyDown={(e) => { if (e.key === "Escape") setIsOpen(false); }}
           />
           {query.trim() ? (
             <button
@@ -146,37 +165,13 @@ export function ApuTransportPicker({
           </select>
         </label>
 
-        <label className="apu-labor-position-select" htmlFor={selectId}>
-          <span>Unidad de Transporte</span>
-          <select
-            id={selectId}
-            value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
-            disabled={isLoading || !matches.length}
-          >
-            <option value="">
-              {isLoading
-                ? "Cargando transportes…"
-                : matches.length
-                ? `Seleccionar (${matches.length} opciones)`
-                : "Sin coincidencias"}
-            </option>
-            {matches.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} · {formatCOP(item.defaultRate)} / {item.unit}
-              </option>
-            ))}
-          </select>
-        </label>
-
         <div className="apu-labor-actions">
           <button
             type="button"
-            disabled={!selected}
-            onClick={() => selected && onAdd(selected)}
-            title="Agregar este transporte a la cuadrilla o análisis APU"
+            onClick={() => { setQuery(""); setIsOpen(true); }}
+            title="Ver todo el catálogo de transportes"
           >
-            Agregar al APU
+            Ver todos ({catalog.items.length})
           </button>
 
           <button
@@ -217,6 +212,38 @@ export function ApuTransportPicker({
         ) : null}
         {notice ? <span className="apu-notice-inline">✓ {notice}</span> : null}
       </div>
+
+      {showResults && (
+        <div className="apu-resource-results" id={selectId} role="listbox" aria-label="Transportes encontrados">
+          <p className="apu-resource-count" aria-live="polite">
+            {matches.length} coincidencia{matches.length === 1 ? "" : "s"}
+          </p>
+          {visibleMatches.map((item) => (
+            <button
+              key={item.id}
+              role="option"
+              type="button"
+              aria-selected={selectedId === item.id}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => pick(item)}
+            >
+              <span>
+                <strong>{item.name}</strong>
+                <small>
+                  {item.categoryLabel}
+                  {item.capacity ? ` · ${item.capacity}` : ""}
+                </small>
+              </span>
+              <b>{formatCOP(item.defaultRate)} / {item.unit}</b>
+            </button>
+          ))}
+          {matches.length > visibleMatches.length ? (
+            <p className="apu-resource-hint">
+              Se muestran {visibleMatches.length} de {matches.length}. Afine la búsqueda para ver más.
+            </p>
+          ) : null}
+        </div>
+      )}
 
       {/* Detalle visual del transporte seleccionado */}
       {selected ? (

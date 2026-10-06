@@ -6,7 +6,7 @@ type QuoteRow = {
   id: string; code: string; title: string; client: string; contact_name: string | null;
   contact_email: string | null; contact_phone: string | null; email_origin: string | null;
   status: QuoteStatus; responsible: string; estimated_value: number | string | null; revision: number;
-  cost_breakdown: Quote["costBreakdown"] | null; technical_visit: Quote["technicalVisit"] | null; technical_visits: Quote["technicalVisits"] | null;
+  cost_breakdown: Quote["costBreakdown"] | null; technical_visit: Quote["technicalVisit"] | null; technical_visits: Quote["technicalVisits"] | null; request_body: string | null;
   validity_days: number | null; sent_at: string | null; delivery_time_weeks: number | null;
   payment_terms: string | null; folder_url: string | null; received_at: string; deadline: string | null;
   next_action: string | null; project_id: string | null; notes: string | null; created_at: string; updated_at: string;
@@ -26,6 +26,7 @@ function toQuote(row: QuoteRow, history: QuoteHistoryEntry[]): Quote {
     revision: row.revision, costBreakdown: row.cost_breakdown ?? undefined,
     technicalVisit: row.technical_visit ?? undefined,
     technicalVisits: row.technical_visits ?? undefined,
+    requestBody: row.request_body ?? undefined,
     validityDays: row.validity_days ?? undefined, sentAt: row.sent_at ?? undefined,
     deliveryTimeWeeks: row.delivery_time_weeks ?? undefined, paymentTerms: row.payment_terms ?? undefined,
     folderUrl: row.folder_url ?? undefined, receivedAt: row.received_at, deadline: row.deadline ?? undefined,

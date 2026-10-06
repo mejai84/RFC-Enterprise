@@ -3,6 +3,9 @@
 -- Lista de visitas técnicas: la cotización puede tener varias.
 alter table public.quotes add column if not exists technical_visits jsonb;
 
+-- Cuerpo del correo o mensaje original que originó la solicitud.
+alter table public.quotes add column if not exists request_body text;
+
 create or replace function public.save_quote_with_history(
   p_company_id uuid,
   p_quote jsonb
@@ -41,7 +44,7 @@ begin
     id, company_id, code, title, client, contact_name, contact_email, contact_phone,
     email_origin, status, responsible, estimated_value, revision, cost_breakdown,
     technical_visit, technical_visits, validity_days, sent_at, delivery_time_weeks, payment_terms,
-    folder_url, received_at, deadline, next_action, project_id, notes,
+    folder_url, received_at, deadline, next_action, project_id, notes, request_body,
     created_at, updated_at
   ) values (
     v_quote_id, p_company_id, p_quote->>'code', p_quote->>'title', p_quote->>'client',
@@ -56,7 +59,7 @@ begin
     coalesce(nullif(p_quote->>'receivedAt', '')::timestamptz, now()),
     nullif(p_quote->>'deadline', '')::timestamptz,
     nullif(p_quote->>'nextAction', ''), nullif(p_quote->>'projectId', '')::uuid,
-    nullif(p_quote->>'notes', ''),
+    nullif(p_quote->>'notes', ''), p_quote->>'requestBody',
     coalesce(nullif(p_quote->>'createdAt', '')::timestamptz, now()), now()
   )
   on conflict (id) do update set
@@ -71,7 +74,7 @@ begin
     delivery_time_weeks = excluded.delivery_time_weeks, payment_terms = excluded.payment_terms,
     folder_url = excluded.folder_url, deadline = excluded.deadline,
     next_action = excluded.next_action, project_id = excluded.project_id,
-    notes = excluded.notes, updated_at = now()
+    notes = excluded.notes, request_body = excluded.request_body, updated_at = now()
   where q.company_id = p_company_id;
 
   -- Historial: solo los eventos nuevos, siempre con el actor de la sesión.

@@ -690,6 +690,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       const contactEmail = String(fd.get("contactEmail") ?? "").trim();
       const contactPhone = String(fd.get("contactPhone") ?? "").trim();
       const emailOrigin = String(fd.get("emailOrigin") ?? "").trim();
+      const requestBody = String(fd.get("requestBody") ?? "").trim();
       const validityDays = Number(fd.get("validityDays") || 30);
       const deliveryTimeWeeks = Number(fd.get("deliveryTimeWeeks") || 3);
       const paymentTerms = String(
@@ -726,6 +727,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         contactEmail: contactEmail || undefined,
         contactPhone: contactPhone || undefined,
         emailOrigin: emailOrigin || undefined,
+        requestBody: requestBody || undefined,
         status: "received",
         responsible: "Jorge Figueroa",
         estimatedValue: estSum > 0 ? estSum : undefined,
@@ -1700,6 +1702,13 @@ function DetailModal({
               </div>
             )}
 
+            {quote.requestBody && (
+              <details className="quote-request-body" open>
+                <summary>✉️ Cuerpo de la solicitud original</summary>
+                <pre>{quote.requestBody}</pre>
+              </details>
+            )}
+
             {quote.nextAction && (
               <div className="quote-modal-next-action">
                 <strong>→ Próxima acción requerida:</strong> {quote.nextAction}
@@ -2082,6 +2091,19 @@ function NewQuoteModal({
               />
             </label>
           </div>
+
+          <label className="form-field quote-email-body">
+            Cuerpo del correo o mensaje de la solicitud
+            <textarea
+              name="requestBody"
+              rows={8}
+              placeholder="Pega aquí el texto del correo recibido o el mensaje del cliente: descripción de la obra, alcance solicitado, ubicación, fecha límite de entrega y cualquier requisito mencionado."
+            />
+            <small className="quote-field-hint">
+              Este texto es el origen de la solicitud: se conserva como respaldo del
+              expediente y sirve para construir el alcance del APU.
+            </small>
+          </label>
 
           <div className="new-quote-row">
             <label className="form-field">

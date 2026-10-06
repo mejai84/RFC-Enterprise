@@ -50,6 +50,30 @@ const categories: ApuCategory[] = ["equipment", "materials", "labor", "transport
 const emptyLaborCatalog: LaborPositionCatalog = { positions: [], source: "fallback" };
 const formatCOP = (value: number) => value.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const newId = () => crypto.randomUUID();
+
+/** Preferencia de interfaz (no autoritativa): qué rubros del APU están plegados. */
+const COLLAPSED_KEY = "rfc_apu_rubros_plegados";
+
+const readCollapsed = (): ApuCategory[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(COLLAPSED_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((value): value is ApuCategory => categories.includes(value as ApuCategory));
+  } catch {
+    return [];
+  }
+};
+
+const writeCollapsed = (value: ApuCategory[]) => {
+  try {
+    window.localStorage.setItem(COLLAPSED_KEY, JSON.stringify(value));
+  } catch {
+    // Si el navegador bloquea el almacenamiento, la preferencia simplemente no persiste.
+  }
+};
 const parseDecimal = (value: string) => {
   const compact = value.trim().replace(/\s/g, "");
   const normalized = compact.includes(",") ? compact.replace(/\./g, "").replace(",", ".") : compact;
@@ -214,6 +238,29 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   /** Datos de la cotización de origen, para buscar y ubicar cada actividad. */
   const [quoteOrigin, setQuoteOrigin] = useState<Map<string, { code: string; title: string; client: string; status: string }>>(new Map());
   const [search, setSearch] = useState("");
+  /** Rubros plegados. Solo es una preferencia visual, no afecta los datos guardados. */
+  const [collapsed, setCollapsed] = useState<ApuCategory[]>([]);
+  const [isCollapsedReady, setIsCollapsedReady] = useState(false);
+
+  useEffect(() => {
+    setCollapsed(readCollapsed());
+    setIsCollapsedReady(true);
+  }, []);
+
+  function toggleSection(category: ApuCategory) {
+    setCollapsed((current) => {
+      const next = current.includes(category) ? current.filter((value) => value !== category) : [...current, category];
+      writeCollapsed(next);
+      return next;
+    });
+  }
+
+  /** @param collapseAll true = plegar todos, false = expandir todos. */
+  function setAllSections(collapseAll: boolean) {
+    const next = collapseAll ? [...categories] : [];
+    setCollapsed(next);
+    writeCollapsed(next);
+  }
   const [projectToLink, setProjectToLink] = useState("");
   const [costType, setCostType] = useState<ProjectBoqCost["costType"]>("committed");
   const [costAmount, setCostAmount] = useState("");
@@ -972,14 +1019,59 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 const actual = boqCosts.filter((cost) => cost.boqItemId === item.id && cost.costType === "actual").reduce((sum, cost) => sum + cost.amount, 0);
                 return <section className="apu-boq-status" key={item.id}><div><p>Control BOQ · {item.code}</p><h3>{item.description}</h3></div><dl><div><dt>Presupuestado</dt><dd>{formatCOP(item.budgetTotal)}</dd></div><div><dt>Comprometido</dt><dd>{formatCOP(committed)}</dd></div><div><dt>Real</dt><dd>{formatCOP(actual)}</dd></div><div><dt>Variación</dt><dd className={actual > item.budgetTotal ? "is-over" : ""}>{formatCOP(item.budgetTotal - actual)}</dd></div></dl><div className="apu-boq-entry"><select value={costType} onChange={(event) => setCostType(event.target.value as ProjectBoqCost["costType"])}><option value="committed">Comprometido</option><option value="actual">Real ejecutado</option></select><input type="number" min="0" step="any" value={costAmount} onChange={(event) => setCostAmount(event.target.value)} placeholder="Valor COP" aria-label="Valor del costo" /><input value={costReference} onChange={(event) => setCostReference(event.target.value)} placeholder="OC, factura o referencia" aria-label="Referencia del costo" /><button type="button" onClick={() => void addBoqCost(item.id)}>Registrar</button></div></section>;
               })}
+              {isCollapsedReady ? (
+                <div className="apu-sections-tools" role="group" aria-label="Plegar o expandir los rubros del APU">
+                  <button
+                    type="button"
+                    onClick={() => setAllSections(false)}
+                    disabled={collapsed.length === 0}
+                    title="Expandir los cuatro rubros y mostrar sus recursos"
+                    aria-label="Expandir todos los rubros"
+                  >
+                    ▾ Expandir todo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAllSections(true)}
+                    disabled={collapsed.length === categories.length}
+                    title="Plegar los cuatro rubros para ver solo el resumen de cada uno"
+                    aria-label="Plegar todos los rubros"
+                  >
+                    ▸ Plegar todo
+                  </button>
+                </div>
+              ) : null}
               {categories.map((category) => {
                 const lines = selected.lines.filter((line) => line.category === category);
                 const inventoryChoices = category === "materials" || category === "equipment" ? products : [];
                 const marginPercent = selected.categoryMargins?.[category] ?? defaultApuMargins[category];
                 const costSubtotal = lines.reduce((sum, line) => sum + lineTotal(line), 0);
                 const sellingSubtotal = lines.reduce((sum, line) => sum + lineSellingTotal(line, selected.categoryMargins), 0);
+                const isCollapsed = collapsed.includes(category);
+                const bodyId = `apu-section-body-${category}`;
                 return (
-                  <section className="apu-section" key={category}>
+                  <section className={`apu-section ${isCollapsed ? "is-collapsed" : ""}`} key={category}>
+                    <div className="apu-section-bar">
+                      <button
+                        type="button"
+                        className="apu-section-toggle"
+                        onClick={() => toggleSection(category)}
+                        aria-expanded={!isCollapsed}
+                        aria-controls={bodyId}
+                        title={isCollapsed ? `Expandir ${apuCategoryMeta[category].label}` : `Plegar ${apuCategoryMeta[category].label}`}
+                      >
+                        <span className="apu-section-chevron" aria-hidden="true">{isCollapsed ? "▸" : "▾"}</span>
+                        <span className="apu-section-heading">
+                          <strong>{apuCategoryMeta[category].label}</strong>
+                          <small>
+                            {lines.length === 0
+                              ? "Sin recursos"
+                              : `${lines.length} recurso${lines.length === 1 ? "" : "s"} · ${formatCOP(costSubtotal)}`}
+                          </small>
+                        </span>
+                      </button>
+                    </div>
+                    <div id={bodyId} hidden={isCollapsed}>
                     <header>
                       <div><h3>{apuCategoryMeta[category].label}</h3><small>{apuCategoryMeta[category].description}</small></div>
                       {category === "labor" ? (
@@ -1044,6 +1136,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                         </span>
                       </div>
                     </footer>
+                    </div>
                   </section>
                 );
               })}

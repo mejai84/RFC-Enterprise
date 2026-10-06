@@ -5,7 +5,7 @@ import { apuTotal, lineTotal, type Apu, type ApuLine } from "../domain/apu";
 export type ApuProject = { id: string; code: string; name: string };
 export type ProjectBoqItem = { id: string; projectId: string; apuAnalysisId: string; apuVersionId: string; code: string; description: string; unit: string; contractQuantity: number; budgetTotal: number; status: string };
 export type ProjectBoqCost = { id: string; boqItemId: string; costType: "committed" | "actual"; amount: number; reference?: string; occurredAt: string };
-export type ApuWorkspaceData = { companyId: string; apus: Apu[]; projects: ApuProject[]; boqItems: ProjectBoqItem[]; boqCosts: ProjectBoqCost[] };
+export type ApuWorkspaceData = { companyId: string; apus: Apu[]; projects: ApuProject[]; boqItems: ProjectBoqItem[]; boqCosts: ProjectBoqCost[]; quoteOrigin?: Map<string, { code: string; title: string; client: string; status: string }> };
 
 const uuid = (value?: string) => Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value));
 const num = (value: unknown) => Number(value || 0);
@@ -31,6 +31,14 @@ export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
     supabase.from("project_boq_items").select("id, project_id, apu_analysis_id, apu_version_id, code, description, unit, contract_quantity, budget_total, status").eq("company_id", companyId).neq("status", "cancelled"),
   ]);
   if (analysisError) throw analysisError;
+
+  // Datos de la cotización de origen para poder buscar la actividad por
+  // código, nombre de actividad o empresa que contrata.
+  const quoteIds = Array.from(new Set((analysisRows ?? []).map((row) => row.quote_id).filter((value): value is string => Boolean(value))));
+  const { data: quoteRows } = quoteIds.length
+    ? await supabase.from("quotes").select("id, code, title, client, status").in("id", quoteIds)
+    : { data: [] };
+  const quoteById = new Map((quoteRows ?? []).map((quote) => [quote.id, quote] as const));
   const analysisIds = (analysisRows ?? []).map((row) => row.id);
   const { data: versionRows } = analysisIds.length ? await supabase.from("apu_versions").select("id, apu_analysis_id, version_number").in("apu_analysis_id", analysisIds).order("version_number", { ascending: false }) : { data: [] };
   const currentVersionByAnalysis = new Map<string, { id: string; version_number: number }>();
@@ -53,6 +61,7 @@ export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
       return { id: row.id, code: row.code, name: row.name, unit: row.unit, workQuantity: num(row.work_quantity), lines: version ? linesByVersion.get(version.id) ?? [] : [], quoteId: row.quote_id || undefined, quoteCode: row.quote_code || undefined, projectId: row.project_id || undefined, revision: version?.version_number ?? row.current_version, versionId: version?.id, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at } as Apu;
     }),
     projects: (projects ?? []).map((row) => ({ id: row.id, code: row.code, name: row.name })),
+    quoteOrigin: quoteById,
     boqItems: (boqRows ?? []).map((row) => ({ id: row.id, projectId: row.project_id, apuAnalysisId: row.apu_analysis_id, apuVersionId: row.apu_version_id, code: row.code, description: row.description, unit: row.unit, contractQuantity: num(row.contract_quantity), budgetTotal: num(row.budget_total), status: row.status })),
     boqCosts: (costRows ?? []).map((row) => ({ id: row.id, boqItemId: row.boq_item_id, costType: row.cost_type, amount: num(row.amount), reference: row.reference || undefined, occurredAt: row.occurred_at })),
   };

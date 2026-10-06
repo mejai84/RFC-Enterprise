@@ -382,3 +382,13 @@
   .apu-unitcost-op { display: none; }
   .apu-unitcost-step { flex: 1 1 100%; }
 }
+
+/* Busqueda de actividades en el modulo APU - 2026-10-07 */
+.apu-search { position: relative; display: block; margin-bottom: 0.3rem; }
+.apu-search input { width: 100%; min-height: 44px; padding: 0.5rem 2.1rem 0.5rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 9px; font: inherit; font-size: 0.82rem; box-sizing: border-box; }
+.apu-search button { position: absolute; right: 2px; top: 2px; width: 40px; height: 40px; border: 0; background: transparent; color: #64748b; font-size: 0.9rem; cursor: pointer; border-radius: 8px; }
+.apu-search button:hover { background: #eef2f6; color: #0f172a; }
+.apu-search-count { display: block; margin: 0 0 0.5rem; font-size: 0.7rem; color: #64748b; }
+.apu-search-empty { margin: 0 0 0.6rem; padding: 0.6rem 0.7rem; border-radius: 9px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 0.76rem; line-height: 1.45; }
+.apu-row-origin { display: block; color: #0f766e !important; font-weight: 600; }
+.apu-editor-origin { display: block; margin-top: 0.2rem; color: #0f766e; font-weight: 600; }

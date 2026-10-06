@@ -211,6 +211,9 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   const [projects, setProjects] = useState<ApuProject[]>([]);
   const [boqItems, setBoqItems] = useState<ProjectBoqItem[]>([]);
   const [boqCosts, setBoqCosts] = useState<ProjectBoqCost[]>([]);
+  /** Datos de la cotización de origen, para buscar y ubicar cada actividad. */
+  const [quoteOrigin, setQuoteOrigin] = useState<Map<string, { code: string; title: string; client: string; status: string }>>(new Map());
+  const [search, setSearch] = useState("");
   const [projectToLink, setProjectToLink] = useState("");
   const [costType, setCostType] = useState<ProjectBoqCost["costType"]>("committed");
   const [costAmount, setCostAmount] = useState("");
@@ -223,8 +226,33 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     () => quoteContext?.quoteId ? apus.filter((apu) => apu.quoteId === quoteContext.quoteId) : apus,
     [apus, quoteContext],
   );
+  /**
+   * Filtro de búsqueda del módulo: código del APU, nombre de la actividad,
+   * código o título de la cotización y empresa que contrata.
+   */
+  const filteredApus = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const collapse = (value: string | undefined) =>
+      (value ?? "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    const needle = collapse(term);
+    if (!needle) return visibleApus;
+    return visibleApus.filter((apu) => {
+      const origin = apu.quoteId ? quoteOrigin.get(apu.quoteId) : undefined;
+      const haystack = collapse(
+        [apu.code, apu.name, apu.unit, apu.quoteCode, origin?.code, origin?.title, origin?.client]
+          .filter(Boolean)
+          .join(" "),
+      );
+      return needle.split(/\s+/).every((word) => haystack.includes(word));
+    });
+  }, [visibleApus, search, quoteOrigin]);
+
   /** Costo por unidad de la actividad: costo directo total ÷ cantidad de la obra. */
   const selectedCost = selected ? apuCostTotal(selected) : 0;
+  const selectedOrigin = selected?.quoteId ? quoteOrigin.get(selected.quoteId) : undefined;
   const selectedQuantity = selected ? Number(selected.workQuantity) || 0 : 0;
   const unitCost = selectedQuantity > 0 ? selectedCost / selectedQuantity : 0;
   const unitSelling = selectedQuantity > 0 && selected ? apuSellingTotal(selected) / selectedQuantity : 0;
@@ -288,6 +316,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
           setProjects(mergeProjects(remote.projects));
           setBoqItems(remote.boqItems);
           setBoqCosts(remote.boqCosts);
+          setQuoteOrigin(remote.quoteOrigin ?? new Map());
           setApus(remote.apus);
           const visible = quoteContext?.quoteId ? remote.apus.filter((apu) => apu.quoteId === quoteContext.quoteId) : remote.apus;
           setSelectedId(visible[0]?.id || "");
@@ -652,6 +681,33 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
       <section className="apu-layout">
         <aside className="dashboard-panel apu-list">
           <div className="panel-title"><div><p>APUs</p><h2>{visibleApus.length} análisis</h2></div></div>
+          <label className="apu-search">
+            <span className="sr-only">Buscar análisis de precios unitarios</span>
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar por código, actividad o empresa…"
+              aria-label="Buscar por código, nombre de la actividad o empresa que contrata"
+              aria-describedby="apu-search-count"
+              title="Busca por código del APU, nombre de la actividad, código o cliente de la cotización"
+            />
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Limpiar la búsqueda de análisis"
+                title="Limpiar búsqueda"
+              >
+                ✕
+              </button>
+            ) : null}
+          </label>
+          <small id="apu-search-count" className="apu-search-count" aria-live="polite">
+            {search.trim()
+              ? `${filteredApus.length} de ${visibleApus.length} coinciden`
+              : "Busca por código, actividad o empresa que contrata."}
+          </small>
           <div className="apu-analysis-total" aria-label="Total del análisis">
             <span>Total de las {analysisTotals.count} actividades</span>
             <strong>{formatCOP(analysisTotals.selling)}</strong>
@@ -659,13 +715,34 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
               Costo {formatCOP(analysisTotals.cost)} · Ganancia +{formatCOP(analysisTotals.profit)}
             </small>
           </div>
-          {visibleApus.map((apu) => (
-            <button type="button" key={apu.id} className={`apu-row ${apu.id === selectedId ? "is-selected" : ""}`} onClick={() => setSelectedId(apu.id)}>
-              <strong>{apu.code}</strong>
-              <span>{apu.name}</span>
-              <small>Venta: {formatCOP(apuSellingTotal(apu))}</small>
-            </button>
-          ))}
+          {filteredApus.length === 0 && visibleApus.length > 0 ? (
+            <p className="apu-search-empty">
+              Ninguna actividad coincide con “{search}”. Puedes buscarla por código (APU-001), por nombre de la
+              actividad o por la empresa que contrata.
+            </p>
+          ) : null}
+          {filteredApus.map((apu) => {
+            const origin = apu.quoteId ? quoteOrigin.get(apu.quoteId) : undefined;
+            return (
+              <button
+                type="button"
+                key={apu.id}
+                className={`apu-row ${apu.id === selectedId ? "is-selected" : ""}`}
+                onClick={() => setSelectedId(apu.id)}
+                title={`${apu.code} · ${apu.name}${origin?.client ? ` · ${origin.client}` : ""}`}
+              >
+                <strong>{apu.code}</strong>
+                <span>{apu.name}</span>
+                {origin?.client || apu.quoteCode ? (
+                  <small className="apu-row-origin">
+                    {origin?.client ? origin.client : origin?.title}
+                    {apu.quoteCode ? ` · ${apu.quoteCode}` : ""}
+                  </small>
+                ) : null}
+                <small>Venta: {formatCOP(apuSellingTotal(apu))}</small>
+              </button>
+            );
+          })}
           <form className="apu-new-form" onSubmit={createApu}>
             <input name="name" required placeholder="Actividad: trazado y replanteo" />
             <div><ApuUnitCombobox name="unit" value={newApuUnit} onChange={setNewApuUnit} /><input name="quantity" type="number" min="0.01" step="any" defaultValue="1" aria-label="Cantidad de obra" /></div>
@@ -688,6 +765,13 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                   <p>{selected.code} · {selected.unit}</p>
                   <h2>{selected.name}</h2>
                   <small>Cantidad de obra: {selected.workQuantity.toLocaleString("es-CO")} {selected.unit}</small>
+                  {selectedOrigin ? (
+                    <small className="apu-editor-origin">
+                      Cotización {selectedOrigin.code}
+                      {selectedOrigin.client ? ` · ${selectedOrigin.client}` : ""}
+                      {selectedOrigin.title ? ` · ${selectedOrigin.title}` : ""}
+                    </small>
+                  ) : null}
                 </div>
                 <strong className="apu-total">
                   {formatCOP(apuSellingTotal(selected))}

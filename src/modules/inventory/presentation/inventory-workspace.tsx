@@ -13,6 +13,7 @@ import {
   withDefaultInventoryAliases,
 } from "../index";
 import { InlineCatalogCombobox } from "./inline-catalog-combobox";
+import { WriteoffsPanel } from "./writeoffs-panel";
 import { CurrencyInput } from "@/shared/components/currency-input";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 
@@ -32,7 +33,7 @@ const movementLabels: Record<MovementType, string> = {
   return: "DevoluciÓn a Bodega",
 };
 
-type TabKey = "catalog" | "movements" | "projects" | "low-stock" | "settings";
+type TabKey = "catalog" | "movements" | "projects" | "low-stock" | "writeoffs" | "settings";
 
 function formatDateTime() {
   const date = new Date();
@@ -632,6 +633,14 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
         >
           ⚠️ Alertas de Stock Mínimo {lowStockCount > 0 && <span className="tab-badge">{lowStockCount}</span>}
         </button>
+        <button
+          className={`tab-btn ${activeTab === "writeoffs" ? "active" : ""}`}
+          onClick={() => setActiveTab("writeoffs")}
+          type="button"
+          title="Bajas de inventario por deterioro, daño, vencimiento o pérdida"
+        >
+          🗑️ Bajas de Inventario
+        </button>
         <button className={`tab-btn ${activeTab === "settings" ? "active" : ""}`} onClick={() => setActiveTab("settings")} type="button"><svg aria-hidden="true" className="inventory-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 2-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-2.8v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3L9 19l-2-2 .1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H5.6v-2.8h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L7 8.2l2-2 .1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.2h2.8V5a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 2 2-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2V14H21a1.7 1.7 0 0 0-1.6 1Z" /></svg>Configuración de inventario</button>
         </>}
       </nav>
@@ -1171,6 +1180,22 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
               </tbody>
             </table>
           </div>
+        </section>
+      )}
+      {!isMovementsView && activeTab === "writeoffs" && (
+        <section className="dashboard-panel writeoffs-tab-panel">
+          <WriteoffsPanel
+            products={products}
+            scope={scope}
+            notify={showToast}
+            onStockChanged={(stockId, delta) =>
+              setProducts((current) =>
+                current.map((product) =>
+                  product.id === stockId ? { ...product, available: Math.max(0, product.available + delta) } : product,
+                ),
+              )
+            }
+          />
         </section>
       )}
       {!isMovementsView && activeTab === "settings" && (

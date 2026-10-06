@@ -33,7 +33,6 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 | --- | --- | --- | --- |
 | COM-002 | Alta | Módulo de Compras y Proveedores | Catálogo de proveedores, orden de compra generada desde una requisición aprobada, recepción parcial y total, factura asociada y entrada automática al inventario con recálculo de costo promedio ponderado |
 | INV-009 | Alta | Reposición y sugerencia de compra | Punto de reorden por artículo, propuesta de compra consolidada y recepción parcial |
-| INV-008 | Alta | Bajas por deterioro, daño o vencimiento | Ajuste de salida con causa, evidencia, responsable, aprobación por umbral y acta imprimible |
 | TALL-001 | Alta | Orden de taller y remisión de entrega | Recepción de equipo, diagnóstico, trabajo ejecutado, repuestos, entrega con firma en documento institucional imprimible |
 | INV-003 | Alta | Operaciones auditables de inventario | Cerrar la migración pendiente de compras y conteos bajo RLS con auditoría completa de responsables |
 | INV-004 | Media | Alertas y reportes operativos | Consumo por obra, rotación, inmovilizado y valoración por grupo |

@@ -166,7 +166,7 @@
   @page { size:A4; margin:10mm; }
 }
 
-/* -- APU: barra de acciones y resumen acumulado del análisis (2026-10-06) -- */
+/* -- APU: barra de acciones y resumen acumulado del analisis (2026-10-06) -- */
 .apu-actions-bar {
   align-items: center;
   background: var(--canvas);

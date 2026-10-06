@@ -120,97 +120,21 @@ export function DashboardExecutiveWorkspace({
   initialProducts?: StockProduct[];
 }) {
   const [viewerName, setViewerName] = useState("Usuario");
-  // Sincronización con localStorage
-  const [products, setProducts] = useState<StockProduct[]>(() => {
-    prepareRealDataStorage();
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_inventory_products");
-      if (saved) {
-        try {
-          return withDefaultInventoryAliases(JSON.parse(saved));
-        } catch {}
-      }
-    }
-    return initialProducts;
-  });
+  const [scope, setScope] = useState<{ companyId: string; branchId: string } | null>(null);
+  // Estado operativo proveniente de Supabase.
+  const [products, setProducts] = useState<StockProduct[]>(initialProducts);
 
-  const [movements, setMovements] = useState<InventoryMovement[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_inventory_movements");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {}
-      }
-    }
-    return [];
-  });
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
 
-  const [projects, setProjects] = useState<Project[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_inventory_projects");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {}
-      }
-    }
-    return [];
-  });
+  const [projects, setProjects] = useState<Project[]>([]);
 
-  const [requisitions, setRequisitions] = useState<MaterialRequisition[]>(
-    () => {
-      if (typeof window !== "undefined") {
-        const saved = localStorage.getItem("rfc_inventory_requisitions");
-        if (saved) {
-          try {
-            return JSON.parse(saved);
-          } catch {}
-        }
-      }
-      return [];
-    },
-  );
+  const [requisitions, setRequisitions] = useState<MaterialRequisition[]>([]);
 
-  const [toolLoans, setToolLoans] = useState<ToolLoan[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_inventory_tool_loans");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {}
-      }
-    }
-    return [];
-  });
+  const [toolLoans, setToolLoans] = useState<ToolLoan[]>([]);
 
-  const [quotes, setQuotes] = useState<Quote[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_quotes");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          /* Use the operational examples below. */
-        }
-      }
-    }
-    return [];
-  });
+  const [quotes, setQuotes] = useState<Quote[]>([]);
 
-  const [apus, setApus] = useState<Apu[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rfc_apus");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          /* No saved APUs yet. */
-        }
-      }
-    }
-    return [];
-  });
+  const [apus, setApus] = useState<Apu[]>([]);
 
   useEffect(() => {
     const supabase = inventoryClient();
@@ -221,57 +145,19 @@ export function DashboardExecutiveWorkspace({
       if (!user || !active) return;
       const fallback = String(user.user_metadata.full_name || user.email || "Usuario");
       const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
+      const { data: membership } = await supabase.from("user_roles").select("company_id,branch_id").eq("user_id", user.id).limit(1).maybeSingle();
+      if (membership?.company_id && membership.branch_id && active) setScope({ companyId: membership.company_id, branchId: membership.branch_id });
       if (active) setViewerName(profile?.display_name?.trim() || fallback);
     });
     return () => { active = false; };
   }, []);
-
-  // Persistir cambios en localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("rfc_inventory_products", JSON.stringify(products));
-    }
-  }, [products]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        "rfc_inventory_movements",
-        JSON.stringify(movements),
-      );
-    }
-  }, [movements]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("rfc_inventory_projects", JSON.stringify(projects));
-    }
-  }, [projects]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        "rfc_inventory_requisitions",
-        JSON.stringify(requisitions),
-      );
-    }
-  }, [requisitions]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        "rfc_inventory_tool_loans",
-        JSON.stringify(toolLoans),
-      );
-    }
-  }, [toolLoans]);
 
   useEffect(() => {
     const supabase = inventoryClient();
     if (!supabase) return;
 
     const loadSharedOperations = async () => {
-      const [projectResult, requisitionResult] = await Promise.all([
+      const [projectResult, requisitionResult, quoteResult, apuResult, movementResult] = await Promise.all([
         supabase
           .from("projects")
           .select("id,code,name,client,location,material_budget,status,start_date,estimated_end_date,actual_end_date,created_at")
@@ -281,6 +167,9 @@ export function DashboardExecutiveWorkspace({
           .select("id,code,project_id,requested_by_name,status,created_at,needed_by,notes,project:projects(name),lines:inventory_requisition_lines(stock_id,item_name_snapshot,requested_quantity,unit_snapshot,unit_cost_snapshot)")
           .order("created_at", { ascending: false })
           .limit(30),
+        supabase.from("quotes").select("*").order("created_at", { ascending: false }),
+        supabase.from("apu_analyses").select("*").order("created_at", { ascending: false }),
+        supabase.from("inventory_movements").select("id,stock_id,movement_type,quantity,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inner(inventory_items!inner(name,unit)),projects(name)").order("occurred_at", { ascending: false }),
       ]);
 
       if (!projectResult.error && projectResult.data?.length) {
@@ -329,6 +218,9 @@ export function DashboardExecutiveWorkspace({
           }),
         );
       }
+      if (!quoteResult.error && quoteResult.data) setQuotes(quoteResult.data as Quote[]);
+      if (!apuResult.error && apuResult.data) setApus(apuResult.data as Apu[]);
+      if (!movementResult.error && movementResult.data) setMovements(movementResult.data.map((movement) => { const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock; const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items); const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects; return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: movement.occurred_at, reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined }; }));
     };
 
     void loadSharedOperations();
@@ -337,10 +229,7 @@ export function DashboardExecutiveWorkspace({
   useEffect(() => {
     const syncCommercialModules = () => {
       try {
-        const storedQuotes = localStorage.getItem("rfc_quotes");
-        if (storedQuotes) setQuotes(JSON.parse(storedQuotes));
-        const storedApus = localStorage.getItem("rfc_apus");
-        setApus(storedApus ? JSON.parse(storedApus) : []);
+        return;
       } catch {
         // Mantener el último resumen válido si el almacenamiento no está disponible.
       }
@@ -679,7 +568,7 @@ export function DashboardExecutiveWorkspace({
   );
 
   // Handle New Dispatch (Salida a Obra)
-  const handleDispatchSubmit = (e: FormEvent) => {
+  const handleDispatchSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const qty = parseFloat(quantityInput);
     if (!selectedProduct)
@@ -696,8 +585,13 @@ export function DashboardExecutiveWorkspace({
     const unitCost = selectedProduct.unitCost || 25000;
     const totalCost = qty * unitCost;
 
+    const db = inventoryClient();
+    if (!db || !scope || !prj) return alert("No fue posible validar la empresa y la obra del despacho.");
+    const reference = `VALE-${new Date().getFullYear()}-${String(movements.length + 1).padStart(3, "0")}`;
+    const { data: savedMovement, error } = await db.from("inventory_movements").insert({ stock_id: selectedProduct.id, company_id: scope.companyId, branch_id: scope.branchId, movement_type: "exit", quantity: qty, unit_cost: unitCost, reference, notes: notesInput || null, occurred_at: new Date().toISOString(), project_id: prj.id }).select("id").single();
+    if (error || !savedMovement) return alert(error?.message ?? "No fue posible guardar el vale en la base de datos.");
     const newMovement: InventoryMovement = {
-      id: `mov-${Date.now()}`,
+      id: savedMovement.id,
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       type: "exit",
@@ -706,7 +600,7 @@ export function DashboardExecutiveWorkspace({
       unitCost,
       totalCost,
       occurredAt: formatDateTime(),
-      reference: `VALE-2026-${String(movements.length + 1).padStart(3, "0")}`,
+      reference,
       projectId: prj?.id,
       projectName: prj?.name,
       responsible: responsibleInput,
@@ -731,7 +625,7 @@ export function DashboardExecutiveWorkspace({
   };
 
   // Handle Devolución de Sobrante
-  const handleReturnSubmit = (e: FormEvent) => {
+  const handleReturnSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const qty = parseFloat(quantityInput);
     if (!selectedProduct)
@@ -744,8 +638,13 @@ export function DashboardExecutiveWorkspace({
     const unitCost = selectedProduct.unitCost || 25000;
     const totalCost = qty * unitCost;
 
+    const db = inventoryClient();
+    if (!db || !scope) return alert("No fue posible validar la empresa para la devolución.");
+    const reference = `DEV-${new Date().getFullYear()}-${String(movements.length + 1).padStart(3, "0")}`;
+    const { data: savedMovement, error } = await db.from("inventory_movements").insert({ stock_id: selectedProduct.id, company_id: scope.companyId, branch_id: scope.branchId, movement_type: "entry", quantity: qty, unit_cost: unitCost, reference, notes: `Devolución sobrante de obra: ${notesInput}`, occurred_at: new Date().toISOString(), project_id: prj?.id ?? null }).select("id").single();
+    if (error || !savedMovement) return alert(error?.message ?? "No fue posible guardar la devolución en la base de datos.");
     const newMovement: InventoryMovement = {
-      id: `mov-${Date.now()}`,
+      id: savedMovement.id,
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       type: "return",
@@ -754,7 +653,7 @@ export function DashboardExecutiveWorkspace({
       unitCost,
       totalCost,
       occurredAt: formatDateTime(),
-      reference: `DEV-2026-${String(movements.length + 1).padStart(3, "0")}`,
+      reference,
       projectId: prj?.id,
       projectName: prj?.name,
       responsible: responsibleInput,
@@ -782,15 +681,21 @@ export function DashboardExecutiveWorkspace({
   };
 
   // Handle Nueva Requisición
-  const handleRequisitionSubmit = (e: FormEvent) => {
+  const handleRequisitionSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedProduct)
       return alert("Selecciona un material de la lista antes de continuar.");
     const prj = projects.find((p) => p.id === reqProject);
+    if (!prj) return alert("Selecciona una obra válida para la requisición.");
+    const db = inventoryClient();
+    if (!db) return alert("No fue posible conectar con la base de datos.");
+    const quantity = parseFloat(quantityInput) || 10;
+    const { data: savedReq, error } = await db.rpc("create_inventory_requisition", { target_project: prj.id, requester_name: reqRequestedBy, target_needed_by: null, request_notes: reqNotes || null, request_lines: [{ stock_id: selectedProduct.id, quantity }] });
+    if (error || !savedReq?.[0]) return alert(error?.message ?? "No fue posible guardar la requisición en la base de datos.");
     const newReq: MaterialRequisition = {
-      id: `req-${Date.now()}`,
-      code: `REQ-2026-${String(requisitions.length + 1).padStart(3, "0")}`,
-      projectId: prj?.id || "prj-01",
+      id: savedReq[0].requisition_id,
+      code: savedReq[0].requisition_code,
+      projectId: prj.id,
       projectName: prj?.name || "Obra General",
       requestedBy: reqRequestedBy,
       status: "pending",
@@ -800,7 +705,7 @@ export function DashboardExecutiveWorkspace({
         {
           productId: selectedProduct.id,
           productName: selectedProduct.name,
-          quantity: parseFloat(quantityInput) || 10,
+          quantity,
           unit: selectedProduct.unit,
           unitCost: selectedProduct.unitCost || 25000,
         },

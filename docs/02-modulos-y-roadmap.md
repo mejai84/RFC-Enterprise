@@ -158,3 +158,5 @@ La evolución se ejecutará en este orden para que cada fase entregue control op
 ## Persistencia operativa (actualización 2026-10-06)
 
 Inventarios y Movimientos confirman altas, entradas, salidas, mínimos, ubicaciones y obras en Supabase antes de reflejarlas en pantalla. La creación de artículo usa una operación transaccional que registra ficha, existencia y movimiento de apertura como una sola unidad.
+
+Resumen ejecutivo e Informes se alimentan de las tablas de Inventario, Proyectos, Requisiciones, Cotizaciones y APU; no leen ni guardan indicadores operativos en el navegador.

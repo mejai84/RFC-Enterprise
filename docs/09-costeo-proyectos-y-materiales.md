@@ -220,3 +220,5 @@ export type ToolLoan = {
 ## Persistencia de inventario y costo (2026-10-06)
 
 Las entradas y salidas se insertan en el Kardex de Supabase. El disparador de base actualiza las existencias y, cuando corresponde, aplica el costo promedio ponderado. La interfaz solo actualiza su estado después de recibir confirmación; no se considera guardado un cambio en memoria o navegador.
+
+Las requisiciones se emiten mediante `create_inventory_requisition`, que conserva la obra, el solicitante y la instantánea de cantidad/unidad/costo de cada existencia solicitada.

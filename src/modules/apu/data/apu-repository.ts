@@ -1,6 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
-import { apuTotal, lineTotal, type Apu, type ApuLine } from "../domain/apu";
+import { apuTotal, defaultApuMargins, lineTotal, type Apu, type ApuLine } from "../domain/apu";
 
 export type ApuProject = { id: string; code: string; name: string };
 export type ProjectBoqItem = { id: string; projectId: string; apuAnalysisId: string; apuVersionId: string; code: string; description: string; unit: string; contractQuantity: number; budgetTotal: number; status: string };
@@ -9,6 +9,38 @@ export type ApuWorkspaceData = { companyId: string; apus: Apu[]; projects: ApuPr
 
 const uuid = (value?: string) => Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value));
 const num = (value: unknown) => Number(value || 0);
+
+const MARGIN_KEYS = ["materials", "equipment", "labor", "transport"] as const;
+
+/**
+ * Los márgenes llegan como jsonb y solo contienen los rubros personalizados.
+ * Se ignoran claves desconocidas y valores no numéricos o fuera de rango, para que
+ * un dato corrupto no rompa el cálculo de toda la actividad.
+ */
+function readMargins(value: unknown): Apu["categoryMargins"] | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const source = value as Record<string, unknown>;
+  const result: NonNullable<Apu["categoryMargins"]> = {};
+  for (const key of MARGIN_KEYS) {
+    const raw = source[key];
+    const parsed = typeof raw === "number" ? raw : Number(raw);
+    if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 1000) result[key] = parsed;
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+/** Serializa solo los rubros que difieren del valor por defecto del sistema. */
+function writeMargins(margins: Apu["categoryMargins"]): Record<string, number> | null {
+  if (!margins) return null;
+  const result: Record<string, number> = {};
+  for (const key of MARGIN_KEYS) {
+    const value = margins[key];
+    if (typeof value === "number" && Number.isFinite(value) && value !== defaultApuMargins[key]) {
+      result[key] = value;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
 
 function client() {
   if (!isSupabaseConfigured || !supabaseUrl || !supabasePublishableKey) return null;
@@ -26,7 +58,7 @@ export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
   if (!companyId) throw new Error("Tu cuenta no está vinculada a una empresa y rol. Un administrador debe asignarte el acceso antes de guardar APUs.");
 
   const [{ data: analysisRows, error: analysisError }, { data: projects }, { data: boqRows }] = await Promise.all([
-    supabase.from("apu_analyses").select("id, code, name, unit, work_quantity, quote_id, quote_code, project_id, current_version, status, created_at, updated_at").eq("company_id", companyId).neq("status", "archived").order("updated_at", { ascending: false }),
+    supabase.from("apu_analyses").select("id, code, name, unit, work_quantity, quote_id, quote_code, project_id, current_version, status, category_margins, created_at, updated_at").eq("company_id", companyId).neq("status", "archived").order("updated_at", { ascending: false }),
     supabase.from("projects").select("id, code, name").eq("company_id", companyId).in("status", ["pending", "active", "on_hold"]).order("name"),
     supabase.from("project_boq_items").select("id, project_id, apu_analysis_id, apu_version_id, code, description, unit, contract_quantity, budget_total, status").eq("company_id", companyId).neq("status", "cancelled"),
   ]);
@@ -34,10 +66,11 @@ export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
 
   // Datos de la cotización de origen para poder buscar la actividad por
   // código, nombre de actividad o empresa que contrata.
-  const quoteIds = Array.from(new Set((analysisRows ?? []).map((row) => row.quote_id).filter((value): value is string => Boolean(value))));
-  const { data: quoteRows } = quoteIds.length
-    ? await supabase.from("quotes").select("id, code, title, client, status").in("id", quoteIds)
-    : { data: [] };
+  const { data: quoteRows } = await supabase
+    .from("quotes")
+    .select("id, code, title, client, status")
+    .eq("company_id", companyId)
+    .order("updated_at", { ascending: false });
   const quoteById = new Map((quoteRows ?? []).map((quote) => [quote.id, quote] as const));
   const analysisIds = (analysisRows ?? []).map((row) => row.id);
   const { data: versionRows } = analysisIds.length ? await supabase.from("apu_versions").select("id, apu_analysis_id, version_number").in("apu_analysis_id", analysisIds).order("version_number", { ascending: false }) : { data: [] };
@@ -58,7 +91,7 @@ export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
     companyId,
     apus: (analysisRows ?? []).map((row) => {
       const version = currentVersionByAnalysis.get(row.id);
-      return { id: row.id, code: row.code, name: row.name, unit: row.unit, workQuantity: num(row.work_quantity), lines: version ? linesByVersion.get(version.id) ?? [] : [], quoteId: row.quote_id || undefined, quoteCode: row.quote_code || undefined, projectId: row.project_id || undefined, revision: version?.version_number ?? row.current_version, versionId: version?.id, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at } as Apu;
+      return { id: row.id, code: row.code, name: row.name, unit: row.unit, workQuantity: num(row.work_quantity), lines: version ? linesByVersion.get(version.id) ?? [] : [], quoteId: row.quote_id || undefined, quoteCode: row.quote_code || undefined, projectId: row.project_id || undefined, revision: version?.version_number ?? row.current_version, versionId: version?.id, status: row.status, categoryMargins: readMargins(row.category_margins), createdAt: row.created_at, updatedAt: row.updated_at } as Apu;
     }),
     projects: (projects ?? []).map((row) => ({ id: row.id, code: row.code, name: row.name })),
     quoteOrigin: quoteById,
@@ -71,7 +104,7 @@ export async function saveApuAnalysis(companyId: string, apu: Apu) {
   const supabase = client();
   if (!supabase) throw new Error("Supabase no está configurado.");
   const directCost = apuTotal(apu);
-  const { error: analysisError } = await supabase.from("apu_analyses").upsert({ id: apu.id, company_id: companyId, project_id: uuid(apu.projectId) ? apu.projectId : null, quote_id: uuid(apu.quoteId) ? apu.quoteId : null, quote_code: apu.quoteCode || null, code: apu.code, name: apu.name, unit: apu.unit, work_quantity: apu.workQuantity, status: apu.status === "approved" ? "approved" : "draft" }, { onConflict: "id" });
+  const { error: analysisError } = await supabase.from("apu_analyses").upsert({ id: apu.id, company_id: companyId, project_id: uuid(apu.projectId) ? apu.projectId : null, quote_id: uuid(apu.quoteId) ? apu.quoteId : null, quote_code: apu.quoteCode || null, code: apu.code, name: apu.name, unit: apu.unit, work_quantity: apu.workQuantity, status: apu.status === "approved" ? "approved" : "draft", category_margins: writeMargins(apu.categoryMargins) }, { onConflict: "id" });
   if (analysisError) throw analysisError;
   const { data: latest } = await supabase.from("apu_versions").select("version_number").eq("apu_analysis_id", apu.id).order("version_number", { ascending: false }).limit(1).maybeSingle();
   const versionNumber = (latest?.version_number ?? 0) + 1;

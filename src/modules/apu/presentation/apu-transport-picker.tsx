@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import {
   transportCategoryLabels,
   type TransportCatalog,
@@ -17,7 +17,9 @@ type Props = {
   catalog: TransportCatalog;
   isLoading: boolean;
   onAdd: (item: TransportItem) => void;
-  onAddManual: () => void;
+  onAddManual: (query: string) => void;
+  /** Limpia el buscador; se invoca al aceptar el alta manual. */
+  clearSignal?: number;
   onSaveItem: (item: Omit<TransportItem, "id" | "createdAt" | "updatedAt"> & { id?: string }) => Promise<void>;
   onDeleteItem: (itemId: string) => Promise<void>;
 };
@@ -27,6 +29,7 @@ export function ApuTransportPicker({
   isLoading,
   onAdd,
   onAddManual,
+  clearSignal = 0,
   onSaveItem,
   onDeleteItem,
 }: Props) {
@@ -60,6 +63,13 @@ export function ApuTransportPicker({
   const selected = catalog.items.find((item) => item.id === selectedId);
   const showResults = isOpen && !isLoading && matches.length > 0;
   const visibleMatches = matches.slice(0, 40);
+
+  // Cuando el padre confirma el alta manual, el buscador queda limpio.
+  useEffect(() => {
+    setQuery("");
+    setSelectedId("");
+    setIsOpen(false);
+  }, [clearSignal]);
 
   function pick(item: TransportItem) {
     setSelectedId(item.id);
@@ -177,7 +187,7 @@ export function ApuTransportPicker({
           <button
             type="button"
             className="apu-secondary-action"
-            onClick={onAddManual}
+            onClick={() => onAddManual(query)}
             title="Agregar un flete no catalogado para esta actividad"
           >
             + Manual

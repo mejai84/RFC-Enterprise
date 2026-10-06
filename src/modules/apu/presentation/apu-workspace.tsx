@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import {
   apuCategoryMeta,
   apuCostTotal,
@@ -41,7 +42,10 @@ import { ApuActivityCatalog } from "./apu-activity-catalog";
 import { ApuLaborPicker } from "./apu-labor-picker";
 import { ApuPrintModal } from "./apu-print-modal";
 import { ApuImportModal } from "./apu-import-modal";
+import { ApuNewModal } from "./apu-new-modal";
+import { ApuManualResourceModal, type ManualResource } from "./apu-manual-resource-modal";
 import { ApuMoneyField } from "./apu-money-field";
+import { ApuUnitCombobox } from "./apu-unit-combobox";
 import { exportApuToXlsx } from "./apu-xlsx-export";
 import { ApuResourcePicker } from "./apu-resource-picker";
 import { ApuTransportPicker } from "./apu-transport-picker";
@@ -160,59 +164,16 @@ const measurementUnits: MeasurementUnit[] = [
   { name: "Grado Celsius", symbol: "°C", aliases: ["celsius", "grado", "temperatura"] },
 ];
 
-const normalizeSearchText = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-CO");
-
-function ApuUnitCombobox({ value, onChange, name, className = "" }: { value: string; onChange: (unit: string) => void; name?: string; className?: string }) {
-  const listId = useId();
-  const [query, setQuery] = useState(value);
-  const [isOpen, setIsOpen] = useState(false);
-  const normalizedQuery = normalizeSearchText(query.trim());
-  const results = measurementUnits.filter((unit) => {
-    const searchable = [unit.name, unit.symbol, ...(unit.aliases ?? [])].join(" ");
-    return !normalizedQuery || normalizeSearchText(searchable).includes(normalizedQuery);
-  });
-
-  function selectUnit(unit: MeasurementUnit) {
-    onChange(unit.symbol);
-    setQuery(unit.symbol);
-    setIsOpen(false);
-  }
-
-  return (
-    <div className={`apu-unit-combobox ${className}`}>
-      {name ? <input type="hidden" name={name} value={value} /> : null}
-      <input
-        value={query}
-        role="combobox"
-        aria-label="Unidad de medida"
-        aria-autocomplete="list"
-        aria-controls={listId}
-        aria-expanded={isOpen}
-        placeholder="Unidad"
-        onFocus={(event) => { setIsOpen(true); event.currentTarget.select(); }}
-        onChange={(event) => { setQuery(event.target.value); setIsOpen(true); }}
-        onBlur={() => window.setTimeout(() => { setIsOpen(false); setQuery(value); }, 120)}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") { setIsOpen(false); setQuery(value); }
-          if (event.key === "Enter" && isOpen && results.length) { event.preventDefault(); selectUnit(results[0]); }
-        }}
-      />
-      {isOpen ? (
-        <div id={listId} className="apu-unit-options" role="listbox" aria-label="Unidades de medida disponibles">
-          {results.length ? results.map((unit) => (
-            <button type="button" role="option" aria-selected={value === unit.symbol} key={unit.symbol} onMouseDown={(event) => event.preventDefault()} onClick={() => selectUnit(unit)}>
-              <span>{unit.name}</span><strong>{unit.symbol}</strong>
-            </button>
-          )) : <p>No hay una unidad que coincida.</p>}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 type QuoteContext = { quoteId?: string; quoteCode?: string; quoteTitle?: string; quoteStatus?: string };
+type QuoteOption = { id: string; code: string; title: string; client: string; status: string };
+
+const filterApusByQuoteContext = (items: Apu[], quoteId?: string) =>
+  quoteId
+    ? items.filter((apu) => apu.quoteId === quoteId)
+    : items.filter((apu) => !apu.quoteId);
 
 export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) {
+  const router = useRouter();
   const isQuoteApuReadOnly = Boolean(quoteContext?.quoteId && !["estimating", "revision_requested"].includes(quoteContext.quoteStatus ?? "estimating"));
   const [products, setProducts] = useState<StockProduct[]>([]);
   const [catalogStatus, setCatalogStatus] = useState<{
@@ -237,9 +198,11 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   const [boqCosts, setBoqCosts] = useState<ProjectBoqCost[]>([]);
   /** Datos de la cotización de origen, para buscar y ubicar cada actividad. */
   const [quoteOrigin, setQuoteOrigin] = useState<Map<string, { code: string; title: string; client: string; status: string }>>(new Map());
+  const [quoteSearch, setQuoteSearch] = useState("");
   const [search, setSearch] = useState("");
   /** Rubros plegados. Solo es una preferencia visual, no afecta los datos guardados. */
   const [collapsed, setCollapsed] = useState<ApuCategory[]>([]);
+  const [isShortageCollapsed, setIsShortageCollapsed] = useState(false);
   const [isCollapsedReady, setIsCollapsedReady] = useState(false);
 
   useEffect(() => {
@@ -261,18 +224,47 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     setCollapsed(next);
     writeCollapsed(next);
   }
+
+  function toggleShortagePanel() {
+    setIsShortageCollapsed((current) => !current);
+  }
   const [projectToLink, setProjectToLink] = useState("");
   const [costType, setCostType] = useState<ProjectBoqCost["costType"]>("committed");
   const [costAmount, setCostAmount] = useState("");
   const [costReference, setCostReference] = useState("");
   const [printingApu, setPrintingApu] = useState<Apu | null>(null);
-  const [newApuUnit, setNewApuUnit] = useState("m²");
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  /** Recurso que se está ingresando a mano, con el texto que ya se había buscado. */
+  const [manualResource, setManualResource] = useState<{ category: ApuCategory; query: string } | null>(null);
+  /** Se incrementa al aceptar un alta manual para limpiar el buscador del rubro. */
+  const [clearSearchSignal, setClearSearchSignal] = useState(0);
   const selected = useMemo(() => apus.find((apu) => apu.id === selectedId), [apus, selectedId]);
   const visibleApus = useMemo(
-    () => quoteContext?.quoteId ? apus.filter((apu) => apu.quoteId === quoteContext.quoteId) : apus,
-    [apus, quoteContext],
+    () => filterApusByQuoteContext(apus, quoteContext?.quoteId),
+    [apus, quoteContext?.quoteId],
   );
+  const quoteOptions = useMemo<QuoteOption[]>(
+    () => Array.from(quoteOrigin, ([id, quote]) => ({ id, ...quote })).sort((a, b) => a.code.localeCompare(b.code, "es-CO")),
+    [quoteOrigin],
+  );
+  const matchingQuotes = useMemo(() => {
+    const search = quoteSearch.trim().toLocaleLowerCase("es-CO");
+    if (!search) return [];
+    return quoteOptions
+      .filter((quote) => [quote.code, quote.title, quote.client].some((value) => value.toLocaleLowerCase("es-CO").includes(search)))
+      .slice(0, 6);
+  }, [quoteOptions, quoteSearch]);
+
+  function openQuoteApu(quote: QuoteOption) {
+    const params = new URLSearchParams({
+      quoteId: quote.id,
+      quoteCode: quote.code,
+      quoteTitle: quote.title,
+      quoteStatus: quote.status,
+    });
+    router.push(`/apu?${params.toString()}`);
+  }
   /**
    * Filtro de búsqueda del módulo: código del APU, nombre de la actividad,
    * código o título de la cotización y empresa que contrata.
@@ -366,7 +358,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
           setBoqCosts(remote.boqCosts);
           setQuoteOrigin(remote.quoteOrigin ?? new Map());
           setApus(remote.apus);
-          const visible = quoteContext?.quoteId ? remote.apus.filter((apu) => apu.quoteId === quoteContext.quoteId) : remote.apus;
+          const visible = filterApusByQuoteContext(remote.apus, quoteContext?.quoteId);
           setSelectedId(visible[0]?.id || "");
           setSaveMessage("APUs cargados desde la base de datos.");
           return;
@@ -376,7 +368,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
         setProjects(mergeProjects(loadFallbackProjects(), seedFallback));
         const saved = JSON.parse(localStorage.getItem("rfc_apus") || "[]") as Apu[];
         setApus(saved);
-        const visible = quoteContext?.quoteId ? saved.filter((apu) => apu.quoteId === quoteContext.quoteId) : saved;
+        const visible = filterApusByQuoteContext(saved, quoteContext?.quoteId);
         setSelectedId(visible[0]?.id || "");
       } catch {
         if (active) {
@@ -411,17 +403,18 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     return () => { active = false; };
   }, []);
 
-  function createApu(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  /** Consecutivo siguiente del APU, visible en el modal antes de crear. */
+  const nextApuCode = `APU-${String(apus.length + 1).padStart(3, "0")}`;
+
+  function createApu(values: { name: string; unit: string; workQuantity: number }) {
     if (isQuoteApuReadOnly) { setSaveState("error"); setSaveMessage("Este APU se conserva en consulta porque la cotización ya no está en proceso o por modificar."); return; }
-    const data = new FormData(event.currentTarget);
     const now = new Date().toISOString();
     const apu: Apu = {
       id: newId(),
-      code: `APU-${String(apus.length + 1).padStart(3, "0")}`,
-      name: String(data.get("name") || quoteContext?.quoteTitle || "Nuevo APU"),
-      unit: String(data.get("unit") || "und"),
-      workQuantity: Number(data.get("quantity")) || 1,
+      code: nextApuCode,
+      name: values.name,
+      unit: values.unit,
+      workQuantity: values.workQuantity,
       lines: [],
       quoteId: quoteContext?.quoteId,
       quoteCode: quoteContext?.quoteCode,
@@ -430,9 +423,9 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     };
     setApus((current) => [apu, ...current]);
     setSelectedId(apu.id);
-    setSaveMessage("APU creado. Agrega los recursos y pulsa Guardar APU.");
-    event.currentTarget.reset();
-    setNewApuUnit("m²");
+    setIsNewModalOpen(false);
+    setSaveState("saving");
+    setSaveMessage(`${apu.code} creado. Agrega los recursos de cada rubro y pulsa Guardar APU.`);
   }
 
   function createApuFromActivity(activity: ApuActivity) {
@@ -492,19 +485,61 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     setSaveMessage("Hay cambios pendientes de guardar.");
   }
 
+  /** Abre el alta manual del rubro, propone como nombre lo que se había buscado. */
+  function openManualResource(category: ApuCategory, query: string) {
+    if (!selected) return;
+    if (isQuoteApuReadOnly) {
+      setSaveState("error");
+      setSaveMessage("Este APU está en consulta; crea una revisión de la cotización para editarlo.");
+      return;
+    }
+    setManualResource({ category, query });
+  }
+
+  /** Confirma el alta manual: agrega la línea completa y deja el buscador en blanco. */
+  function acceptManualResource(values: ManualResource) {
+    if (!selected || !manualResource) return;
+    const quantity = Number(values.quantity.replace(",", "."));
+    const yieldPerDay = Number(values.yieldPerDay.replace(",", "."));
+    const rate = Number(values.dailyRate.replace(/[^\d.,-]/g, "").replace(",", "."));
+    const line: ApuLine = {
+      id: newId(),
+      category: manualResource.category,
+      name: values.name,
+      quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+      yieldPerDay:
+        manualResource.category === "materials"
+          ? 1
+          : Number.isFinite(yieldPerDay) && yieldPerDay > 0
+            ? yieldPerDay
+            : 1,
+      dailyRate: Number.isFinite(rate) && rate > 0 ? rate : 0,
+      unit: values.unit || undefined,
+    };
+    setApus((current) =>
+      current.map((item) => (item.id === selected.id ? { ...item, lines: [...item.lines, line], updatedAt: new Date().toISOString() } : item)),
+    );
+    setManualResource(null);
+    setClearSearchSignal((value) => value + 1);
+    setSaveState("saving");
+    setSaveMessage(`${values.name} se agregó a ${apuCategoryMeta[manualResource.category].label.toLocaleLowerCase("es-CO")}. Pulsa Guardar APU para confirmarlo.`);
+  }
+
   function addLine(category: ApuCategory, product?: StockProduct) {
     if (!selected) return;
-    const manualName = product ? undefined : window.prompt(`Nombre del recurso de ${apuCategoryMeta[category].label.toLocaleLowerCase("es-CO")}:`, category === "labor" ? "Nuevo cargo" : "Nuevo recurso")?.trim();
-    if (!product && !manualName) return;
+    if (!product) {
+      openManualResource(category, "");
+      return;
+    }
     const line: ApuLine = {
       id: newId(),
       category,
-      name: product?.name || manualName || "Nuevo recurso",
+      name: product.name,
       quantity: 1,
       yieldPerDay: 1,
-      dailyRate: product?.unitCost || 0,
-      inventoryProductId: product?.id,
-      unit: product?.unit,
+      dailyRate: product.unitCost || 0,
+      inventoryProductId: product.id,
+      unit: product.unit,
     };
     updateApu({ ...selected, lines: [...selected.lines, line] });
   }
@@ -611,7 +646,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     if (isQuoteApuReadOnly) { setSaveState("error"); setSaveMessage("El APU está en consulta y no puede eliminarse en el estado actual."); return; }
     try { if (companyId) await archiveApuAnalysis(selected.id); } catch (error) { setSaveMessage(error instanceof Error ? error.message : "No fue posible archivar el APU."); return; }
     const nextApus = apus.filter((apu) => apu.id !== selected.id);
-    const nextVisible = quoteContext?.quoteId ? nextApus.filter((apu) => apu.quoteId === quoteContext.quoteId) : nextApus;
+    const nextVisible = filterApusByQuoteContext(nextApus, quoteContext?.quoteId);
     setApus(nextApus);
     setSelectedId(nextVisible[0]?.id || "");
     setSaveMessage(`${selected.code} fue eliminado. Los demás APUs no se modificaron.`);
@@ -722,6 +757,36 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
       <section className="dashboard-heading">
         <div><p>Costos · RFC Enterprise</p><h1>Análisis de Precios Unitarios</h1><small>Construye APUs por actividad y toma precios unitarios de Inventarios.</small></div>
       </section>
+      {!quoteContext?.quoteId ? (
+        <section className="apu-quote-picker" aria-labelledby="apu-quote-picker-title">
+          <div>
+            <p id="apu-quote-picker-title">Abrir APU de una cotización</p>
+            <small>Busca por código, cliente o nombre para trabajar únicamente sus actividades.</small>
+          </div>
+          <label className="apu-quote-picker-search">
+            <span>Buscar cotización</span>
+            <input
+              value={quoteSearch}
+              onChange={(event) => setQuoteSearch(event.target.value)}
+              placeholder="Ej.: COT-001, Ocensa o prefabricado"
+              type="search"
+              autoComplete="off"
+              aria-describedby="apu-quote-picker-help"
+            />
+          </label>
+          <div id="apu-quote-picker-help" className="apu-quote-picker-results" aria-live="polite">
+            {quoteSearch.trim() ? (
+              matchingQuotes.length ? matchingQuotes.map((quote) => (
+                <button key={quote.id} type="button" onClick={() => openQuoteApu(quote)}>
+                  <strong>{quote.code}</strong>
+                  <span>{quote.title}</span>
+                  <small>{quote.client}</small>
+                </button>
+              )) : <p>No encontramos una cotización con esos datos. Prueba con el código, cliente o nombre.</p>
+            ) : <p>Escribe para buscar entre las cotizaciones de tu empresa.</p>}
+          </div>
+        </section>
+      ) : null}
       {quoteContext?.quoteCode ? (
         <p className={`apu-quote-context ${isQuoteApuReadOnly ? "is-read-only" : ""}`}>{isQuoteApuReadOnly ? <>Estás consultando el APU de <strong>{quoteContext.quoteCode}</strong>. Se conserva como historial de la oferta; para modificarlo, crea una revisión de cotización.</> : <>Estás creando actividades para la cotización <strong>{quoteContext.quoteCode}</strong>. Guarda cada APU antes de volver a Cotizaciones.</>}</p>
       ) : null}
@@ -755,6 +820,30 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
       <ApuActivityCatalog onCreate={createApuFromActivity} />
       <section className="apu-layout">
         <aside className="dashboard-panel apu-list">
+          {/* Las acciones van arriba: con muchas actividades el final de la lista queda fuera de vista. */}
+          <div className="apu-list-actions">
+            <button
+              type="button"
+              className="inventory-action apu-list-new"
+              onClick={() => setIsNewModalOpen(true)}
+              disabled={isQuoteApuReadOnly}
+              title={
+                isQuoteApuReadOnly
+                  ? "La cotización está en consulta; crea una revisión para agregar actividades"
+                  : "Crear una actividad nueva"
+              }
+            >
+              ➕ Nuevo APU
+            </button>
+            <button
+              type="button"
+              className="inventory-action secondary apu-import-launch"
+              onClick={() => setIsImportOpen(true)}
+              title="Cargar un APU desde un archivo de Excel con el formato de RFC"
+            >
+              📥 Importar desde Excel
+            </button>
+          </div>
           <div className="panel-title"><div><p>APUs</p><h2>{visibleApus.length} análisis</h2></div></div>
           <label className="apu-search">
             <span className="sr-only">Buscar análisis de precios unitarios</span>
@@ -822,19 +911,6 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
               </button>
             );
           })}
-          <form className="apu-new-form" onSubmit={createApu}>
-            <input name="name" required placeholder="Actividad: trazado y replanteo" />
-            <div><ApuUnitCombobox name="unit" value={newApuUnit} onChange={setNewApuUnit} /><input name="quantity" type="number" min="0.01" step="any" defaultValue="1" aria-label="Cantidad de obra" /></div>
-            <button className="inventory-action" type="submit">Nuevo APU</button>
-          </form>
-          <button
-            type="button"
-            className="inventory-action secondary apu-import-launch"
-            onClick={() => setIsImportOpen(true)}
-            title="Cargar un APU desde un archivo de Excel con el formato de RFC"
-          >
-            📥 Importar desde Excel
-          </button>
         </aside>
         <section className="dashboard-panel apu-editor">
           {selected ? (
@@ -966,22 +1042,46 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
               </section>
 
               {/* Faltantes del APU → requisición al almacén (APU-012) */}
-              <section className="apu-shortage-panel" aria-label="Faltantes de materiales y equipos">
-                <div className="apu-analysis-header">
-                  <div>
-                    <p>Faltantes para ejecutar este APU</p>
-                    <small>
-                      {shortages.length === 0
-                        ? "El inventario cubre todo lo que este análisis necesita."
-                        : `${shortages.length} recurso(s) deben comprarse o ingresar al almacén antes de iniciar la obra.`}
-                    </small>
-                  </div>
+              <section className={`apu-shortage-panel ${isShortageCollapsed ? "is-collapsed" : ""}`} aria-label="Faltantes de materiales y equipos">
+                <div className="apu-section-bar">
+                  <button
+                    type="button"
+                    className="apu-section-toggle"
+                    onClick={() => toggleShortagePanel()}
+                    aria-expanded={!isShortageCollapsed}
+                    aria-controls="apu-shortage-body"
+                    title={isShortageCollapsed ? "Expandir los faltantes" : "Plegar los faltantes"}
+                  >
+                    <span className="apu-section-chevron" aria-hidden="true">{isShortageCollapsed ? "▸" : "▾"}</span>
+                    <span className="apu-section-heading">
+                      <strong>Faltantes para ejecutar este APU</strong>
+                      <small>
+                        {shortages.length === 0
+                          ? "El inventario cubre todo lo que este análisis necesita."
+                          : `${shortages.length} recurso${shortages.length === 1 ? "" : "s"} por comprar antes de iniciar la obra`}
+                      </small>
+                    </span>
+                  </button>
+                </div>
+                <div id="apu-shortage-body" hidden={isShortageCollapsed}>
+                <div className="apu-shortage-actions">
+                  <small>
+                    {shortages.length === 0
+                      ? "No hace falta comprar nada para ejecutar esta actividad."
+                      : `${shortages.length} recurso(s) deben comprarse o ingresar al almacén antes de iniciar la obra.`}
+                  </small>
                   <button
                     type="button"
                     className="inventory-action"
                     onClick={() => void generateRequisitionFromApu()}
-                    disabled={isSendingRequisition || !projectToLink || isQuoteApuReadOnly}
-                    title={projectToLink ? "Envía los faltantes al almacén de la obra seleccionada" : "Selecciona primero la obra destino"}
+                    disabled={isSendingRequisition || !projectToLink || isQuoteApuReadOnly || shortages.length === 0}
+                    title={
+                      shortages.length === 0
+                        ? "Esta actividad no tiene faltantes"
+                        : projectToLink
+                        ? "Envía los faltantes al almacén de la obra seleccionada"
+                        : "Selecciona primero la obra destino"
+                    }
                   >
                     {isSendingRequisition ? "⏳ Enviando…" : "📦 Generar requisición"}
                   </button>
@@ -1013,6 +1113,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 {requisitionCode ? (
                   <p className="apu-notice-inline">✓ Requisición {requisitionCode} enviada al almacén.</p>
                 ) : null}
+                </div>
               </section>
               {companyId && boqItems.filter((item) => item.apuAnalysisId === selected.id).map((item) => {
                 const committed = boqCosts.filter((cost) => cost.boqItemId === item.id && cost.costType === "committed").reduce((sum, cost) => sum + cost.amount, 0);
@@ -1075,7 +1176,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                     <header>
                       <div><h3>{apuCategoryMeta[category].label}</h3><small>{apuCategoryMeta[category].description}</small></div>
                       {category === "labor" ? (
-                        <ApuLaborPicker catalog={laborCatalog} isLoading={isLaborLoading} onAdd={addLaborPosition} onAddManual={() => addLine("labor")} />
+                        <ApuLaborPicker catalog={laborCatalog} isLoading={isLaborLoading} onAdd={addLaborPosition} onAddManual={(query) => openManualResource("labor", query)} clearSignal={clearSearchSignal} />
                       ) : category === "materials" || category === "equipment" ? (
                         <ApuResourcePicker
                           category={category}
@@ -1083,13 +1184,16 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                           catalogLoading={catalogStatus.loading}
                           catalogError={catalogStatus.error}
                           onAdd={(product) => addLine(category, product)}
+                          onAddManual={(query) => openManualResource(category, query)}
+                          clearSignal={clearSearchSignal}
                         />
                       ) : (
                         <ApuTransportPicker
                           catalog={transportCatalog}
                           isLoading={isTransportLoading}
                           onAdd={addTransportItem}
-                          onAddManual={() => addLine("transport")}
+                          onAddManual={(query) => openManualResource("transport", query)}
+                          clearSignal={clearSearchSignal}
                           onSaveItem={handleSaveTransportItem}
                           onDeleteItem={handleDeleteTransportItem}
                         />
@@ -1146,6 +1250,21 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
       </section>
       {printingApu ? <ApuPrintModal apu={printingApu} onClose={() => setPrintingApu(null)} /> : null}
       {isImportOpen ? <ApuImportModal onClose={() => setIsImportOpen(false)} onConfirm={createApuFromImport} /> : null}
+      {isNewModalOpen ? (
+        <ApuNewModal
+          nextCode={nextApuCode}
+          onClose={() => setIsNewModalOpen(false)}
+          onCreate={createApu}
+        />
+      ) : null}
+      {manualResource ? (
+        <ApuManualResourceModal
+          category={manualResource.category}
+          initialQuery={manualResource.query}
+          onClose={() => setManualResource(null)}
+          onAccept={acceptManualResource}
+        />
+      ) : null}
     </main>
   );
 }

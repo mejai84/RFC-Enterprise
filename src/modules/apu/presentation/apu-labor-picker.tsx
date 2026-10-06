@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { LaborActivityType, LaborPosition, LaborPositionCatalog } from "@/modules/apu";
 import { rankItems } from "../domain/search-utils";
 
@@ -11,14 +11,16 @@ type Props = {
   catalog: LaborPositionCatalog;
   isLoading: boolean;
   onAdd: (position: LaborPosition) => void;
-  onAddManual: () => void;
+  onAddManual: (query: string) => void;
+  /** Limpia el buscador; se invoca al aceptar el alta manual. */
+  clearSignal?: number;
 };
 
 /**
  * Buscador de cargos con el mismo comportamiento del buscador de inventario:
  * se escribe y la lista se filtra en vivo; al elegir el cargo se agrega al APU.
  */
-export function ApuLaborPicker({ catalog, isLoading, onAdd, onAddManual }: Props) {
+export function ApuLaborPicker({ catalog, isLoading, onAdd, onAddManual, clearSignal = 0 }: Props) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [activityType, setActivityType] = useState<"all" | LaborActivityType>("all");
@@ -59,6 +61,13 @@ export function ApuLaborPicker({ catalog, isLoading, onAdd, onAddManual }: Props
     setQuery("");
     setIsOpen(false);
   }
+
+  // Cuando el padre confirma el alta manual, el buscador queda limpio.
+  useEffect(() => {
+    setQuery("");
+    setSelectedId("");
+    setIsOpen(false);
+  }, [clearSignal]);
 
   return (
     <div className="apu-labor-picker">
@@ -118,7 +127,16 @@ export function ApuLaborPicker({ catalog, isLoading, onAdd, onAddManual }: Props
           >
             Ver todos ({catalog.positions.length})
           </button>
-          <button type="button" className="apu-secondary-action" onClick={onAddManual}>
+          <button
+            type="button"
+            className="apu-secondary-action"
+            onClick={() => onAddManual(query)}
+            title={
+              query.trim() && matches.length === 0
+                ? `No encontramos "${query}" en la tabla salarial. Ingresarlo a mano`
+                : "Agregar un cargo que no está en la tabla salarial"
+            }
+          >
             Agregar manual
           </button>
         </div>

@@ -1,6 +1,10 @@
 .apu-workspace { padding-bottom: 42px; }
 .apu-quote-context { background:var(--brand-soft); border:1px solid var(--brand); border-radius:8px; color:var(--ink); margin:0 0 18px; padding:12px 14px; }
 .apu-quote-context.is-read-only { background:#f8fafc; border-color:#94a3b8; color:#334155; }
+.apu-quote-picker { display:grid; grid-template-columns:minmax(220px, .8fr) minmax(260px, 1fr); gap:12px 18px; align-items:end; margin:0 0 18px; padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--surface); }
+.apu-quote-picker > div:first-child { display:grid; gap:3px; }.apu-quote-picker p { margin:0; color:var(--brand-dark); font-size:12px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }.apu-quote-picker small { color:var(--muted); font-size:12px; }
+.apu-quote-picker-search { display:grid; gap:5px; }.apu-quote-picker-search > span { color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; }.apu-quote-picker-search input { min-height:42px; width:100%; border:1px solid var(--line); border-radius:7px; padding:9px 11px; background:var(--canvas); color:var(--ink); font:inherit; }.apu-quote-picker-search input:focus { border-color:var(--brand); outline:none; box-shadow:0 0 0 3px var(--brand-glow); }
+.apu-quote-picker-results { grid-column:1 / -1; display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; }.apu-quote-picker-results > p { grid-column:1 / -1; color:var(--muted); font-size:13px; font-weight:400; letter-spacing:normal; text-transform:none; }.apu-quote-picker-results button { display:grid; gap:2px; min-height:64px; border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:var(--canvas); color:var(--ink); cursor:pointer; font:inherit; text-align:left; }.apu-quote-picker-results button:hover,.apu-quote-picker-results button:focus-visible { border-color:var(--brand); background:var(--brand-soft); outline:none; }.apu-quote-picker-results button strong { color:var(--brand-dark); font-size:12px; }.apu-quote-picker-results button span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; }.apu-quote-picker-results button small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .apu-workspace--readonly .apu-activity-catalog,.apu-workspace--readonly .apu-new-form,.apu-workspace--readonly .apu-editor input,.apu-workspace--readonly .apu-editor select,.apu-workspace--readonly .apu-editor button:not(.apu-print-btn) { cursor:not-allowed; opacity:.56; pointer-events:none; }
 .apu-activity-catalog { display:grid; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:12px; margin-bottom:20px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.03); }
 .apu-resource-note { margin:10px 0 0; padding:9px 11px; border-radius:8px; background:#fff8e7; color:#764d00; font-size:.82rem; line-height:1.4; }
@@ -76,6 +80,7 @@
 @media (max-width:900px) { .apu-layout { grid-template-columns:1fr; }.apu-total { text-align:left; } .apu-section header { align-items:flex-start; flex-direction:column; } }
 
 @media (max-width:768px) {
+  .apu-quote-picker { grid-template-columns:1fr; }.apu-quote-picker-search input { min-height:44px; }
   .apu-activity-catalog { padding:14px; }.apu-activity-results { grid-template-columns:1fr; max-height:260px; }
   .apu-activity-results button,.apu-custom-activity { min-height:44px; width:100%; }
   .apu-layout { gap:14px; }.apu-editor,.apu-list { min-width:0; }.apu-section header,.apu-section footer { padding:12px; }
@@ -417,6 +422,25 @@
   .apu-sections-tools button { width: 100%; }
 }
 
+/* Acciones al tope de la lista de APUs y modal de nueva actividad - 2026-10-07 */
+.apu-list-actions { display: grid; grid-template-columns: 1fr; gap: 0.4rem; margin-bottom: 0.85rem; }
+.apu-list-actions button { width: 100%; min-height: 44px; }
+.apu-list-new { font-weight: 800; }
+
+.apu-new-card { max-width: min(560px, 94vw); width: 560px; }
+.apu-new-form-body { display: grid; gap: 0.8rem; padding: 1rem 1.25rem 0; }
+.apu-new-code { margin: 0; padding: 0.5rem 0.7rem; border-radius: 8px; background: #eef3f0; color: #3f5a4e; font-size: 0.78rem; }
+.apu-new-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; align-items: start; }
+.apu-new-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin: 0 -1.25rem; padding: 0.9rem 1.25rem; border-top: 1px solid #e2e8f0; }
+.apu-new-actions button { min-height: 44px; padding: 0.5rem 1.2rem; border-radius: 9px; border: 1px solid var(--brand, #1f6f4a); background: var(--brand, #1f6f4a); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.apu-new-actions .apu-import-secondary { background: #fff; color: #334155; border-color: #cbd5e1; }
+
+@media (max-width: 560px) {
+  .apu-new-card { width: 100%; }
+  .apu-new-grid { grid-template-columns: 1fr; }
+  .apu-new-actions button { flex: 1; }
+}
+
 /* Resumen del presupuesto a nivel de modulo - 2026-10-07 */
 .apu-summary-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; background: #f4f8f6; border: 1px solid #cfe0d7; border-radius: 12px; padding: 0.85rem 1rem; }
 .apu-summary-title p { margin: 0 0 2px; color: #3f5a4e; font-size: 10.5px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
@@ -449,3 +473,8 @@
 .apu-editor-origin { display: block; margin-top: 0.2rem; color: #0f766e; font-weight: 600; }
 .apu-row.is-empty { opacity: 0.72; border-style: dashed; }
 .apu-row-empty { display: block; color: #b45309 !important; font-weight: 700; }
+.apu-shortage-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; padding: 0.6rem 0.85rem 0.7rem; }
+.apu-shortage-actions small { flex: 1 1 240px; color: #475569; font-size: 0.78rem; }
+@media (max-width: 640px) { .apu-shortage-actions { flex-direction: column; align-items: stretch; } .apu-shortage-actions button { width: 100%; } }
+.apu-manual-card { max-width: min(620px, 94vw); width: 620px; }
+.apu-inline-link { min-height: 44px; padding: 0 4px; border: 0; background: none; color: var(--brand, #1f6f4a); font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; vertical-align: baseline; }

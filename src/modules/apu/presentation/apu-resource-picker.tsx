@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { ApuCategory } from "@/modules/apu";
 import type { StockProduct } from "@/modules/inventory";
 import { inventorySearchText } from "@/modules/inventory";
@@ -14,6 +14,10 @@ type Props = {
   catalogLoading?: boolean;
   catalogError?: string;
   onAdd: (product?: StockProduct) => void;
+  /** Pide el alta manual pasando lo que el usuario ya escribió en el buscador. */
+  onAddManual: (query: string) => void;
+  /** Limpia el buscador; se invoca al aceptar el alta manual. */
+  clearSignal?: number;
 };
 
 export function ApuResourcePicker({
@@ -22,6 +26,8 @@ export function ApuResourcePicker({
   catalogLoading = false,
   catalogError,
   onAdd,
+  onAddManual,
+  clearSignal = 0,
 }: Props) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -40,11 +46,19 @@ export function ApuResourcePicker({
     return rankItems(products, query, (p) => p.name, (p) => inventorySearchText(p)).length;
   }, [products, query]);
 
+  // Cuando el padre confirma el alta manual, el buscador queda limpio.
+  useEffect(() => {
+    setQuery("");
+    setIsOpen(false);
+  }, [clearSignal]);
+
   function addProduct(product: StockProduct) {
     onAdd(product);
     setQuery("");
     setIsOpen(false);
   }
+
+  const noMatches = Boolean(query.trim()) && totalMatches === 0 && !catalogLoading && !catalogError;
 
   return (
     <div className="apu-resource-picker">
@@ -84,7 +98,17 @@ export function ApuResourcePicker({
           </button>
         ) : null}
       </label>
-      <button type="button" className="apu-resource-manual" onClick={() => onAdd()} disabled={catalogLoading}>
+      <button
+        type="button"
+        className="apu-resource-manual"
+        onClick={() => onAddManual(query)}
+        disabled={catalogLoading}
+        title={
+          noMatches
+            ? `No hay coincidencias para "${query}". Agregar este ${resourceLabel} manualmente`
+            : `Agregar un ${resourceLabel} que no está en el inventario`
+        }
+      >
         + Manual
       </button>
 
@@ -95,6 +119,16 @@ export function ApuResourcePicker({
         <p className="apu-resource-note">
           El APU costea lo que la obra necesitará. Si hoy no hay existencias, el material
           se compra o ingresa al inventario y se despacha a la obra cuando se ejecute.
+        </p>
+      ) : null}
+
+      {noMatches ? (
+        <p className="apu-filter-empty">
+          No encontramos “{query.trim()}” en el inventario. Usa{" "}
+          <button type="button" className="apu-inline-link" onClick={() => onAddManual(query)}>
+            + Manual
+          </button>{" "}
+          para ingresarlo a mano.
         </p>
       ) : null}
 

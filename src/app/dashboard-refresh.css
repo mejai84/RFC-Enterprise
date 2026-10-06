@@ -2547,7 +2547,7 @@
 .dashboard-top-actions .dashboard-signout, .dashboard-top-actions .dashboard-password-link { display:none; }
 .dashboard-sidebar-account-actions { display:grid; gap:6px; margin-left:auto; text-align:right; }.dashboard-sidebar-account-actions a, .dashboard-sidebar-account-actions button { background:transparent; border:0; color:var(--brand-dark); font-size:11px; font-weight:800; padding:3px; text-decoration:none; }.dashboard-sidebar-account-actions button { color:#9b3528; }
 
-/* Proyectos/Obras � adaptaci�n m�vil (2026-10-06) */
+/* Proyectos/Obras — adaptación móvil (2026-10-06) */
 @media (max-width: 980px) {
   .project-metrics-grid { grid-template-columns: 1fr 1fr; }
   .card-top-info { flex-direction: column; gap: 10px; }

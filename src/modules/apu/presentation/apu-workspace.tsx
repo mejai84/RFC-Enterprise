@@ -252,7 +252,6 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
 
   /** Costo por unidad de la actividad: costo directo total ÷ cantidad de la obra. */
   const selectedCost = selected ? apuCostTotal(selected) : 0;
-  const selectedOrigin = selected?.quoteId ? quoteOrigin.get(selected.quoteId) : undefined;
   const selectedQuantity = selected ? Number(selected.workQuantity) || 0 : 0;
   const unitCost = selectedQuantity > 0 ? selectedCost / selectedQuantity : 0;
   const unitSelling = selectedQuantity > 0 && selected ? apuSellingTotal(selected) / selectedQuantity : 0;
@@ -723,16 +722,20 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
           ) : null}
           {filteredApus.map((apu) => {
             const origin = apu.quoteId ? quoteOrigin.get(apu.quoteId) : undefined;
+            const isEmpty = apu.lines.length === 0;
             return (
               <button
                 type="button"
                 key={apu.id}
-                className={`apu-row ${apu.id === selectedId ? "is-selected" : ""}`}
+                className={`apu-row ${apu.id === selectedId ? "is-selected" : ""} ${isEmpty ? "is-empty" : ""}`}
                 onClick={() => setSelectedId(apu.id)}
                 title={`${apu.code} · ${apu.name}${origin?.client ? ` · ${origin.client}` : ""}`}
               >
                 <strong>{apu.code}</strong>
                 <span>{apu.name}</span>
+                {isEmpty ? (
+                  <small className="apu-row-empty">Sin recursos · aún no está cotizada</small>
+                ) : null}
                 {origin?.client || apu.quoteCode ? (
                   <small className="apu-row-origin">
                     {origin?.client ? origin.client : origin?.title}
@@ -765,57 +768,40 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                   <p>{selected.code} · {selected.unit}</p>
                   <h2>{selected.name}</h2>
                   <small>Cantidad de obra: {selected.workQuantity.toLocaleString("es-CO")} {selected.unit}</small>
-                  {selectedOrigin ? (
-                    <small className="apu-editor-origin">
-                      Cotización {selectedOrigin.code}
-                      {selectedOrigin.client ? ` · ${selectedOrigin.client}` : ""}
-                      {selectedOrigin.title ? ` · ${selectedOrigin.title}` : ""}
-                    </small>
-                  ) : null}
                 </div>
-                <strong className="apu-total">
-                  {formatCOP(apuSellingTotal(selected))}
-                  <small>Precio de venta ({formatCOP(apuSellingTotal(selected) / selected.workQuantity)} / {selected.unit})</small>
-                  <small className="apu-total-share">
+                {/* Precio y costo de la actividad, uno junto al otro. */}
+                <div className="apu-price-block">
+                  <div className="apu-price-cell is-selling">
+                    <span>Precio de venta</span>
+                    <strong>{formatCOP(apuSellingTotal(selected))}</strong>
+                    <small>
+                      {formatCOP(unitSelling)} <em>por {selected.unit}</em>
+                    </small>
+                  </div>
+                  <div className="apu-price-cell is-cost">
+                    <span>Costo por {selected.unit}</span>
+                    <strong>{formatCOP(unitCost)}</strong>
+                    <small>
+                      {formatCOP(selectedCost)} <em>÷ {selected.workQuantity.toLocaleString("es-CO")} {selected.unit}</em>
+                    </small>
+                  </div>
+                  <small className="apu-price-share">
                     {analysisTotals.selectedShare.toFixed(1)}% del total del análisis
                   </small>
-                </strong>
+                </div>
               </div>
-              <div className="apu-selected-toolbar">
-                <label><span>Actividad</span><input value={selected.name} onChange={(event) => updateApu({ ...selected, name: event.target.value })} /></label>
-                <label><span>Unidad</span><ApuUnitCombobox value={selected.unit} onChange={(unit) => updateApu({ ...selected, unit })} /></label>
-                <label><span>Cantidad de obra</span><input type="number" min="0.01" step="any" value={selected.workQuantity} onChange={(event) => updateApu({ ...selected, workQuantity: Number(event.target.value) || 1 })} /></label>
-              </div>
-
-              {/* Costo por unidad de la actividad: costo directo total ÷ cantidad de la obra */}
-              <section className="apu-unitcost-strip" aria-label="Costo por unidad de la actividad">
-                <div className="apu-unitcost-step">
-                  <span>Costo directo total</span>
-                  <strong>{formatCOP(selectedCost)}</strong>
-                </div>
-                <span className="apu-unitcost-op" aria-hidden="true">÷</span>
-                <div className="apu-unitcost-step">
-                  <span>Cantidad de la actividad</span>
-                  <strong>
-                    {selected.workQuantity.toLocaleString("es-CO")} <small>{selected.unit}</small>
-                  </strong>
-                </div>
-                <span className="apu-unitcost-op" aria-hidden="true">=</span>
-                <div className="apu-unitcost-step is-result">
-                  <span>Costo por {selected.unit}</span>
-                  <strong>{formatCOP(unitCost)}</strong>
-                </div>
-                <div className="apu-unitcost-step is-selling">
-                  <span>Precio de venta por {selected.unit}</span>
-                  <strong>{formatCOP(unitSelling)}</strong>
-                </div>
-              </section>
               {!hasRealQuantity ? (
                 <p className="apu-unitcost-warning" role="status">
                   La cantidad de la actividad está en 1, así que el costo por unidad coincide con el total.
                   Escribe la cantidad real de la obra para que el costo por unidad sea correcto.
                 </p>
               ) : null}
+              <div className="apu-selected-toolbar">
+                <label><span>Actividad</span><input value={selected.name} onChange={(event) => updateApu({ ...selected, name: event.target.value })} /></label>
+                <label><span>Unidad</span><ApuUnitCombobox value={selected.unit} onChange={(unit) => updateApu({ ...selected, unit })} /></label>
+                <label><span>Cantidad de obra</span><input type="number" min="0.01" step="any" value={selected.workQuantity} onChange={(event) => updateApu({ ...selected, workQuantity: Number(event.target.value) || 1 })} /></label>
+              </div>
+
               <div className="apu-actions-bar" role="group" aria-label="Acciones del APU seleccionado">
                 <button type="button" className="inventory-action apu-action-primary" onClick={() => void saveSelectedApu()} title="Guarda esta actividad en Supabase">
                   💾 Guardar APU

@@ -41,6 +41,7 @@ import { ApuActivityCatalog } from "./apu-activity-catalog";
 import { ApuLaborPicker } from "./apu-labor-picker";
 import { ApuPrintModal } from "./apu-print-modal";
 import { ApuImportModal } from "./apu-import-modal";
+import { ApuMoneyField } from "./apu-money-field";
 import { exportApuToXlsx } from "./apu-xlsx-export";
 import { ApuResourcePicker } from "./apu-resource-picker";
 import { ApuTransportPicker } from "./apu-transport-picker";
@@ -955,7 +956,13 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                               </td>
                               <td><input type="text" inputMode="decimal" defaultValue={line.quantity} onBlur={(event) => updateLine(line.id, "quantity", parseDecimal(event.target.value))} aria-label={`Cantidad de ${line.name}`} /></td>
                               <td><input type="text" inputMode="decimal" defaultValue={line.yieldPerDay} onBlur={(event) => updateLine(line.id, "yieldPerDay", parseDecimal(event.target.value))} aria-label={`Rendimiento diario de ${line.name}`} /></td>
-                              <td><input type="text" inputMode="decimal" defaultValue={line.dailyRate} onBlur={(event) => updateLine(line.id, "dailyRate", parseDecimal(event.target.value))} aria-label={`Tarifa base de ${line.name}`} /></td>
+                              <td>
+                                <ApuMoneyField
+                                  value={line.dailyRate}
+                                  onCommit={(next) => updateLine(line.id, "dailyRate", next)}
+                                  ariaLabel={`Tarifa base de ${line.name}`}
+                                />
+                              </td>
                               <td>{formatCOP(lineTotal(line))}</td>
                               <td><strong>{formatCOP(lineSellingTotal(line, selected.categoryMargins))}</strong></td>
                               <td><button className="apu-remove" aria-label={`Eliminar ${line.name}`} type="button" onClick={() => removeLine(line.id)}>×</button></td>

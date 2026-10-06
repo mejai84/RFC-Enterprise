@@ -2546,3 +2546,36 @@
 @media (max-width:760px) { .report-document .report-controls { grid-template-columns:1fr !important; } }
 .dashboard-top-actions .dashboard-signout, .dashboard-top-actions .dashboard-password-link { display:none; }
 .dashboard-sidebar-account-actions { display:grid; gap:6px; margin-left:auto; text-align:right; }.dashboard-sidebar-account-actions a, .dashboard-sidebar-account-actions button { background:transparent; border:0; color:var(--brand-dark); font-size:11px; font-weight:800; padding:3px; text-decoration:none; }.dashboard-sidebar-account-actions button { color:#9b3528; }
+
+/* Proyectos/Obras � adaptaci�n m�vil (2026-10-06) */
+@media (max-width: 980px) {
+  .project-metrics-grid { grid-template-columns: 1fr 1fr; }
+  .card-top-info { flex-direction: column; gap: 10px; }
+}
+@media (max-width: 760px) {
+  .dash-quick-btns { gap: 8px; flex-wrap: wrap; }
+  .dash-quick-btns .inventory-action { flex: 1 1 100%; }
+  .projects-selector-bar { padding: 12px 14px; gap: 10px; }
+  .project-status-filter { width: 100%; justify-content: space-between; }
+  .project-status-filter select { flex: 1; }
+  .selector-pills { grid-template-columns: 1fr; flex-basis: 100%; }
+  .prj-pill { white-space: normal; }
+  .project-main-card { padding: 16px; }
+  .card-top-info h2 { font-size: 21px; }
+  .project-metrics-grid { grid-template-columns: 1fr; gap: 10px; }
+  .project-tabs-header { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; padding-bottom: 4px; }
+  .project-tabs-header .tab-btn { flex: 0 0 auto; white-space: nowrap; padding: 10px 12px; }
+  .project-tab-content { padding: 14px; }
+  .tab-actions-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .tab-actions-bar button { width: 100%; }
+  .project-history-table { min-width: 620px; }
+  .budget-adjustment-modal { padding: 20px; }
+  .budget-adjustment-modal input { width: 100%; box-sizing: border-box; }
+}
+@media (max-width: 480px) {
+  .project-main-card { padding: 12px; }
+  .project-tab-content { padding: 10px; }
+  .project-status-filter { flex-direction: column; align-items: stretch; }
+  .project-status-filter select { width: 100%; }
+  .metric-box strong { font-size: 19px; }
+}

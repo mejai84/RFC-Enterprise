@@ -26,6 +26,8 @@ export {
 
 export { initialQuotes } from "./fixtures";
 
+export { loadQuotesWorkspaceData, saveQuote } from "./data/quote-repository";
+
 export type {
   OcensaActivityType,
   OcensaSpecialty,

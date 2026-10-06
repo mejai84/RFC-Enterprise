@@ -18,11 +18,12 @@ function client() {
 export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
   const supabase = client();
   if (!supabase) return null;
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
   if (!auth.user) return null;
   const { data: memberships } = await supabase.from("user_roles").select("company_id").eq("user_id", auth.user.id).limit(1);
   const companyId = memberships?.[0]?.company_id;
-  if (!companyId) return null;
+  if (!companyId) throw new Error("Tu cuenta no está vinculada a una empresa y rol. Un administrador debe asignarte el acceso antes de guardar APUs.");
 
   const [{ data: analysisRows, error: analysisError }, { data: projects }, { data: boqRows }] = await Promise.all([
     supabase.from("apu_analyses").select("id, code, name, unit, work_quantity, quote_id, quote_code, project_id, current_version, status, created_at, updated_at").eq("company_id", companyId).neq("status", "archived").order("updated_at", { ascending: false }),

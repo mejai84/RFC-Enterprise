@@ -7,6 +7,8 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 
 # Backlog y riesgos
 
+| R-009 | Cuenta de Auth sin empresa/rol | Alto | Mitigado en interfaz | Bloquear guardado remoto y mostrar instrucción de asignación; administrar el vínculo desde Empleados antes de operar Cotizaciones/APU | Administración |
+
 <!-- INV-003 (Ampliado, 2026-10-05): Conteos físicos incorpora jornadas periódicas por bodega, ubicación o categoría, historial visible y conciliación que produce movimientos de ajuste auditables. -->
 
 ## Validación de integración

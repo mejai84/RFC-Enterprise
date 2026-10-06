@@ -45,6 +45,12 @@ const categories: ApuCategory[] = ["equipment", "materials", "labor", "transport
 const emptyLaborCatalog: LaborPositionCatalog = { positions: [], source: "fallback" };
 const formatCOP = (value: number) => value.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const newId = () => crypto.randomUUID();
+const parseDecimal = (value: string) => {
+  const compact = value.trim().replace(/\s/g, "");
+  const normalized = compact.includes(",") ? compact.replace(/\./g, "").replace(",", ".") : compact;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 type QuoteContext = { quoteId?: string; quoteCode?: string; quoteTitle?: string; quoteStatus?: string };
 
@@ -302,9 +308,8 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
         setSaveState("database");
         setSaveMessage(`${selected.code} guardado como versión ${saved.revision} en la base de datos.`);
       } else {
-        localStorage.setItem("rfc_apus", JSON.stringify(apus));
-        setSaveState("local");
-        setSaveMessage(`${selected.code} guardado localmente. Inicia sesión para crear versiones en la base de datos.`);
+        setSaveState("error");
+        setSaveMessage("No se guardó el APU: no fue posible identificar la empresa de tu sesión. Solicita al administrador asignarte una empresa y rol.");
       }
     } catch (error) {
       setSaveState("error");
@@ -517,9 +522,9 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                                 {line.laborPositionId ? <small>{line.laborCode} · Nivel {line.laborLevel} · {line.laborActivityType === "propias" ? "Actividad propia" : "Actividad no propia"}</small> : null}
                                 {line.transportItemId ? <small>Transporte · {line.transportCode || "Flete"} · {line.unit || "viaje"}</small> : null}
                               </td>
-                              <td><input type="number" min="0" step="any" value={line.quantity} onChange={(event) => updateLine(line.id, "quantity", Number(event.target.value))} /></td>
-                              <td><input type="number" min="0" step="any" value={line.yieldPerDay} onChange={(event) => updateLine(line.id, "yieldPerDay", Number(event.target.value))} /></td>
-                              <td><input type="number" min="0" step="any" value={line.dailyRate} onChange={(event) => updateLine(line.id, "dailyRate", Number(event.target.value))} /></td>
+                              <td><input type="text" inputMode="decimal" defaultValue={line.quantity} onBlur={(event) => updateLine(line.id, "quantity", parseDecimal(event.target.value))} aria-label={`Cantidad de ${line.name}`} /></td>
+                              <td><input type="text" inputMode="decimal" defaultValue={line.yieldPerDay} onBlur={(event) => updateLine(line.id, "yieldPerDay", parseDecimal(event.target.value))} aria-label={`Rendimiento diario de ${line.name}`} /></td>
+                              <td><input type="text" inputMode="decimal" defaultValue={line.dailyRate} onBlur={(event) => updateLine(line.id, "dailyRate", parseDecimal(event.target.value))} aria-label={`Tarifa base de ${line.name}`} /></td>
                               <td>{formatCOP(lineTotal(line))}</td>
                               <td><strong>{formatCOP(lineSellingTotal(line, selected.categoryMargins))}</strong></td>
                               <td><button className="apu-remove" aria-label={`Eliminar ${line.name}`} type="button" onClick={() => removeLine(line.id)}>×</button></td>

@@ -7,6 +7,8 @@ audiencia: Dirección, Desarrollo y Operación
 
 # Registro de decisiones arquitectónicas y de producto
 
+<!-- ADR-083 (Aceptada, 2026-10-06): Cotizaciones y sus cambios de estado se comparten por empresa mediante `quotes` y `quote_history` en Supabase. El navegador solo conserva una caché de contingencia, nunca la confirmación de negocio. Toda alta usa UUID y toda cuenta sin membresía recibe un error accionable. -->
+
 ## ADR-073 · Identidad legible de la obra de origen comercial
 
 **Fecha:** 2026-10-02

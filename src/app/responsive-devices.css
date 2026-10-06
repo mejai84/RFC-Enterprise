@@ -428,6 +428,36 @@
 /* Este bloque se carga después de los estilos de APU y cotizaciones. Evita que
    sus reglas genéricas de impresión oculten la remisión de almacén. */
 @media print {
+  body:has(.apu-print-sheet) *,
+  body:has(.printable-proposal-wrapper) * {
+    visibility: hidden !important;
+  }
+
+  body:has(.apu-print-sheet) .apu-print-overlay,
+  body:has(.apu-print-sheet) .apu-print-sheet,
+  body:has(.apu-print-sheet) .apu-print-sheet *,
+  body:has(.printable-proposal-wrapper) .printable-backdrop,
+  body:has(.printable-proposal-wrapper) .printable-proposal-wrapper,
+  body:has(.printable-proposal-wrapper) .printable-proposal-wrapper * {
+    visibility: visible !important;
+  }
+
+  body:has(.apu-print-sheet) .apu-print-overlay,
+  body:has(.printable-proposal-wrapper) .printable-backdrop {
+    background: transparent !important;
+    inset: 0 !important;
+    padding: 0 !important;
+    position: fixed !important;
+  }
+
+  body:has(.apu-print-sheet) .apu-print-sheet,
+  body:has(.printable-proposal-wrapper) .printable-proposal-wrapper {
+    box-shadow: none !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
   body:has(.printable-voucher-sheet) * {
     visibility: hidden !important;
   }

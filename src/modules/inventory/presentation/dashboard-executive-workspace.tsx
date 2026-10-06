@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { createBrowserClient } from "@supabase/ssr";
 import {
   inventoryProducts,
   inventoryProjects,
@@ -26,6 +27,11 @@ import {
 import { type Apu } from "@/modules/apu";
 import { SignatureCapture } from "@/shared/components/signature-capture";
 import { prepareRealDataStorage } from "@/shared/browser/real-data-storage";
+import {
+  isSupabaseConfigured,
+  supabasePublishableKey,
+  supabaseUrl,
+} from "@/lib/supabase/config";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -102,11 +108,18 @@ function formatDateTime() {
   }).format(date);
 }
 
+function inventoryClient() {
+  return isSupabaseConfigured && supabaseUrl && supabasePublishableKey
+    ? createBrowserClient(supabaseUrl, supabasePublishableKey)
+    : null;
+}
+
 export function DashboardExecutiveWorkspace({
   initialProducts = [],
 }: {
   initialProducts?: StockProduct[];
 }) {
+  const [viewerName, setViewerName] = useState("Usuario");
   // Sincronización con localStorage
   const [products, setProducts] = useState<StockProduct[]>(() => {
     prepareRealDataStorage();
@@ -199,6 +212,20 @@ export function DashboardExecutiveWorkspace({
     return [];
   });
 
+  useEffect(() => {
+    const supabase = inventoryClient();
+    if (!supabase) return;
+    let active = true;
+    void supabase.auth.getUser().then(async ({ data }) => {
+      const user = data.user;
+      if (!user || !active) return;
+      const fallback = String(user.user_metadata.full_name || user.email || "Usuario");
+      const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
+      if (active) setViewerName(profile?.display_name?.trim() || fallback);
+    });
+    return () => { active = false; };
+  }, []);
+
   // Persistir cambios en localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -238,6 +265,74 @@ export function DashboardExecutiveWorkspace({
       );
     }
   }, [toolLoans]);
+
+  useEffect(() => {
+    const supabase = inventoryClient();
+    if (!supabase) return;
+
+    const loadSharedOperations = async () => {
+      const [projectResult, requisitionResult] = await Promise.all([
+        supabase
+          .from("projects")
+          .select("id,code,name,client,location,material_budget,status,start_date,estimated_end_date,actual_end_date,created_at")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("inventory_requisitions")
+          .select("id,code,project_id,requested_by_name,status,created_at,needed_by,notes,project:projects(name),lines:inventory_requisition_lines(stock_id,item_name_snapshot,requested_quantity,unit_snapshot,unit_cost_snapshot)")
+          .order("created_at", { ascending: false })
+          .limit(30),
+      ]);
+
+      if (!projectResult.error && projectResult.data?.length) {
+        const remoteProjects = projectResult.data.map((project) => ({
+          id: project.id,
+          code: project.code,
+          name: project.name,
+          client: project.client,
+          location: project.location ?? "Sin ubicación",
+          budget: Number(project.material_budget ?? 0),
+          status: (project.status === "completed" ? "completed" : project.status === "on_hold" ? "on_hold" : project.status === "active" ? "active" : "pending") as Project["status"],
+          type: "obra" as const,
+          createdAt: project.created_at,
+          startDate: project.start_date,
+          estimatedEndDate: project.estimated_end_date,
+          actualEndDate: project.actual_end_date,
+        }));
+        setProjects(remoteProjects);
+        setReqProject((current) => current || remoteProjects[0]?.id || "");
+      }
+
+      if (!requisitionResult.error && requisitionResult.data) {
+        setRequisitions(
+          requisitionResult.data.map((requisition) => {
+            const project = Array.isArray(requisition.project)
+              ? requisition.project[0]
+              : requisition.project;
+            return {
+              id: requisition.id,
+              code: requisition.code,
+              projectId: requisition.project_id,
+              projectName: project?.name ?? "Obra sin nombre",
+              requestedBy: requisition.requested_by_name,
+              status: requisition.status === "submitted" ? "pending" : requisition.status as MaterialRequisition["status"],
+              createdAt: new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(requisition.created_at)),
+              neededByDate: requisition.needed_by ?? undefined,
+              notes: requisition.notes ?? undefined,
+              items: (requisition.lines ?? []).map((line) => ({
+                productId: line.stock_id,
+                productName: line.item_name_snapshot,
+                quantity: Number(line.requested_quantity),
+                unit: line.unit_snapshot,
+                unitCost: Number(line.unit_cost_snapshot),
+              })),
+            };
+          }),
+        );
+      }
+    };
+
+    void loadSharedOperations();
+  }, []);
 
   useEffect(() => {
     const syncCommercialModules = () => {
@@ -836,7 +931,7 @@ export function DashboardExecutiveWorkspace({
       <section className="dashboard-heading greeting-section">
         <div>
           <p className="greeting-date">{todayFormatted}</p>
-          <h1>{greeting}, Jaime</h1>
+          <h1>{greeting}, {viewerName}</h1>
           <div className="greeting-activity">
             <span className="activity-pill pill-dispatches">
               📤 {activitySummary.totalDispatches} despachos

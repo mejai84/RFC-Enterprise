@@ -7,6 +7,8 @@ audiencia: Dirección, Operaciones, Almacén, Contabilidad y Desarrollo
 
 # Ficha de Módulo: Costeo de Materiales por Obra y Control de Inventarios
 
+<!-- Registro 2026-10-06: los valores de cantidad, rendimiento por día y tarifa de las líneas APU admiten decimales escritos con coma o punto. El total de costo y venta se recalcula al confirmar el campo y se conserva en la nueva versión del APU. -->
+
 ## Trazabilidad cotización–obra
 
 Cada obra creada desde una cotización conserva el identificador y código de cotización de origen. El consecutivo propio de la obra permite su operación y costeo; el nombre incorpora el código comercial para que el equipo reconozca inmediatamente el expediente que la originó.

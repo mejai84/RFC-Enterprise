@@ -30,6 +30,8 @@ import {
   getOfferExpiry,
   calculateTotalCost,
   isStale,
+  loadQuotesWorkspaceData,
+  saveQuote,
 } from "@/modules/quotes";
 import { getNextProjectCode, type Project } from "@/modules/inventory";
 import { apuCostBreakdown, apuSellingBreakdown, type Apu } from "@/modules/apu";
@@ -182,7 +184,7 @@ function proposalNoteLines(notes: string | undefined): string[] {
 }
 
 function uid(): string {
-  return Math.random().toString(36).slice(2, 10);
+  return crypto.randomUUID();
 }
 
 /** Ayuda contextual: visible con cursor, foco de teclado o toque. */
@@ -323,6 +325,8 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   const [filterStatus, setFilterStatus] = useState<QuoteStatus | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [isRemoteReady, setIsRemoteReady] = useState(false);
 
   // Auto-desvanecer aviso de acción
   useEffect(() => {
@@ -334,6 +338,39 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   useEffect(() => {
     localStorage.setItem("rfc_quotes", JSON.stringify(quotes));
   }, [quotes]);
+
+  useEffect(() => {
+    let active = true;
+    void loadQuotesWorkspaceData()
+      .then((remote) => {
+        if (!active || !remote) return;
+        setCompanyId(remote.companyId);
+        const remoteQuotes = remote.quotes;
+        setQuotes((current) => {
+          if (remoteQuotes.length) return remoteQuotes;
+          // Primera sincronización: conservar únicamente registros locales reales y
+          // reemplazar sus IDs históricos cortos por UUIDs válidos para Supabase.
+          return current.map((quote) => ({
+            ...quote,
+            id: crypto.randomUUID(),
+            history: quote.history.map((entry) => ({ ...entry, id: crypto.randomUUID() })),
+          }));
+        });
+        setSelectedQuote((current) => current && remoteQuotes.length ? remoteQuotes.find((quote) => quote.id === current.id) ?? null : current);
+        setIsRemoteReady(true);
+      })
+      .catch((error) => {
+        if (active) setActionNotice(error instanceof Error ? error.message : "No fue posible cargar las cotizaciones compartidas.");
+      });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!companyId || !isRemoteReady) return;
+    void Promise.all(quotes.map((quote) => saveQuote(companyId, quote))).catch((error) => {
+      setActionNotice(error instanceof Error ? `No se guardaron los cambios: ${error.message}` : "No se guardaron los cambios en la base de datos.");
+    });
+  }, [companyId, isRemoteReady, quotes]);
 
   /* ── Resumen ────────────────────────────────────────────── */
   const summary = useMemo(() => {
@@ -468,6 +505,13 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     },
     [],
   );
+
+  const handleSaveGeneralData = useCallback((quoteId: string, changes: Pick<Quote, "title" | "client" | "contactName" | "contactEmail" | "contactPhone" | "responsible" | "deadline" | "nextAction">) => {
+    const updatedAt = new Date().toISOString();
+    setQuotes((previous) => previous.map((quote) => quote.id === quoteId ? { ...quote, ...changes, updatedAt } : quote));
+    setSelectedQuote((previous) => previous?.id === quoteId ? { ...previous, ...changes, updatedAt } : previous);
+    setActionNotice("Datos de la cotización actualizados y sincronizados.");
+  }, []);
 
   /* ── Guardar actualización de Visita Técnica ─────────────── */
   const handleSaveTechnicalVisit = useCallback(
@@ -900,6 +944,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           onStatusChange={changeStatus}
           onSaveCostBreakdown={handleSaveCostBreakdown}
           onSaveProposalNotes={handleSaveProposalNotes}
+          onSaveGeneralData={handleSaveGeneralData}
           onSaveTechnicalVisit={handleSaveTechnicalVisit}
           onCreateRevision={handleCreateRevision}
           onConvertToProject={handleConvertToProject}
@@ -1341,6 +1386,7 @@ function DetailModal({
   onStatusChange,
   onSaveCostBreakdown,
   onSaveProposalNotes,
+  onSaveGeneralData,
   onSaveTechnicalVisit,
   onCreateRevision,
   onConvertToProject,
@@ -1351,6 +1397,7 @@ function DetailModal({
   onStatusChange: (id: string, status: QuoteStatus, note?: string) => void;
   onSaveCostBreakdown: (id: string, breakdown: QuoteCostBreakdown) => void;
   onSaveProposalNotes: (id: string, notes: string) => void;
+  onSaveGeneralData: (id: string, changes: Pick<Quote, "title" | "client" | "contactName" | "contactEmail" | "contactPhone" | "responsible" | "deadline" | "nextAction">) => void;
   onSaveTechnicalVisit: (id: string, visit: TechnicalVisit) => void;
   onCreateRevision: (id: string, reason: string) => void;
   onConvertToProject: (quote: Quote) => void;
@@ -1376,6 +1423,11 @@ function DetailModal({
     quote.costBreakdown?.indirects ?? 0,
   );
   const [proposalNotes, setProposalNotes] = useState(quote.notes ?? "");
+  const [isEditingGeneral, setIsEditingGeneral] = useState(false);
+  const [generalDraft, setGeneralDraft] = useState({
+    title: quote.title, client: quote.client, contactName: quote.contactName ?? "", contactEmail: quote.contactEmail ?? "",
+    contactPhone: quote.contactPhone ?? "", responsible: quote.responsible, deadline: quote.deadline?.slice(0, 10) ?? "", nextAction: quote.nextAction ?? "",
+  });
 
   // Estado local para edición de Visita Técnica
   const [visitReq, setVisitReq] = useState(
@@ -1579,6 +1631,24 @@ function DetailModal({
         {/* ── TAB 1: DATOS GENERALES ── */}
         {activeTab === "general" && (
           <div className="quote-tab-content">
+            <div className="quote-modal-action-bar">
+              <button className="action-pill-btn btn-apu" type="button" onClick={() => setIsEditingGeneral((current) => !current)}>
+                {isEditingGeneral ? "Cancelar edición" : "Editar datos de cotización"}
+              </button>
+            </div>
+            {isEditingGeneral ? (
+              <form className="quote-modal-grid" onSubmit={(event) => { event.preventDefault(); onSaveGeneralData(quote.id, { ...generalDraft, contactName: generalDraft.contactName || undefined, contactEmail: generalDraft.contactEmail || undefined, contactPhone: generalDraft.contactPhone || undefined, deadline: generalDraft.deadline || undefined, nextAction: generalDraft.nextAction || undefined }); setIsEditingGeneral(false); }}>
+                <label className="form-field">Nombre de la actividad / obra<input value={generalDraft.title} onChange={(event) => setGeneralDraft({ ...generalDraft, title: event.target.value })} required /></label>
+                <label className="form-field">Cliente<input value={generalDraft.client} onChange={(event) => setGeneralDraft({ ...generalDraft, client: event.target.value })} required /></label>
+                <label className="form-field">Contacto<input value={generalDraft.contactName} onChange={(event) => setGeneralDraft({ ...generalDraft, contactName: event.target.value })} /></label>
+                <label className="form-field">Correo del contacto<input type="email" value={generalDraft.contactEmail} onChange={(event) => setGeneralDraft({ ...generalDraft, contactEmail: event.target.value })} /></label>
+                <label className="form-field">Teléfono<input value={generalDraft.contactPhone} onChange={(event) => setGeneralDraft({ ...generalDraft, contactPhone: event.target.value })} /></label>
+                <label className="form-field">Responsable RFC<input value={generalDraft.responsible} onChange={(event) => setGeneralDraft({ ...generalDraft, responsible: event.target.value })} required /></label>
+                <label className="form-field">Fecha límite<input type="date" value={generalDraft.deadline} onChange={(event) => setGeneralDraft({ ...generalDraft, deadline: event.target.value })} /></label>
+                <label className="form-field">Próxima acción<input value={generalDraft.nextAction} onChange={(event) => setGeneralDraft({ ...generalDraft, nextAction: event.target.value })} /></label>
+                <button className="quotes-new-btn" type="submit">Guardar cambios</button>
+              </form>
+            ) : null}
             <div className="quote-modal-grid">
               <Field label="Cliente" value={quote.client} />
               <Field label="Contacto" value={quote.contactName} />

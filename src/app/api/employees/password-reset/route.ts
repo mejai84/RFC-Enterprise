@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
   const { data: memberships } = await admin
     .from("user_roles")
-    .select("company_id, roles!inner(code)")
+    .select("company_id, branch_id, roles!inner(code)")
     .eq("user_id", userData.user.id)
     .eq("roles.code", "administrator");
 
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
   const { data: employee } = await admin
     .from("employees")
-    .select("id, email, profile_id, company_id, is_active")
+    .select("id, email, profile_id, company_id, branch_id, is_active")
     .eq("id", employeeId)
     .in("company_id", companyIds)
     .maybeSingle();
@@ -154,22 +154,26 @@ export async function POST(request: NextRequest) {
         .update({ profile_id: profileId })
         .eq("id", employee.id);
 
-      // Crear user_roles para que el empleado tenga acceso a la empresa
-      const { data: empRole } = await admin
+      // El trigger `employees_sync_user_role` sincroniza la membresía efectiva
+      // al vincular la identidad Auth con la ficha y su rol laboral.
+
+      const { data: employeeRole } = await admin
         .from("employee_roles")
         .select("role_id")
         .eq("employee_id", employee.id)
         .maybeSingle();
-
-      if (empRole?.role_id) {
-        await admin.from("user_roles").upsert(
-          {
-            user_id: profileId,
-            company_id: employee.company_id,
-            role_id: empRole.role_id,
-          },
-          { onConflict: "user_id,company_id" }
-        );
+      const accessBranchId = employee.branch_id ?? memberships?.[0]?.branch_id;
+      if (!employeeRole?.role_id || !accessBranchId) {
+        return NextResponse.json({ error: "El empleado necesita sede y rol antes de activar su acceso." }, { status: 422 });
+      }
+      const { error: membershipError } = await admin.from("user_roles").insert({
+        user_id: profileId,
+        company_id: employee.company_id,
+        branch_id: accessBranchId,
+        role_id: employeeRole.role_id,
+      });
+      if (membershipError) {
+        return NextResponse.json({ error: "La cuenta fue creada, pero no se pudo asignar su acceso: " + membershipError.message }, { status: 502 });
       }
 
       // Registrar en auditoría
@@ -197,6 +201,26 @@ export async function POST(request: NextRequest) {
         { error: "No fue posible establecer la nueva contraseña." },
         { status: 502 }
       );
+    }
+
+    const { data: employeeRole } = await admin
+      .from("employee_roles")
+      .select("role_id")
+      .eq("employee_id", employee.id)
+      .maybeSingle();
+    const accessBranchId = employee.branch_id ?? memberships?.[0]?.branch_id;
+    if (!employeeRole?.role_id || !accessBranchId) {
+      return NextResponse.json({ error: "El empleado necesita sede y rol antes de activar su acceso." }, { status: 422 });
+    }
+    await admin.from("user_roles").delete().eq("user_id", profileId).eq("company_id", employee.company_id);
+    const { error: membershipError } = await admin.from("user_roles").insert({
+      user_id: profileId,
+      company_id: employee.company_id,
+      branch_id: accessBranchId,
+      role_id: employeeRole.role_id,
+    });
+    if (membershipError) {
+      return NextResponse.json({ error: "No se pudo sincronizar el rol de acceso: " + membershipError.message }, { status: 502 });
     }
 
     // Registrar en auditoría

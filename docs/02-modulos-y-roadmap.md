@@ -7,6 +7,8 @@ audiencia: Dirección, Producto y Desarrollo
 
 # Módulos y roadmap
 
+<!-- Registro 2026-10-06: una ficha laboral recibe empresa, sede y rol al crearse. Al asignar su primera contraseña se crea o repara su membresía efectiva `user_roles` con ese mismo rol; la autorización de Supabase y la pantalla de Empleados permanecen coherentes. -->
+<!-- Registro 2026-10-06: Cotizaciones y Proyectos/Obras evitan desplazamiento lateral en móvil; Kanban se presenta como columnas verticales y los controles de vista permanecen junto al título en escritorio. -->
 <!-- Registro 2026-10-06: Cotizaciones usa Supabase como fuente compartida: carga cotizaciones e historial por empresa, persiste altas y modificaciones con UUID válido y notifica el fallo si la cuenta no tiene empresa/rol. La ficha permite editar datos generales del cliente, contacto, actividad, responsable y siguiente acción. -->
 <!-- Registro 2026-10-06: APU no presenta un guardado local como confirmación cuando existe sesión sin empresa/rol; el usuario recibe una acción clara para solicitar su asignación. Cantidad, rendimiento y tarifa aceptan decimales con coma o punto. -->
 

@@ -7,6 +7,7 @@ audiencia: Dirección, Desarrollo y Operación
 
 # Registro de decisiones arquitectónicas y de producto
 
+<!-- ADR-084 (Aceptada, 2026-10-06): el rol laboral se asigna al crear la ficha. La membresía `user_roles`, exigida por RLS, se crea o repara en el flujo administrativo que crea/reestablece la cuenta Auth, usando la misma empresa, sede y rol; no se presentan permisos ficticios antes de existir una cuenta de acceso. -->
 <!-- ADR-083 (Aceptada, 2026-10-06): Cotizaciones y sus cambios de estado se comparten por empresa mediante `quotes` y `quote_history` en Supabase. El navegador solo conserva una caché de contingencia, nunca la confirmación de negocio. Toda alta usa UUID y toda cuenta sin membresía recibe un error accionable. -->
 
 ## ADR-073 · Identidad legible de la obra de origen comercial

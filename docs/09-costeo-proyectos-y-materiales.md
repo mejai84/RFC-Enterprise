@@ -7,6 +7,7 @@ audiencia: Dirección, Operaciones, Almacén, Contabilidad y Desarrollo
 
 # Ficha de Módulo: Costeo de Materiales por Obra y Control de Inventarios
 
+<!-- Registro 2026-10-06: en móvil las fichas de proyecto, sus métricas, pestañas y tablas de historial se ajustan a una sola columna o contenedor interno, sin forzar desplazamiento horizontal de la pantalla. -->
 <!-- Registro 2026-10-06: los valores de cantidad, rendimiento por día y tarifa de las líneas APU admiten decimales escritos con coma o punto. El total de costo y venta se recalcula al confirmar el campo y se conserva en la nueva versión del APU. -->
 
 ## Trazabilidad cotización–obra

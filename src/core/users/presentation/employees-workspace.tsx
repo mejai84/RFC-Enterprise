@@ -20,6 +20,7 @@ export function EmployeesWorkspace() {
   const [basePermissionsByRole, setBasePermissionsByRole] = useState<Map<string, Set<string>>>(new Map());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [branchId, setBranchId] = useState<string | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [message, setMessage] = useState("Cargando empleados…");
   const [isLoading, setIsLoading] = useState(true);
@@ -54,7 +55,7 @@ export function EmployeesWorkspace() {
 
     const { data: memberships, error: membershipsError } = await supabase
       .from("user_roles")
-      .select("company_id, role_id")
+      .select("company_id, branch_id, role_id")
       .eq("user_id", authData.user.id);
     if (membershipsError || !memberships?.length) {
       setMessage(getErrorMessage(membershipsError, "Tu cuenta no tiene una empresa asignada."));
@@ -122,6 +123,7 @@ export function EmployeesWorkspace() {
 
     const administratorRoleIds = new Set(roleRows.filter((role) => role.code === "administrator").map((role) => role.id));
     setCompanyId(currentCompanyId);
+    setBranchId(memberships[0].branch_id);
     setCanManage(memberships.some((membership) => administratorRoleIds.has(membership.role_id)));
     setRoles(roleRows);
     setBasePermissionsByRole(basePermissionsByRole);
@@ -143,6 +145,7 @@ export function EmployeesWorkspace() {
     setMessage("");
     const { data: createdEmployee, error: createError } = await supabase.from("employees").insert({
       company_id: companyId,
+      branch_id: branchId,
       full_name: String(data.get("name")).trim(),
       email: String(data.get("email")).trim().toLowerCase(),
       job_title: String(data.get("title")).trim(),
@@ -320,7 +323,7 @@ export function EmployeesWorkspace() {
       return;
     }
     setModalSaving(true);
-    const { data: created, error } = await supabase.from("employees").insert({ company_id: companyId, full_name: newEmpName.trim(), email: newEmpEmail.trim().toLowerCase(), job_title: newEmpTitle.trim() }).select("id").single();
+    const { data: created, error } = await supabase.from("employees").insert({ company_id: companyId, branch_id: branchId, full_name: newEmpName.trim(), email: newEmpEmail.trim().toLowerCase(), job_title: newEmpTitle.trim() }).select("id").single();
     if (error || !created) { setMessage(getErrorMessage(error, "No fue posible crear el empleado.")); setModalSaving(false); return; }
     const { error: roleError } = await supabase.from("employee_roles").insert({ employee_id: created.id, role_id: newEmpRole });
     if (roleError) { setMessage(getErrorMessage(roleError, "Empleado creado sin rol.")); setModalSaving(false); return; }

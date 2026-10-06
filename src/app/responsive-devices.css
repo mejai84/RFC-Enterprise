@@ -494,3 +494,19 @@
     display: none !important;
   }
 }
+
+/* Obras y proyectos: la ficha se ajusta al ancho móvil sin desplazamiento lateral. */
+@media (max-width: 768px) {
+  .projects-selector-bar,
+  .project-detail-container,
+  .project-main-card,
+  .project-tab-content,
+  .projects-grid { max-width: 100%; min-width: 0; }
+  .projects-selector-bar { align-items: stretch; display: flex; flex-wrap: wrap; overflow: visible; }
+  .projects-selector-bar > * { max-width: 100%; }
+  .project-tabs-header { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+  .project-tabs-header .tab-btn { min-width: 0; white-space: normal; }
+  .project-metrics-grid { grid-template-columns: 1fr; }
+  .project-tab-content { overflow-x: hidden; }
+  .project-history-table { display: block; max-width: 100%; overflow-x: auto; }
+}

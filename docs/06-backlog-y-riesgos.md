@@ -33,7 +33,7 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 
 | ID | Prioridad | Entrega | Criterio de aceptación resumido |
 | --- | --- | --- | --- |
-| COM-002 | Alta | Módulo de Compras y Proveedores | Catálogo de proveedores, orden de compra generada desde una requisición aprobada, recepción parcial y total, factura asociada y entrada automática al inventario con recálculo de costo promedio ponderado |
+| COM-002 | Alta | Módulo de Compras y Proveedores | Catálogo de proveedores, orden de compra generada desde una requisición aprobada, recepción parcial y total, factura asociada y entrada automática al inventario con recálculo de costo promedio ponderado. Base de datos ya creada (ADR-093): `suppliers`, `supplier_products`, vista `item_suppliers_overview` y RPC `create_supplier`, `link_supplier_product`, `set_preferred_supplier_product`. Falta la interfaz |
 | INV-009 | Alta | Reposición y sugerencia de compra | Punto de reorden por artículo, propuesta de compra consolidada y recepción parcial |
 | TALL-001 | Alta | Orden de taller y remisión de entrega | Recepción de equipo, diagnóstico, trabajo ejecutado, repuestos, entrega con firma en documento institucional imprimible |
 | INV-003 | Alta | Operaciones auditables de inventario | Cerrar la migración pendiente de compras y conteos bajo RLS con auditoría completa de responsables |

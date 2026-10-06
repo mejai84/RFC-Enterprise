@@ -129,6 +129,7 @@ La evolución se ejecutará en este orden para que cada fase entregue control op
 - Configuración de inventario dispone formularios con controles alineados e icono SVG. La búsqueda de catálogo muestra coincidencias en vivo y, al elegir una, restablece filtros restrictivos para presentar el artículo seleccionado.
 - El manual de usuario de RFC Enterprise documenta los procedimientos de acceso, inventario, movimientos, conteos, obras, informes, empleados y permisos.
 - La pestaña Bajas de Inventario registra salida por deterioro, daño, vencimiento, pérdida u obsolescencia, con evidencia fotográfica en bucket privado, valorización al costo vigente y umbral de aprobación configurable por empresa; las bajas sobre el umbral quedan pendientes de un administrador y no descuentan existencias hasta su autorización.
+- La base de datos de proveedores y su vinculación con materiales y equipos queda creada sin interfaz, lista para el módulo de Compras y Proveedores: cada artículo admite varios proveedores con precio, unidad de compra, plazo y mínimo a pedir, de los cuales uno es el preferido (ADR-093).
 <!-- Registro 2026-10-01: `/quotes` se compone dentro de DashboardShell; conserva barra lateral, menu movil y control de sesion del portal. -->
 <!-- Registro 2026-10-01: el Kanban de `/quotes` presenta el tramo completo de ejecucion: En ejecucion, Trabajo terminado, Pendiente pago y Cerrado. -->
 <!-- Registro 2026-10-01: el Kanban de `/quotes` deriva sus columnas del catalogo unico de 12 estados; ningun estado seleccionable queda oculto. -->

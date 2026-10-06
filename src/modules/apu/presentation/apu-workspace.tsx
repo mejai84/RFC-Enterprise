@@ -797,6 +797,9 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                   <p>{selected.code} · {selected.unit}</p>
                   <h2>{selected.name}</h2>
                   <small>Cantidad de obra: {selected.workQuantity.toLocaleString("es-CO")} {selected.unit}</small>
+                  <small className="apu-price-share">
+                    {analysisTotals.selectedShare.toFixed(1)}% del total del presupuesto
+                  </small>
                 </div>
                 {/* Precio y costo de la actividad, uno junto al otro. */}
                 <div className="apu-price-block">
@@ -814,9 +817,6 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                       {formatCOP(selectedCost)} <em>÷ {selected.workQuantity.toLocaleString("es-CO")} {selected.unit}</em>
                     </small>
                   </div>
-                  <small className="apu-price-share">
-                    {analysisTotals.selectedShare.toFixed(1)}% del total del análisis
-                  </small>
                 </div>
               </div>
               {!hasRealQuantity ? (

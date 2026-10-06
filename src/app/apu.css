@@ -363,10 +363,12 @@
 }
 
 /* Precio de venta y costo por unidad, juntos en el encabezado - 2026-10-07 */
-.apu-editor-heading > div:first-child { min-width: 0; flex: 1 1 auto; }
+/* Rejilla de dos columnas: titulo a la izquierda (cede espacio) y cifras a la derecha. */
+.panel-title.apu-editor-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: start; }
+.apu-editor-heading > div:first-child { min-width: 0; }
 .apu-editor-heading > div:first-child h2 { overflow-wrap: anywhere; }
-.apu-price-block { display: flex; align-items: stretch; gap: 0.55rem; flex-wrap: nowrap; margin: 0; flex: 0 1 430px; }
-.apu-price-cell { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; padding: 0.55rem 0.8rem; border-radius: 11px; border: 1px solid transparent; }
+.apu-price-block { display: flex; align-items: stretch; gap: 0.55rem; flex-wrap: nowrap; margin: 0; flex: 0 0 auto; }
+.apu-price-cell { flex: 0 1 auto; min-width: 172px; display: flex; flex-direction: column; gap: 0.15rem; padding: 0.55rem 0.8rem; border-radius: 11px; border: 1px solid transparent; }
 .apu-price-cell > span { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
 .apu-price-cell > strong { font-size: 1.5rem; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
 .apu-price-cell > small { font-size: 0.73rem; }
@@ -379,14 +381,19 @@
 .apu-price-cell.is-cost > span { color: #cfe3d8; }
 .apu-price-cell.is-cost > strong { color: #ffffff; }
 .apu-price-cell.is-cost > small { color: #cfe3d8; }
-.apu-price-share { flex: 1 1 100%; text-align: right; font-size: 0.7rem; color: #64748b; }
+.apu-price-share { display: block; margin-top: 4px; font-size: 0.72rem; color: #64748b; }
 .apu-unitcost-warning { margin: 0 0 0.75rem; padding: 0.55rem 0.75rem; border-radius: 9px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 0.78rem; }
+
+@media (max-width: 1120px) {
+  .panel-title.apu-editor-heading { grid-template-columns: minmax(0, 1fr); }
+  .apu-price-block { flex-wrap: wrap; }
+  .apu-price-cell { flex: 1 1 172px; }
+}
 
 @media (max-width: 640px) {
   .apu-price-block { flex-direction: column; }
   .apu-price-cell { flex: 1 1 100%; }
   .apu-price-cell > strong { font-size: 1.3rem; }
-  .apu-price-share { text-align: left; }
 }
 
 /* Resumen del presupuesto a nivel de modulo - 2026-10-07 */

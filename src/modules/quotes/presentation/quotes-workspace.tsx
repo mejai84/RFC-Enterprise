@@ -32,12 +32,11 @@ import {
   isStale,
   loadQuotesWorkspaceData,
   saveQuote,
+  convertQuoteToProject,
 } from "@/modules/quotes";
-import { getNextProjectCode, type Project } from "@/modules/inventory";
+
 import { apuCostBreakdown, apuSellingBreakdown, type Apu } from "@/modules/apu";
 import { prepareRealDataStorage } from "@/shared/browser/real-data-storage";
-import { createBrowserClient } from "@supabase/ssr";
-import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 
 /* ── Helpers de formato ─────────────────────────────────────── */
 
@@ -316,6 +315,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   const [filterStatus, setFilterStatus] = useState<QuoteStatus | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [branchId, setBranchId] = useState<string | null>(null);
   const [isRemoteReady, setIsRemoteReady] = useState(false);
@@ -577,77 +577,52 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       setActionNotice("No fue posible validar la empresa o sede del usuario. Vuelve a iniciar sesión.");
       return;
     }
-    if (!isSupabaseConfigured || !supabaseUrl || !supabasePublishableKey) {
-      setActionNotice("No fue posible conectar con la base de datos.");
-      return;
-    }
     const now = new Date();
     const createdAt = now.toISOString();
     const startDate = createdAt.slice(0, 10);
     const estimatedEnd = new Date(now);
     estimatedEnd.setDate(estimatedEnd.getDate() + (quote.deliveryTimeWeeks ?? 3) * 7);
     const estimatedEndDate = estimatedEnd.toISOString().slice(0, 10);
-
-    const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
-    // Generar consecutivo por empresa a partir de los códigos reales en Supabase
-    const { data: existingProjects, error: listError } = await supabase
-      .from("projects").select("code").eq("company_id", companyId);
-    if (listError) {
-      setActionNotice(`No fue posible leer las obras existentes: ${listError.message}`);
-      return;
-    }
-    const generatedProjectCode = getNextProjectCode(
-      (existingProjects ?? []) as Array<{ code: string }>, "obra", startDate,
-    );
-
-    const { data: savedProject, error: createError } = await supabase.from("projects").insert({
-      company_id: companyId,
-      branch_id: branchId,
-      code: generatedProjectCode,
-      name: `${getEffectiveQuoteCode(quote)} · ${quote.title}`,
-      client: quote.client,
-      location: "Por definir",
-      material_budget: quote.estimatedValue ?? 0,
-      status: "active",
-      start_date: startDate,
-      estimated_end_date: estimatedEndDate,
-    }).select("id, created_at").single();
-
-    if (createError || !savedProject) {
-      setActionNotice(createError?.message ?? "No fue posible crear la obra en la base de datos.");
-      return;
-    }
-
-    const updatedQuote: Quote = {
-      ...quote,
-      projectId: savedProject.id,
-      projectCode: generatedProjectCode,
-      status: "in_execution",
-      updatedAt: createdAt,
-      history: [
-        ...quote.history,
-        {
-          id: uid(),
-          fromStatus: quote.status,
-          toStatus: "in_execution",
-          changedBy: quote.responsible || "Usuario",
-          changedAt: createdAt,
-          note: `Cotización convertida a Obra oficial: ${generatedProjectCode}`,
-        },
-      ],
-    };
-
+    if (isConverting) return;
+    setIsConverting(true);
     try {
-      await saveQuote(companyId, updatedQuote);
+      const result = await convertQuoteToProject(companyId, branchId, quote.id, {
+        projectType: "obra",
+        projectName: `${getEffectiveQuoteCode(quote)} · ${quote.title}`,
+        client: quote.client,
+        location: "Por definir",
+        materialBudget: quote.estimatedValue ?? 0,
+        startDate,
+        estimatedEndDate,
+        note: `Cotización convertida a Obra oficial.`,
+      });
+      const updatedQuote: Quote = {
+        ...quote,
+        projectId: result.projectId,
+        projectCode: result.code,
+        status: "in_execution",
+        updatedAt: createdAt,
+        history: [
+          ...quote.history,
+          {
+            id: uid(),
+            fromStatus: quote.status,
+            toStatus: "in_execution",
+            changedBy: quote.responsible || "Usuario",
+            changedAt: createdAt,
+            note: `Cotización convertida a Obra oficial: ${result.code}`,
+          },
+        ],
+      };
+      setQuotes((prev) => prev.map((q) => (q.id === quote.id ? updatedQuote : q)));
+      setSelectedQuote((prev) => (prev && prev.id === quote.id ? updatedQuote : prev));
+      setActionNotice(`¡Proyecto creado exitosamente con código ${result.code}!`);
     } catch (error) {
-      setActionNotice(error instanceof Error ? `Obra creada, pero no se actualizó la cotización: ${error.message}` : "Obra creada, pero no se pudo registrar el historial de la cotización.");
-      return;
+      setActionNotice(error instanceof Error ? error.message : "No fue posible convertir la cotización a obra.");
+    } finally {
+      setIsConverting(false);
     }
-
-    setQuotes((prev) => prev.map((q) => (q.id === quote.id ? updatedQuote : q)));
-    setSelectedQuote((prev) => (prev && prev.id === quote.id ? updatedQuote : prev));
-    setActionNotice(`¡Proyecto creado exitosamente con código ${generatedProjectCode}!`);
-  }, [companyId, branchId, quotes]);
+  }, [companyId, branchId, isConverting]);
 
   /* ── Crear nueva cotización ────────────────────────────── */
   const handleCreateQuote = useCallback(
@@ -1384,7 +1359,7 @@ function DetailModal({
   onSaveGeneralData: (id: string, changes: Pick<Quote, "title" | "client" | "contactName" | "contactEmail" | "contactPhone" | "responsible" | "deadline" | "nextAction">) => void;
   onSaveTechnicalVisit: (id: string, visit: TechnicalVisit) => void;
   onCreateRevision: (id: string, reason: string) => void;
-  onConvertToProject: (quote: Quote) => void;
+  onConvertToProject: (quote: Quote) => Promise<void>;
   onPrintProposal: (quote: Quote) => void;
 }) {
   const [activeTab, setActiveTab] = useState<ModalTab>("general");

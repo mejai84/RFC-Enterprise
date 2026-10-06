@@ -32,6 +32,30 @@ function toQuote(row: QuoteRow, history: QuoteHistoryEntry[]): Quote {
   };
 }
 
+// RPC: convierte la cotización en obra de forma transaccional en Supabase.
+export async function convertQuoteToProject(companyId: string, branchId: string | null, quoteId: string, payload: {
+  projectType: string; projectName: string; client: string; location: string; materialBudget: number;
+  startDate: string; estimatedEndDate: string; note: string;
+}): Promise<{ projectId: string; code: string }> {
+  const supabase = client();
+  if (!supabase) throw new Error("Supabase no está configurado.");
+  const { data, error } = await supabase.rpc("convert_quote_to_project", {
+    p_company_id: companyId,
+    p_branch_id: branchId,
+    p_quote_id: quoteId,
+    p_project_type: payload.projectType,
+    p_project_name: payload.projectName,
+    p_client: payload.client,
+    p_location: payload.location,
+    p_material_budget: payload.materialBudget,
+    p_start_date: payload.startDate,
+    p_estimated_end_date: payload.estimatedEndDate,
+    p_note: payload.note,
+  });
+  if (error) throw error;
+  return { projectId: data.projectId, code: data.code };
+}
+
 export async function loadQuotesWorkspaceData(): Promise<{ companyId: string; branchId: string | null; quotes: Quote[] } | null> {
   const supabase = client();
   if (!supabase) return null;

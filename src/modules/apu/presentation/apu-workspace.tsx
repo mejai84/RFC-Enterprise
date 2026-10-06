@@ -222,6 +222,13 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     () => quoteContext?.quoteId ? apus.filter((apu) => apu.quoteId === quoteContext.quoteId) : apus,
     [apus, quoteContext],
   );
+  /** Costo por unidad de la actividad: costo directo total ÷ cantidad de la obra. */
+  const selectedCost = selected ? apuCostTotal(selected) : 0;
+  const selectedQuantity = selected ? Number(selected.workQuantity) || 0 : 0;
+  const unitCost = selectedQuantity > 0 ? selectedCost / selectedQuantity : 0;
+  const unitSelling = selectedQuantity > 0 && selected ? apuSellingTotal(selected) / selectedQuantity : 0;
+  const hasRealQuantity = selectedQuantity > 1;
+
   /** Totales del análisis: suma de todas las actividades (no solo la seleccionada). */
   const analysisTotals = useMemo(() => {
     const quantity = visibleApus.reduce(
@@ -694,6 +701,36 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 <label><span>Unidad</span><ApuUnitCombobox value={selected.unit} onChange={(unit) => updateApu({ ...selected, unit })} /></label>
                 <label><span>Cantidad de obra</span><input type="number" min="0.01" step="any" value={selected.workQuantity} onChange={(event) => updateApu({ ...selected, workQuantity: Number(event.target.value) || 1 })} /></label>
               </div>
+
+              {/* Costo por unidad de la actividad: costo directo total ÷ cantidad de la obra */}
+              <section className="apu-unitcost-strip" aria-label="Costo por unidad de la actividad">
+                <div className="apu-unitcost-step">
+                  <span>Costo directo total</span>
+                  <strong>{formatCOP(selectedCost)}</strong>
+                </div>
+                <span className="apu-unitcost-op" aria-hidden="true">÷</span>
+                <div className="apu-unitcost-step">
+                  <span>Cantidad de la actividad</span>
+                  <strong>
+                    {selected.workQuantity.toLocaleString("es-CO")} <small>{selected.unit}</small>
+                  </strong>
+                </div>
+                <span className="apu-unitcost-op" aria-hidden="true">=</span>
+                <div className="apu-unitcost-step is-result">
+                  <span>Costo por {selected.unit}</span>
+                  <strong>{formatCOP(unitCost)}</strong>
+                </div>
+                <div className="apu-unitcost-step is-selling">
+                  <span>Precio de venta por {selected.unit}</span>
+                  <strong>{formatCOP(unitSelling)}</strong>
+                </div>
+              </section>
+              {!hasRealQuantity ? (
+                <p className="apu-unitcost-warning" role="status">
+                  La cantidad de la actividad está en 1, así que el costo por unidad coincide con el total.
+                  Escribe la cantidad real de la obra para que el costo por unidad sea correcto.
+                </p>
+              ) : null}
               <div className="apu-actions-bar" role="group" aria-label="Acciones del APU seleccionado">
                 <button type="button" className="inventory-action apu-action-primary" onClick={() => void saveSelectedApu()} title="Guarda esta actividad en Supabase">
                   💾 Guardar APU

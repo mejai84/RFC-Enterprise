@@ -498,8 +498,22 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
 
   const handleSaveGeneralData = useCallback((quoteId: string, changes: Pick<Quote, "title" | "client" | "contactName" | "contactEmail" | "contactPhone" | "responsible" | "deadline" | "nextAction">) => {
     const updatedAt = new Date().toISOString();
-    setQuotes((previous) => previous.map((quote) => quote.id === quoteId ? { ...quote, ...changes, updatedAt } : quote));
-    setSelectedQuote((previous) => previous?.id === quoteId ? { ...previous, ...changes, updatedAt } : previous);
+    setQuotes((previous) => previous.map((quote) => {
+      if (quote.id !== quoteId) return quote;
+      const changedFields = Object.entries(changes)
+        .filter(([key, value]) => value !== undefined && quote[key as keyof Quote] !== value)
+        .map(([key]) => ({ title: "título", client: "cliente", contactName: "contacto", contactEmail: "email", contactPhone: "teléfono", responsible: "responsable", deadline: "fecha límite", nextAction: "próxima acción" }[key] ?? key));
+      const entry: QuoteHistoryEntry = {
+        id: uid(),
+        fromStatus: quote.status,
+        toStatus: quote.status,
+        changedBy: quote.responsible || "Usuario",
+        changedAt: updatedAt,
+        note: `Actualización de datos generales: ${changedFields.join(", ") || "sin cambios"}.`,
+      };
+      return { ...quote, ...changes, updatedAt, history: [...quote.history, entry] };
+    }));
+    setSelectedQuote((previous) => previous?.id === quoteId ? { ...previous, ...changes, updatedAt, history: [...previous.history, { id: uid(), fromStatus: previous.status, toStatus: previous.status, changedBy: previous.responsible || "Usuario", changedAt: updatedAt, note: `Actualización de datos generales.` }] } : previous);
     setActionNotice("Datos de la cotización actualizados y sincronizados.");
   }, []);
 

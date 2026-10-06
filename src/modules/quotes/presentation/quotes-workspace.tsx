@@ -1841,14 +1841,6 @@ function DetailModal({
                   status,
                 })
               }
-              onCreateRequisition={(materialsMissing) =>
-                onSaveTechnicalVisit(quote.id, {
-                  required: true,
-                  status: quote.technicalVisit?.status ?? "pending",
-                  ...(quote.technicalVisit ?? {}),
-                  materialsMissing,
-                })
-              }
             />
           </div>
         )}

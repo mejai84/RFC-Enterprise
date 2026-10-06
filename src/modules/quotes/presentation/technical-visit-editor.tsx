@@ -25,18 +25,36 @@ function client() {
   return createBrowserClient(supabaseUrl, supabasePublishableKey);
 }
 
+/** Normaliza texto para comparar nombres de artículos (sin tildes, minúsculas). */
+function normalize(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+/** Interpreta una línea de texto libre como "cantidad + descripción de artículo". */
+function parseMissingLine(line: string) {
+  const cleaned = line.replace(/\s+/g, " ").trim().replace(/^[-*•]\s*/, "");
+  if (!cleaned) return null;
+  const match = cleaned.match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/);
+  if (!match) return { quantity: 1, query: cleaned };
+  const quantity = Number(match[1].replace(",", "."));
+  const query = match[2].replace(/\s*(de|del|para|und\.?|unidades?)\s*$/i, "").trim();
+  return { quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1, query: query || cleaned };
+}
+
 export function TechnicalVisitEditor({
   quote,
   currentUser,
   onSave,
   onSaveStatus,
-  onCreateRequisition,
 }: {
   quote: Quote;
   currentUser: string;
   onSave: (visit: TechnicalVisit) => void;
   onSaveStatus: (status: TechnicalVisit["status"]) => void;
-  onCreateRequisition: (materialsMissing: string) => void;
 }) {
   const visit = quote.technicalVisit;
   const supabase = useMemo(() => client(), []);
@@ -76,6 +94,99 @@ export function TechnicalVisitEditor({
   );
   const [notice, setNotice] = useState<string | null>(null);
   const [actaToPrint, setActaToPrint] = useState<TechnicalVisit | null>(null);
+  const [reqLines, setReqLines] = useState<
+    Array<{ id: string; query: string; quantity: number; stockId: string | null; matchName: string | null; unit: string | null; candidates: Array<{ stockId: string; name: string; unit: string }> }>
+  >([]);
+  const [reqOpen, setReqOpen] = useState(false);
+  const [reqCreating, setReqCreating] = useState(false);
+
+  /** Carga candidatos del catálogo para que el almacén valide qué artículo es. */
+  async function searchCatalog(query: string, signal: { canceled: boolean }) {
+    const db = supabase;
+    if (!db || query.length < 2) return [];
+    const { data, error } = await db
+      .from("inventory_stock")
+      .select("id, inventory_items!inner(name, unit)")
+      .ilike("inventory_items.name", `%${query}%`)
+      .limit(8);
+    if (signal.canceled || error || !data) return [];
+    return data.map((row) => {
+      const item = Array.isArray(row.inventory_items) ? row.inventory_items[0] : row.inventory_items;
+      return { stockId: row.id as string, name: item?.name ?? "", unit: item?.unit ?? "" };
+    });
+  }
+
+  async function openRequisitionBuilder() {
+    const parsed = materialsMissing
+      .split(/\r?\n|;/)
+      .map(parseMissingLine)
+      .filter((entry): entry is { quantity: number; query: string } => Boolean(entry));
+    if (!parsed.length) {
+      setNotice("Escribe al menos un material faltante antes de crear la requisición.");
+      return;
+    }
+    if (!quote.projectId) {
+      setNotice(
+        "Esta cotización todavía no tiene obra. Conviértela en obra y luego crea la requisición desde la ficha de la obra.",
+      );
+      return;
+    }
+    const lines = parsed.map((entry, index) => ({
+      id: `${Date.now()}-${index}`,
+      query: entry.query,
+      quantity: entry.quantity,
+      stockId: null as string | null,
+      matchName: null as string | null,
+      unit: null as string | null,
+      candidates: [] as Array<{ stockId: string; name: string; unit: string }>,
+    }));
+    setReqLines(lines);
+    setReqOpen(true);
+    await Promise.all(
+      lines.map(async (line) => {
+        const candidates = await searchCatalog(line.query, { canceled: false });
+        setReqLines((current) =>
+          current.map((row) => (row.id === line.id ? { ...row, candidates } : row)),
+        );
+      }),
+    );
+  }
+
+  async function createRequisition() {
+    const db = supabase;
+    if (!db || !quote.projectId) return;
+    const selected = reqLines.filter((line) => line.stockId && line.quantity > 0);
+    if (!selected.length) {
+      setNotice("Selecciona el artículo de al menos una línea.");
+      return;
+    }
+    setReqCreating(true);
+    const { data, error } = await db.rpc("create_inventory_requisition", {
+      target_project: quote.projectId,
+      requester_name: visit?.responsible ?? quote.responsible ?? currentUser,
+      target_needed_by: scheduledDate || null,
+      request_notes: `Generada desde la visita técnica de la cotización ${getEffectiveQuoteCode(quote)}.`,
+      request_lines: selected.map((line) => ({
+        stock_id: line.stockId,
+        quantity: line.quantity,
+        notes: line.matchName ? `Solicitado como "${line.query}"` : null,
+      })),
+    });
+    setReqCreating(false);
+    if (error) {
+      setNotice(`No fue posible crear la requisición: ${error.message}`);
+      return;
+    }
+    const created = Array.isArray(data) ? data[0] : data;
+    const code = created?.requisition_code ?? created?.code ?? "REQ";
+    onSave({
+      ...buildVisit(),
+      linkedRequisitionId: created?.requisition_id ?? created?.id,
+      linkedRequisitionCode: code,
+    });
+    setReqOpen(false);
+    setNotice(`Requisición ${code} creada y enviada al almacén.`);
+  }
 
   const isOverdue =
     required &&
@@ -451,14 +562,22 @@ export function TechnicalVisitEditor({
               />
             </label>
             {materialsMissing.trim() && (
-              <button
-                type="button"
-                className="btn-mini"
-                style={{ marginTop: "8px" }}
-                onClick={() => onCreateRequisition(materialsMissing.trim())}
-              >
-                📦 Crear requisición con estos faltantes
-              </button>
+              <div className="visit-requ requisition-actions">
+                {visit?.linkedRequisitionCode && (
+                  <p className="visit-alert is-info">
+                    Requisición <strong>{visit.linkedRequisitionCode}</strong> enviada al
+                    almacén desde esta visita.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="btn-mini"
+                  style={{ marginTop: "8px" }}
+                  onClick={() => void openRequisitionBuilder()}
+                >
+                  📦 Crear requisición con estos faltantes
+                </button>
+              </div>
             )}
           </section>
 
@@ -489,6 +608,112 @@ export function TechnicalVisitEditor({
             </button>
           </div>
         </>
+      )}
+
+      {reqOpen && (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Crear requisición desde la visita técnica"
+        >
+          <div className="modal-card visit-requisition-modal">
+            <div className="modal-header">
+              <div>
+                <p>Visita técnica · {getEffectiveQuoteCode(quote)}</p>
+                <h3>Crear requisición al almacén</h3>
+              </div>
+              <button
+                className="btn-close-modal"
+                type="button"
+                onClick={() => setReqOpen(false)}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
+            <p className="panel-intro">
+              Confirma el artículo del catálogo y la cantidad. El almacén despacha desde
+              la obra {quote.projectCode ?? ""}.
+            </p>
+            <div className="visit-requisition-lines">
+              {reqLines.map((line) => (
+                <div key={line.id} className="visit-requisition-line">
+                  <div className="visit-requisition-head">
+                    <code>{line.query}</code>
+                    <label>
+                      Cantidad
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="any"
+                        value={line.quantity}
+                        onChange={(event) =>
+                          setReqLines((current) =>
+                            current.map((row) =>
+                              row.id === line.id
+                                ? { ...row, quantity: Number(event.target.value) || 0 }
+                                : row,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                  {line.candidates.length === 0 ? (
+                    <p className="visit-requisition-empty">
+                      Sin coincidencias en el catálogo. Ajusta el texto o crea primero el
+                      artículo en Inventarios.
+                    </p>
+                  ) : (
+                    <ul className="visit-requisition-candidates">
+                      {line.candidates.map((candidate) => (
+                        <li key={candidate.stockId}>
+                          <button
+                            type="button"
+                            className={
+                              line.stockId === candidate.stockId ? "is-selected" : ""
+                            }
+                            onClick={() =>
+                              setReqLines((current) =>
+                                current.map((row) =>
+                                  row.id === line.id
+                                    ? {
+                                        ...row,
+                                        stockId: candidate.stockId,
+                                        matchName: candidate.name,
+                                        unit: candidate.unit,
+                                      }
+                                    : row,
+                                ),
+                              )
+                            }
+                          >
+                            {candidate.name}
+                            <small>{candidate.unit}</small>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn-cancel" onClick={() => setReqOpen(false)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="inventory-action"
+                disabled={reqCreating}
+                onClick={() => void createRequisition()}
+              >
+                {reqCreating ? "Enviando…" : "Enviar requisición"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {actaToPrint && (

@@ -1,0 +1,300 @@
+/* Página principal premium en blanco. Intención: blanco luminoso, tipografía
+   oscura con peso meidano, brillos de video con parallax y efecto sutil de
+   profundidad. Los videos hacen parallax con transform sobre su offset. */
+
+.page {
+  background: #fcfaf6;
+  color: #16241c;
+  overflow-x: hidden;
+}
+
+/* ---- Hero ---- */
+.hero {
+  position: relative;
+  min-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fdfcf9;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(120deg, rgba(253, 252, 249, 0.92) 0%, rgba(253, 252, 249, 0.78) 42%, rgba(253, 252, 249, 0.35) 100%),
+    linear-gradient(to top, rgba(252, 250, 246, 0.9), rgba(252, 250, 246, 0) 40%);
+  pointer-events: none;
+}
+
+.heroVideo {
+  position: absolute;
+  inset: -10% 0;
+  z-index: 0;
+}
+.heroVideo video,
+.panelVideo video,
+.panelVideoAlt video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: translateY(var(--parallax-offset, 0)) scale(1.08);
+  border-radius: inherit;
+}
+
+.nav {
+  position: relative;
+  z-index: 3;
+  align-items: center;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: clamp(12px, 2vw, 28px);
+  padding: 18px clamp(20px, 5vw, 64px);
+}
+
+.logo { align-items: center; color: #16241c; display: flex; gap: 12px; text-decoration: none; }
+.logo b { font-size: 12px; letter-spacing: 0.12em; line-height: 1.2; text-transform: uppercase; }
+.logoImage { border-radius: 10px; }
+
+.navLinks { display: flex; gap: clamp(10px, 2vw, 26px); justify-self: center; }
+.navLinks a { color: #5c6b62; font-size: 14px; font-weight: 500; text-decoration: none; }
+.navLinks a:hover { color: #16241c; }
+
+.portal { color: #16241c; font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.cta {
+  border: 1px solid #e0d9c8;
+  background: #fffdf8;
+  padding: 10px 18px;
+  border-radius: 12px;
+  color: #16241c;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(22, 36, 28, 0.06);
+}
+.cta:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(22, 36, 28, 0.1); }
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  max-width: 700px;
+  padding: clamp(24px, 6vw, 72px) clamp(20px, 5vw, 64px) clamp(60px, 8vw, 96px);
+  display: grid;
+  gap: 18px;
+}
+
+.kicker {
+  color: #b07816;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.heroContent h1 {
+  font-size: clamp(34px, 5.4vw, 60px);
+  font-weight: 500;
+  letter-spacing: -1.5px;
+  line-height: 1.02;
+  margin: 0;
+}
+
+.lede { color: #54645c; font-size: clamp(16px, 1.6vw, 18px); line-height: 1.5; margin: 0; max-width: 560px; }
+
+.actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #16241c;
+  color: #fdfcf9;
+  border-radius: 12px;
+  padding: 14px 22px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 12px 30px rgba(22, 36, 28, 0.18);
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(22, 36, 28, 0.22); }
+
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e0d9c8;
+  color: #16241c;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  padding: 14px 22px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ---- Tira de capacidades ---- */
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 28px;
+  align-items: center;
+  padding: 16px clamp(20px, 5vw, 64px);
+  border-block: 1px solid #ece7da;
+  color: #6b7a71;
+  font-size: 14px;
+}
+
+/* ---- Secciones comunes ---- */
+.intro {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: clamp(20px, 4vw, 64px);
+  padding: clamp(64px, 9vw, 120px) clamp(20px, 5vw, 64px);
+  align-items: start;
+}
+
+.label {
+  color: #b07816;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin: 0 0 12px;
+}
+
+.intro h2,
+.panelCopy h2,
+.services h2,
+.process h2,
+.contact h2 {
+  font-size: clamp(26px, 3.4vw, 36px);
+  font-weight: 500;
+  letter-spacing: -0.6px;
+  line-height: 1.12;
+  margin: 0 0 16px;
+}
+
+.intro p { color: #5c6b62; font-size: 16px; line-height: 1.6; margin: 10px 0; }
+
+/* ---- Panel con video parallax ---- */
+.videoPanel,
+.videoPanelAlt {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(20px, 4vw, 56px);
+  align-items: center;
+  padding: clamp(56px, 8vw, 104px) clamp(20px, 5vw, 64px);
+}
+.videoPanelAlt { grid-template-columns: 1fr 1.2fr; }
+
+.panelVideo,
+.panelVideoAlt {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  box-shadow: 0 30px 70px rgba(22, 36, 28, 0.18);
+}
+.panelVideo video,
+.panelVideoAlt video {
+  position: absolute; inset: 0;
+}
+
+.panelCopy h2 { color: #16241c; }
+.panelCopy p { color: #5c6b62; font-size: 16px; line-height: 1.6; margin: 0 0 14px; }
+
+/* ---- Servicios ---- */
+.services {
+  background: #ffffff;
+  border-block: 1px solid #ece7da;
+  padding: clamp(72px, 10vw, 140px) clamp(20px, 5vw, 64px);
+}
+.servicesHeading { max-width: 760px; margin-bottom: 40px; }
+.servicesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.service {
+  border: 1px solid #eeebe2;
+  border-radius: 14px;
+  padding: 26px 24px;
+  background: #fdfcf8;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.service:hover { transform: translateY(-4px); border-color: #ddd3b6; box-shadow: 0 20px 44px rgba(22, 36, 28, 0.08); }
+.serviceLine { background: #b07816; display: block; height: 2px; width: 36px; margin-bottom: 18px; }
+.service h3 { font-size: 20px; font-weight: 600; margin: 0 0 8px; color: #16241c; }
+.service p { color: #66766d; font-size: 14px; line-height: 1.55; margin: 0; }
+
+/* ---- Proceso ---- */
+.process { padding: clamp(72px, 10vw, 140px) clamp(20px, 5vw, 64px); }
+.processHeading { max-width: 760px; margin-bottom: 40px; }
+.processList { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; list-style: none; margin: 0; padding: 0; }
+.processList li {
+  border: 1px solid #eeebe2;
+  border-radius: 14px;
+  padding: 26px 24px;
+  background: #fdfcf8;
+}
+.processList li span { color: #b07816; font-weight: 700; font-size: 14px; }
+.processList h3 { font-size: 19px; margin: 10px 0 8px; color: #16241c; }
+.processList p { color: #66766d; font-size: 14px; line-height: 1.55; margin: 0; }
+
+/* ---- Declaración ---- */
+.statement {
+  background: linear-gradient(120deg, #fdfcf9, #f6f1e3);
+  border-block: 1px solid #ece7da;
+  padding: clamp(72px, 10vw, 140px) clamp(20px, 6vw, 80px);
+  text-align: center;
+}
+.statement p {
+  max-width: 780px;
+  margin: 0 auto;
+  font-size: clamp(24px, 3vw, 36px);
+  font-weight: 500;
+  line-height: 1.25;
+  color: #16241c;
+}
+
+/* ---- Contacto ---- */
+.contact {
+  background: #f6f2e8;
+  border-top: 1px solid #ece7da;
+  padding: clamp(56px, 8vw, 104px) clamp(20px, 5vw, 64px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(24px, 5vw, 64px);
+  align-items: start;
+}
+.contactIntro p { color: #5c6b62; line-height: 1.6; }
+.address { color: #b07816; text-decoration: none; font-weight: 600; }
+
+/* ---- Footer ---- */
+.footer {
+  border-top: 1px solid #ece7da;
+  padding: 28px clamp(20px, 5vw, 64px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: #6b7a71;
+  font-size: 13px;
+}
+.logoImageSmall { border-radius: 8px; margin-right: 10px; vertical-align: middle; }
+
+/* ---- Reducido ---- */
+@media (prefers-reduced-motion: reduce) {
+  .heroVideo video, .panelVideo video, .panelVideoAlt video { transform: none; }
+  .page { scroll-behavior: auto; }
+}
+
+@media (max-width: 860px) {
+  .nav { grid-template-columns: auto 1fr auto; }
+  .navLinks { display: none; }
+  .intro, .videoPanel, .videoPanelAlt, .contact { grid-template-columns: 1fr; }
+  .heroContent h1 { letter-spacing: -0.02em; }
+}

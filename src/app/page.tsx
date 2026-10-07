@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ContactForm } from "./contact-form";
 import { ParallaxVideo } from "./parallax-video";
-import styles from "./home-graphite.module.css";
+import styles from "./home-premium.module.css";
 
 const services = [
   {
@@ -31,51 +31,51 @@ const approach = [
 
 export default function Home() {
   return (
-    <main className={`site-page ${styles.graphiteHome}`} id="main-content" tabIndex={-1}>
-      <section className="site-hero" id="inicio">
-        <ParallaxVideo className="site-hero-video" poster="/hero-caucasia-rfc.png" source="/rfc-caucasia-oil-station.mp4" speed={0.1} />
-        <nav className="site-nav" aria-label="Navegación principal">
-          <Link className="site-logo" href="#inicio" aria-label="Representaciones Figueroa Castro, inicio">
-            <Image className="site-logo-image" src="/rfc-logo.svg" alt="RFC Representaciones Figueroa Castro" width={54} height={54} priority />
+    <main className={styles.page} id="main-content" tabIndex={-1}>
+      {/* Héroe en blanco con el logo explosivo como pieza de parallax */}
+      <section className={styles.hero} id="inicio">
+        <ParallaxVideo
+          className={styles.heroVideo}
+          poster="/workshop-fabrication-rfc.png"
+          source="/Create_3D_logo_video_20261007161453.mp4"
+          speed={0.06}
+        />
+        <nav className={styles.nav} aria-label="Navegación principal">
+          <Link className={styles.logo} href="#inicio" aria-label="Representaciones Figueroa Castro, inicio">
+            <Image className={styles.logoImage} src="/rfc-logo.svg" alt="RFC Representaciones Figueroa Castro" width={46} height={46} priority />
             <b>Representaciones<br />Figueroa Castro</b>
           </Link>
-          <div className="site-nav-links">
+          <div className={styles.navLinks}>
             <a href="#nosotros">Nosotros</a>
             <a href="#servicios">Servicios</a>
             <a href="#proceso">Cómo trabajamos</a>
           </div>
-          <Link className="site-portal-access" href="/login">Portal de empleados <span aria-hidden="true">↗</span></Link>
-          <a className="site-nav-cta" href="#contacto">Iniciar una conversación <span aria-hidden="true">→</span></a>
+          <Link className={styles.portal} href="/login">Portal de empleados <span aria-hidden="true">↗</span></Link>
+          <a className={styles.cta} href="#contacto">Iniciar una conversación <span aria-hidden="true">→</span></a>
         </nav>
 
-        <div className="site-hero-content">
-          <div className="site-hero-parallax-logo" aria-hidden="true">
-            <Image src="/rfc-logo.svg" alt="" width={146} height={146} priority />
-          </div>
-          <p className="site-kicker">Caucasia, Antioquia · Desde 2014</p>
+        <div className={styles.heroContent}>
+          <p className={styles.kicker}>Caucasia, Antioquia · Desde 2014</p>
           <h1>La precisión que una obra necesita antes de empezar.</h1>
-          <p className="site-lede">Arquitectura, ingeniería, estructuras metálicas y mantenimiento para proyectos que exigen decisiones claras y una ejecución bien acompañada.</p>
-          <div className="site-hero-actions">
-            <a className="site-button" href="#contacto">Cuéntenos su proyecto <span aria-hidden="true">↘</span></a>
-            <a className="site-text-link" href="#servicios">Ver capacidades <span aria-hidden="true">↓</span></a>
+          <p className={styles.lede}>
+            Arquitectura, ingeniería, estructuras metálicas y mantenimiento para proyectos que exigen decisiones claras y una ejecución bien acompañada.
+          </p>
+          <div className={styles.actions}>
+            <a className={styles.btn} href="#contacto">Cuéntenos su proyecto <span aria-hidden="true">↘</span></a>
+            <a className={styles.btnGhost} href="#servicios">Ver capacidades <span aria-hidden="true">↓</span></a>
           </div>
-        </div>
-
-        <div className="site-hero-footer">
-          <span>Representaciones Figueroa Castro S.A.S.</span>
-          <span>Ingeniería con criterio de obra</span>
         </div>
       </section>
 
-      <section className="site-capability-strip" aria-label="Capacidades principales">
-        <p>Diseño y consultoría técnica</p><span aria-hidden="true" />
-        <p>Fabricación estructural</p><span aria-hidden="true" />
-        <p>Mantenimiento de instalaciones</p><span aria-hidden="true" />
+      <section className={styles.strip} aria-label="Capacidades principales">
+        <p>Diseño y consultoría técnica</p>
+        <p>Fabricación estructural</p>
+        <p>Mantenimiento de instalaciones</p>
         <p>Intervenciones exteriores</p>
       </section>
 
-      <section className="site-intro" id="nosotros">
-        <p className="site-section-label">Una firma local, una respuesta técnica</p>
+      <section className={styles.intro} id="nosotros">
+        <p className={styles.label}>Una firma local, una respuesta técnica</p>
         <div>
           <h2>Conocemos el terreno antes de proponer la solución.</h2>
           <p>Desde Caucasia acompañamos proyectos que requieren criterio técnico, capacidad de coordinación y atención a los detalles que sostienen una obra en el tiempo.</p>
@@ -83,27 +83,30 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="site-work" aria-labelledby="work-title">
-        <div className="site-work-media">
-          <Image src="/operations-oil-rfc.png" alt="Estación petrolera con tuberías, tanques de almacenamiento y equipos de bombeo" width={1536} height={1024} sizes="(max-width: 800px) 100vw, 52vw" unoptimized />
-        </div>
-        <div className="site-work-copy">
-          <p className="site-section-label">Del planteamiento al detalle</p>
-          <h2 id="work-title">Una buena ejecución empieza por ordenar bien las decisiones.</h2>
-          <p>El diseño, los materiales, la intervención en campo y el mantenimiento no son conversaciones aisladas. Los reunimos desde el principio para que cada etapa tenga una dirección concreta.</p>
-          <a className="site-text-link dark-link" href="#proceso">Conozca nuestro enfoque <span aria-hidden="true">→</span></a>
+      {/* Estructura metálica con parallax de la vista explosiva */}
+      <section className={styles.videoPanel} aria-labelledby="estructura-title">
+        <ParallaxVideo
+          className={styles.panelVideo}
+          poster="/hero-industrial-rfc.png"
+          source="/Steel_beam_structure_exploded_view_20261007164514.mp4"
+          speed={0.08}
+        />
+        <div className={styles.panelCopy}>
+          <p className={styles.label}>Estructura a la medida</p>
+          <h2 id="estructura-title">Diseñamos cada componente para que monte sin sorpresas.</h2>
+          <p>Desde estructuras y soportes hasta ajustes, mantenimiento y montajes, integramos fabricación metalmecánica con criterio técnico, seguridad y coordinación de obra.</p>
         </div>
       </section>
 
-      <section className="site-services" id="servicios">
-        <div className="site-section-heading">
-          <p className="site-section-label">Capacidades</p>
+      <section className={styles.services} id="servicios">
+        <div className={styles.servicesHeading}>
+          <p className={styles.label}>Capacidades</p>
           <h2>Un equipo para las decisiones que mantienen una obra en movimiento.</h2>
         </div>
-        <div className="site-services-grid">
+        <div className={styles.servicesGrid}>
           {services.map((service) => (
-            <article className="site-service" key={service.title}>
-              <span className="site-service-line" aria-hidden="true" />
+            <article className={styles.service} key={service.title}>
+              <span className={styles.serviceLine} aria-hidden="true" />
               <h3>{service.title}</h3>
               <p>{service.description}</p>
             </article>
@@ -111,22 +114,28 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="site-metalmecanica" aria-labelledby="metalmecanica-title">
-        <ParallaxVideo className="site-metalmecanica-video" poster="/operations-oil-rfc.png" source="/rfc-metalmecanica.mp4" speed={0.075} />
-        <div className="site-metalmecanica-copy">
-          <p className="site-section-label">Capacidad de taller y campo</p>
+      {/* Marco de taller metalmecánica con parallax */}
+      <section className={styles.videoPanelAlt} aria-labelledby="metalmecanica-title">
+        <div className={styles.panelCopy}>
+          <p className={styles.label}>Capacidad de taller y campo</p>
           <h2 id="metalmecanica-title">Fabricamos con precisión para que cada componente responda en operación.</h2>
           <p>Desde estructuras y soportes hasta ajustes, mantenimiento y montajes, integramos fabricación metalmecánica con criterio técnico, seguridad y coordinación de obra.</p>
-          <a className="site-button site-button-light" href="#contacto">Hablemos de su necesidad <span aria-hidden="true">↘</span></a>
+          <a className={styles.btn} href="#contacto">Hablemos de su necesidad <span aria-hidden="true">↘</span></a>
         </div>
+        <ParallaxVideo
+          className={styles.panelVideoAlt}
+          poster="/workshop-fabrication-rfc.png"
+          source="/rfc-metalmecanica.mp4"
+          speed={0.09}
+        />
       </section>
 
-      <section className="site-process" id="proceso">
-        <div className="site-process-heading">
-          <p className="site-section-label">Cómo trabajamos</p>
+      <section className={styles.process} id="proceso">
+        <div className={styles.processHeading}>
+          <p className={styles.label}>Cómo trabajamos</p>
           <h2>Un proceso simple para proyectos que no pueden improvisar.</h2>
         </div>
-        <ol className="site-process-list">
+        <ol className={styles.processList}>
           {approach.map(([title, description], index) => (
             <li key={title}>
               <span>{String(index + 1).padStart(2, "0")}</span>
@@ -137,22 +146,40 @@ export default function Home() {
         </ol>
       </section>
 
-      <section className="site-statement">
+      <section className={styles.statement}>
         <p>“Construir bien comienza por entender con claridad lo que cada proyecto exige.”</p>
       </section>
 
-      <section className="site-contact" id="contacto">
-        <div className="site-contact-intro">
-          <p className="site-section-label">Hablemos de su proyecto</p>
+      {/* Campo e instalaciones con parallax */}
+      <section className={styles.videoPanel} aria-labelledby="campo-title">
+        <ParallaxVideo
+          className={styles.panelVideo}
+          poster="/hero-industrial-rfc.png"
+          source="/rfc-caucasia-oil-station.mp4"
+          speed={0.075}
+        />
+        <div className={styles.panelCopy}>
+          <p className={styles.label}>Proyectos que se mantienen vivos</p>
+          <h2 id="campo-title">Acompañamos la operación antes, durante y después de la entrega.</h2>
+          <p>Mantenimiento de instalaciones y seguimiento en campo para que cada proyecto siga rindiendo después de que termina la obra.</p>
+        </div>
+      </section>
+
+      <section className={styles.contact} id="contacto">
+        <div className={styles.contactIntro}>
+          <p className={styles.label}>Hablemos de su proyecto</p>
           <h2>Empecemos con la información que realmente importa.</h2>
           <p>Comparta el tipo de intervención, su ubicación y el momento en que necesita ejecutarla. Así podremos preparar una conversación técnica útil desde el inicio.</p>
-          <a className="site-address" href="https://maps.google.com/?q=Calle+29+K+27+62+Caucasia+Antioquia" target="_blank" rel="noreferrer">Calle 29 K #27-62<br />Caucasia, Antioquia</a>
+          <a className={styles.address} href="https://maps.google.com/?q=Calle+29+K+27+62+Caucasia+Antioquia" target="_blank" rel="noreferrer">Calle 29 K #27-62<br />Caucasia, Antioquia</a>
         </div>
         <ContactForm />
       </section>
 
-      <footer className="site-footer">
-        <Link className="site-logo" href="#inicio"><Image className="site-logo-image" src="/rfc-logo.svg" alt="RFC" width={44} height={44} /><b>Representaciones<br />Figueroa Castro</b></Link>
+      <footer className={styles.footer}>
+        <Link className={styles.logo} href="#inicio">
+          <Image className={styles.logoImageSmall} src="/rfc-logo.svg" alt="RFC" width={40} height={40} />
+          <b>Representaciones<br />Figueroa Castro</b>
+        </Link>
         <p>© {new Date().getFullYear()} Representaciones Figueroa Castro S.A.S.</p>
         <Link href="/login">Acceso al portal</Link>
       </footer>

@@ -18,6 +18,7 @@ import {
   type QuickRentalAttachment,
 } from "../domain/quick-rental";
 import { SignatureCapture } from "@/shared/components/signature-capture";
+import { dataUrlToBlob } from "@/shared/utils/data-url";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const cop = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
@@ -260,13 +261,25 @@ export function QuickRentalWorkspace() {
         setLoading(false);
         return;
       }
-      // Leer empresa y sede del perfil
-      const { data: profile } = await db.from("profiles").select("company_id, branch_id").eq("id", (await db.auth.getUser()).data.user?.id ?? "").maybeSingle();
-      if (profile) { setCompanyId(profile.company_id); setBranchId(profile.branch_id); }
+      // Empresa y sede del usuario: viven en user_roles, no en profiles.
+      const { data: session } = await db.auth.getUser();
+      const userId = session?.user?.id ?? null;
+      const { data: membership } = userId
+        ? await db.from("user_roles").select("company_id, branch_id").eq("user_id", userId).limit(1).maybeSingle()
+        : { data: null };
+      if (!membership?.company_id) {
+        setRentals([]);
+        setLoading(false);
+        showNotice("No se pudo determinar la empresa del usuario: no se cargaron los alquileres.");
+        return;
+      }
+      setCompanyId(membership.company_id);
+      setBranchId(membership.branch_id ?? undefined);
 
       const { data: rows } = await db
         .from("quick_rentals")
         .select("*, quick_rental_attachments(*)")
+        .eq("company_id", membership.company_id)
         .order("created_at", { ascending: false });
 
       if (rows) {
@@ -331,6 +344,7 @@ export function QuickRentalWorkspace() {
     }
 
     const rental: QuickRental = { ...pendingRental, deliverySignatureDataUrl: deliverySignature };
+    let signatureFailure = "";
     const db = supabase();
     if (db && companyId) {
       const { error } = await db.from("quick_rentals").insert({
@@ -343,7 +357,7 @@ export function QuickRentalWorkspace() {
       if (error) { showNotice(`Error: ${error.message}`); return; }
 
       try {
-        const signatureBlob = await (await fetch(deliverySignature)).blob();
+        const signatureBlob = dataUrlToBlob(deliverySignature);
         const path = `${rental.id}/signature/${Date.now()}_firma-entrega.png`;
         const { error: uploadError } = await db.storage.from("rental-attachments").upload(path, signatureBlob, { contentType: "image/png" });
         if (uploadError) throw uploadError;
@@ -361,7 +375,12 @@ export function QuickRentalWorkspace() {
           }];
         }
       } catch (signatureError) {
-        showNotice(`Alquiler creado, pero la firma no pudo guardarse: ${signatureError instanceof Error ? signatureError.message : "intente adjuntarla desde el registro"}.`);
+        // La entrega quedo registrada, pero la firma no. Se conserva el motivo
+        // para informarlo junto con el exito, nunca para ocultarlo (ADR-103).
+        signatureFailure = signatureError instanceof Error
+          ? signatureError.message
+          : "intente adjuntarla desde el registro";
+        console.error("Firma de alquiler no guardada:", signatureError);
       }
     } else {
       // Sin sesion activa: no se confirma el alquiler, se avisa al usuario.
@@ -376,7 +395,11 @@ export function QuickRentalWorkspace() {
     setDepositInput("0");
     setPendingRental(null);
     setDeliverySignature("");
-    showNotice(`${rental.code} registrado. ${equipment.name} quedó marcado como alquilado.`);
+    showNotice(
+      signatureFailure
+        ? `${rental.code} registrado, pero la firma NO pudo guardarse: ${signatureFailure}`
+        : `${rental.code} registrado con firma. ${equipment.name} quedó marcado como alquilado.`,
+    );
   }
 
   async function returnRental(rental: QuickRental) {
@@ -440,7 +463,7 @@ export function QuickRentalWorkspace() {
                 inputMode="tel"
                 autoComplete="tel"
                 placeholder="+57 300 000 00 00"
-                pattern="\\+57 [0-9]{3} [0-9]{3} [0-9]{2} [0-9]{2}"
+                pattern={"\\+57 [0-9]{3} [0-9]{3} [0-9]{2} [0-9]{2}"}
                 title="Ingrese un celular colombiano de 10 dígitos."
                 onChange={(event) => { event.currentTarget.value = colombianPhone(event.currentTarget.value); }}
               />

@@ -16,6 +16,9 @@ import {
   projectTypeRequiresApu,
   projectTypeRequiresQuote,
   projectTypeDescription,
+  projectTypeFromCode,
+  computeRentalPeriod,
+  toRentalMoney,
   type InventoryMovement,
   type AssignedProjectEmployee,
   type MaterialRequisition,
@@ -176,12 +179,12 @@ export function ProjectsWorkspace({
       if (!membership?.company_id || !membership.branch_id) return;
       setScope({ companyId: membership.company_id, branchId: membership.branch_id });
       const [{ data: remoteProjects }, { data: remoteMovements }, { data: remoteLoans }, { data: remoteReqs }] = await Promise.all([
-        supabase.from("projects").select("id, code, name, client, location, material_budget, status, start_date, estimated_end_date, actual_end_date, created_at").eq("company_id", membership.company_id).order("created_at", { ascending: false }),
+        supabase.from("projects").select("id, code, name, client, location, material_budget, status, start_date, estimated_end_date, actual_end_date, created_at, rental_daily_rate, rental_extension_rate, rental_late_fee_per_day, rental_notes").eq("company_id", membership.company_id).order("created_at", { ascending: false }),
         supabase.from("inventory_movements").select("id, stock_id, movement_type, quantity, unit_cost, reference, notes, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)").eq("company_id", membership.company_id).order("occurred_at", { ascending: false }),
         supabase.from("inventory_tool_loans").select("id,code,stock_id,worker_name,project_id,status,notes,created_at,expected_return_date,returned_at,inventory_stock!inner(inventory_items!inner(name)),projects(name)").eq("company_id",membership.company_id).order("created_at",{ascending:false}),
         supabase.from("inventory_requisitions").select("id,code,project_id,requested_by_name,status,created_at,notes,projects(name)").eq("company_id",membership.company_id).order("created_at",{ascending:false}),
       ]);
-      if (remoteProjects) setProjects(remoteProjects.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date, type: project.code.startsWith("MANT-") ? "mantenimiento" : project.code.startsWith("OBRA-") ? "obra" : "otro" })));
+      if (remoteProjects) setProjects(remoteProjects.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date, type: projectTypeFromCode(project.code), rental: { dailyRate: project.rental_daily_rate === null ? undefined : Number(project.rental_daily_rate), extensionRate: project.rental_extension_rate === null ? undefined : Number(project.rental_extension_rate), lateFeePerDay: project.rental_late_fee_per_day === null ? undefined : Number(project.rental_late_fee_per_day), notes: project.rental_notes ?? undefined } })));
       if (remoteMovements) setMovements(remoteMovements.map((movement) => {
         const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock;
         const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items);
@@ -255,8 +258,13 @@ export function ProjectsWorkspace({
     new Date().toISOString().split("T")[0],
   );
   const [newPrjEstimatedEndDate, setNewPrjEstimatedEndDate] = useState("");
+  const [newPrjDailyRate, setNewPrjDailyRate] = useState("");
+  const [newPrjExtensionRate, setNewPrjExtensionRate] = useState("");
+  const [newPrjLateFee, setNewPrjLateFee] = useState("");
+  const [newPrjRentalNotes, setNewPrjRentalNotes] = useState("");
   const [editStartDate, setEditStartDate] = useState("");
   const [editEstimatedEndDate, setEditEstimatedEndDate] = useState("");
+  const [editActualEndDate, setEditActualEndDate] = useState("");
   const [editStatus, setEditStatus] = useState<Project["status"]>("active");
   const [budgetAdjustment, setBudgetAdjustment] = useState("");
   const [budgetReason, setBudgetReason] = useState("");
@@ -341,6 +349,15 @@ export function ProjectsWorkspace({
         ? projects
         : projects.filter((project) => project.status === projectStatusFilter),
     [projects, projectStatusFilter],
+  );
+
+  // Periodo facturable del alquiler: entrega, devolución pactada, extensión y mora (ALQ-001).
+  const rentalSummary = useMemo(
+    () =>
+      selectedProject?.type === "alquiler"
+        ? computeRentalPeriod(selectedProject, selectedProject.rental)
+        : null,
+    [selectedProject],
   );
 
   // Project Specific Computations
@@ -571,14 +588,23 @@ export function ProjectsWorkspace({
     setNotesInput("");
   };
 
+  // Vista previa del valor del alquiler mientras se captura (ALQ-001).
+  const newRentalPreview = computeRentalPeriod(
+    { startDate: newPrjStartDate, estimatedEndDate: newPrjEstimatedEndDate },
+    { dailyRate: toRentalMoney(newPrjDailyRate) ?? undefined },
+  );
+
   // Handle New Project Form Submit
   const handleNewProjectSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const budgetNum = parseFloat(newPrjBudget);
+    // El presupuesto de materiales solo es obligatorio en proyectos que se costean con APU.
+    // En un alquiler no hay consumo de materiales: la referencia economica es la tarifa del periodo.
+    const budgetRequired = projectTypeRequiresApu(newPrjType);
     if (
       !newPrjName.trim() ||
       !newPrjClient.trim() ||
-      !budgetNum ||
+      (budgetRequired && !budgetNum) ||
       !newPrjStartDate ||
       !newPrjEstimatedEndDate
     )
@@ -588,22 +614,41 @@ export function ProjectsWorkspace({
         "La fecha estimada debe ser posterior a la fecha de inicio.",
       );
 
+    // ALQ-001: un alquiler sin tarifa diaria no permite calcular el periodo facturable.
+    const isRental = newPrjType === "alquiler";
+    const dailyRate = isRental ? toRentalMoney(newPrjDailyRate) : null;
+    const extensionRate = isRental ? toRentalMoney(newPrjExtensionRate) : null;
+    const lateFee = isRental ? toRentalMoney(newPrjLateFee) : null;
+    if (isRental && (dailyRate === null || dailyRate <= 0))
+      return alert(
+        "En un proyecto de alquiler la tarifa diaria es obligatoria y debe ser mayor que cero.",
+      );
+    if (
+      isRental &&
+      (newPrjDailyRate.trim() !== "" && dailyRate === null)
+    )
+      return alert("La tarifa diaria no es un valor válido.");
+
     if (!supabase || !scope) return alert("No fue posible validar la empresa del usuario. Vuelve a iniciar sesión.");
     const payload = {
       code: newPrjCode,
       name: newPrjName,
       client: newPrjClient,
       location: newPrjLocation || "Antioquia",
-      material_budget: budgetNum,
+      material_budget: budgetNum || 0,
       status: "active",
       company_id: scope.companyId,
       branch_id: scope.branchId,
       start_date: newPrjStartDate,
       estimated_end_date: newPrjEstimatedEndDate,
+      rental_daily_rate: dailyRate,
+      rental_extension_rate: extensionRate,
+      rental_late_fee_per_day: lateFee,
+      rental_notes: newPrjRentalNotes.trim() || null,
     };
     const { data: savedProject, error } = await supabase.from("projects").insert(payload).select("id, created_at").single();
     if (error || !savedProject) return alert(error?.message ?? "No fue posible crear la obra en la base de datos.");
-    const newPrj: Project = { id: savedProject.id, code: payload.code, type: newPrjType, name: payload.name, client: payload.client, location: payload.location, budget: payload.material_budget, status: "active", createdAt: savedProject.created_at, startDate: payload.start_date, estimatedEndDate: payload.estimated_end_date };
+    const newPrj: Project = { id: savedProject.id, code: payload.code, type: newPrjType, name: payload.name, client: payload.client, location: payload.location, budget: payload.material_budget, status: "active", createdAt: savedProject.created_at, startDate: payload.start_date, estimatedEndDate: payload.estimated_end_date, rental: isRental ? { dailyRate: dailyRate ?? undefined, extensionRate: extensionRate ?? undefined, lateFeePerDay: lateFee ?? undefined, notes: payload.rental_notes ?? undefined } : undefined };
 
     setProjects((prev) => [...prev, newPrj]);
     setSelectedProjectId(newPrj.id);
@@ -614,12 +659,17 @@ export function ProjectsWorkspace({
     setNewPrjLocation("");
     setNewPrjBudget("");
     setNewPrjEstimatedEndDate("");
+    setNewPrjDailyRate("");
+    setNewPrjExtensionRate("");
+    setNewPrjLateFee("");
+    setNewPrjRentalNotes("");
   };
 
   const openEditProject = (project: Project) => {
     setSelectedProjectId(project.id);
     setEditStartDate(project.startDate || "");
     setEditEstimatedEndDate(project.estimatedEndDate || "");
+    setEditActualEndDate(project.actualEndDate || "");
     setEditStatus(project.status);
     setIsProjectPickerOpen(false);
     setIsEditProjectModalOpen(true);
@@ -635,12 +685,15 @@ export function ProjectsWorkspace({
       );
     let actualEndDate = selectedProject.actualEndDate;
     if (editStatus === "completed") {
-      actualEndDate =
-        window.prompt(
-          "Fecha real de entrega o finalización (AAAA-MM-DD):",
-          actualEndDate || editEstimatedEndDate,
-        ) || "";
-      if (!actualEndDate) return;
+      // La fecha real se captura en el formulario: en un alquiler es la devolución
+      // del equipo y en el resto de proyectos la entrega o finalización.
+      actualEndDate = editActualEndDate || "";
+      if (!actualEndDate)
+        return alert(
+          selectedProject.type === "alquiler"
+            ? "Indique la fecha real de devolución del equipo."
+            : "Indique la fecha real de entrega o finalización.",
+        );
       if (actualEndDate < editStartDate)
         return alert(
           "La fecha real de entrega no puede ser anterior al inicio de la obra.",
@@ -900,6 +953,42 @@ export function ProjectsWorkspace({
                 {projectSignalLabel}
               </span>
             </div>
+
+            {selectedProject.type === "alquiler" && rentalSummary && (
+              <div className="project-metrics-grid">
+                <div className="metric-box">
+                  <span>Tarifa por día:</span>
+                  <strong>
+                    {currencyFormatter.format(
+                      selectedProject.rental?.dailyRate ?? 0,
+                    )}
+                  </strong>
+                </div>
+                <div className="metric-box">
+                  <span>
+                    {rentalSummary.closed
+                      ? "Días facturados (devolución real):"
+                      : "Días proyectados (pactados):"}
+                  </span>
+                  <strong>{rentalSummary.elapsedDays ?? rentalSummary.contractedDays}</strong>
+                </div>
+                <div className="metric-box remaining">
+                  <span>
+                    Extensión: {rentalSummary.extensionDays} días · Mora:{" "}
+                    {rentalSummary.lateDays} días
+                  </span>
+                  <strong>
+                    {currencyFormatter.format(
+                      rentalSummary.extensionAmount + rentalSummary.lateFeeAmount,
+                    )}
+                  </strong>
+                </div>
+                <div className="metric-box spent">
+                  <span>Total a facturar por el alquiler:</span>
+                  <strong>{currencyFormatter.format(rentalSummary.total)}</strong>
+                </div>
+              </div>
+            )}
 
             {/* Financial Metrics Summary */}
             <div className="project-metrics-grid">
@@ -1585,7 +1674,9 @@ export function ProjectsWorkspace({
               <div className="form-row-2">
                 <div className="form-group">
                   <label htmlFor="edit-project-start-date">
-                    Fecha de inicio
+                    {selectedProject?.type === "alquiler"
+                      ? "Fecha de entrega del equipo"
+                      : "Fecha de inicio"}
                   </label>
                   <input
                     id="edit-project-start-date"
@@ -1597,7 +1688,9 @@ export function ProjectsWorkspace({
                 </div>
                 <div className="form-group">
                   <label htmlFor="edit-project-estimated-end-date">
-                    Fecha estimada de finalización
+                    {selectedProject?.type === "alquiler"
+                      ? "Fecha pactada de devolución"
+                      : "Fecha estimada de finalización"}
                   </label>
                   <input
                     id="edit-project-estimated-end-date"
@@ -1608,6 +1701,31 @@ export function ProjectsWorkspace({
                     onChange={(e) => setEditEstimatedEndDate(e.target.value)}
                   />
                 </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="edit-project-actual-end-date">
+                  {selectedProject?.type === "alquiler"
+                    ? "Fecha real de devolución del equipo"
+                    : "Fecha real de entrega o finalización"}
+                </label>
+                <input
+                  id="edit-project-actual-end-date"
+                  type="date"
+                  min={editStartDate}
+                  required={editStatus === "completed"}
+                  value={editActualEndDate}
+                  onChange={(e) => setEditActualEndDate(e.target.value)}
+                />
+                {selectedProject?.type === "alquiler" ? (
+                  <small>
+                    Al registrarla se recalculan los días de extensión y la mora
+                    sobre el total a facturar.
+                  </small>
+                ) : (
+                  <small>
+                    Se habilita al marcar el proyecto como finalizado.
+                  </small>
+                )}
               </div>
               <div className="form-group">
                 <label htmlFor="edit-project-status">Estado</label>
@@ -1624,7 +1742,8 @@ export function ProjectsWorkspace({
                   <option value="completed">Finalizada</option>
                 </select>
                 <small>
-                  Al finalizar, se solicitará la fecha real de entrega.
+                  Al finalizar, se solicitará la fecha real de entrega en el
+                  campo de arriba.
                 </small>
               </div>
               <div className="modal-actions">
@@ -1784,7 +1903,9 @@ export function ProjectsWorkspace({
               <div className="form-row-2">
                 <div className="form-group">
                   <label>
-                    Presupuesto de Materiales ($ COP)
+                    {newPrjType === "alquiler"
+                      ? "Presupuesto de referencia del alquiler ($ COP)"
+                      : "Presupuesto de Materiales ($ COP)"}
                     {projectTypeRequiresApu(newPrjType) ? " *" : " (opcional)"}:
                   </label>
                   <CurrencyInput
@@ -1799,15 +1920,20 @@ export function ProjectsWorkspace({
                   />
                   {!projectTypeRequiresApu(newPrjType) && (
                     <small style={{ color: "#6b7280" }}>
-                      En este tipo de proyecto el presupuesto se puede ajustar
-                      conforme avanza el gasto real.
+                      {newPrjType === "alquiler"
+                        ? "Un alquiler no consume materiales: este valor es solo de referencia. Lo que se factura es el valor del periodo calculado más abajo."
+                        : "En este tipo de proyecto el presupuesto se puede ajustar conforme avanza el gasto real."}
                     </small>
                   )}
                 </div>
               </div>
 
               <div className="form-group">
-                <label>Nombre de la Obra / Proyecto:</label>
+                <label>
+                  {newPrjType === "alquiler"
+                    ? "Nombre del alquiler / Proyecto:"
+                    : "Nombre de la Obra / Proyecto:"}
+                </label>
                 <input
                   type="text"
                   required
@@ -1842,7 +1968,9 @@ export function ProjectsWorkspace({
               <div className="form-row-2">
                 <div className="form-group">
                   <label htmlFor="new-project-start-date">
-                    Fecha de inicio:
+                    {newPrjType === "alquiler"
+                      ? "Fecha de entrega del equipo:"
+                      : "Fecha de inicio:"}
                   </label>
                   <input
                     id="new-project-start-date"
@@ -1854,7 +1982,9 @@ export function ProjectsWorkspace({
                 </div>
                 <div className="form-group">
                   <label htmlFor="new-project-estimated-end-date">
-                    Fecha posible de finalización:
+                    {newPrjType === "alquiler"
+                      ? "Fecha pactada de devolución:"
+                      : "Fecha posible de finalización:"}
                   </label>
                   <input
                     id="new-project-estimated-end-date"
@@ -1868,6 +1998,100 @@ export function ProjectsWorkspace({
                   />
                 </div>
               </div>
+
+              {newPrjType === "alquiler" && (
+                <>
+                  <fieldset
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 8,
+                      padding: "12px 14px",
+                      margin: "0 0 14px",
+                    }}
+                  >
+                    <legend
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        padding: "0 6px",
+                      }}
+                    >
+                      Condiciones del alquiler
+                    </legend>
+                    <div className="form-row-2">
+                      <div className="form-group">
+                        <label htmlFor="new-project-daily-rate">
+                          Tarifa por día ($ COP) *:
+                        </label>
+                        <input
+                          id="new-project-daily-rate"
+                          type="text"
+                          inputMode="decimal"
+                          required
+                          placeholder="ej. 180000"
+                          value={newPrjDailyRate}
+                          onChange={(e) => setNewPrjDailyRate(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="new-project-extension-rate">
+                          Cargo por día de extensión ($ COP):
+                        </label>
+                        <input
+                          id="new-project-extension-rate"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="ej. 250000 (opcional)"
+                          value={newPrjExtensionRate}
+                          onChange={(e) => setNewPrjExtensionRate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row-2">
+                      <div className="form-group">
+                        <label htmlFor="new-project-late-fee">
+                          Mora por día de retraso ($ COP):
+                        </label>
+                        <input
+                          id="new-project-late-fee"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="ej. 90000 (opcional)"
+                          value={newPrjLateFee}
+                          onChange={(e) => setNewPrjLateFee(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="new-project-rental-notes">
+                          Condiciones particulares:
+                        </label>
+                        <input
+                          id="new-project-rental-notes"
+                          type="text"
+                          placeholder="ej. Depósito $500.000, equipos con operador"
+                          value={newPrjRentalNotes}
+                          onChange={(e) => setNewPrjRentalNotes(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    {newPrjDailyRate.trim() !== "" &&
+                      toRentalMoney(newPrjDailyRate) !== null && (
+                        <small style={{ color: "#6b7280", display: "block" }}>
+                          Periodo pactado:{" "}
+                          {newPrjStartDate && newPrjEstimatedEndDate
+                            ? `${newRentalPreview.contractedDays} días · valor del alquiler ${new Intl.NumberFormat("es-CO", {
+                                style: "currency",
+                                currency: "COP",
+                                maximumFractionDigits: 0,
+                              }).format(newRentalPreview.rentalAmount)}`
+                            : "indica las fechas para ver el valor"}
+                          . La devolución real se registra al cerrar el
+                          alquiler.
+                        </small>
+                      )}
+                  </fieldset>
+                </>
+              )}
 
               <div className="modal-actions">
                 <button

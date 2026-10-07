@@ -1,7 +1,7 @@
 ---
 estado: vigente
 propietario: Producto y Líder de proyecto RFC Enterprise
-ultima_actualizacion: 2026-10-06
+ultima_actualizacion: 2026-10-07
 audiencia: Dirección, Producto, Desarrollo y Operación
 ---
 
@@ -41,8 +41,6 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 | INV-007 | Alta | Requisiciones y despacho con remisión firmada | Completar el circuito de aprobación y despacho firmado sobre Supabase |
 | INV-010 | Media | Activos, QR y mantenimiento | Identificación por QR o código, serial, custodio, estado, garantía y evidencias |
 | INV-011 | Media | Inteligencia e importación de inventario | Indicadores de rotación e inmovilizado, carga masiva con validación |
-| ALQ-001 | Alta | Proyecto tipo Alquiler | Consecutivo `ALQ`, periodo de entrega y devolución, asignación de equipo, cargos por extensión o daños y enlace a facturación |
-| ALQ-003 | Alta | Persistencia del alquiler rápido | Almacenamiento empresarial, adjuntos de cédula, fotos y firma, y facturación |
 | APU-012 | Media | Compras y requisiciones desde líneas APU | Panel de faltantes y generación de la requisición al almacén implementados; falta alimentar el compromiso y el real desde compras, inventario y nómina |
 | APU-009 | Media | Clasificación configurable | RFC, CSI, UniFormat o ICMS configurables; no se incorporan catálogos licenciados sin autorización |
 | APU-010 | Media | Historial de precios y vigencias | Proveedores, ciudades o sedes y alerta de variación de materiales y equipos |
@@ -56,4 +54,5 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 
 ## Última entrega verificada
 
+- **2026-10-07**: proyecto tipo Alquiler (ALQ-001) con periodo de entrega y devolución, cargos por extensión y mora, y total a facturar; persistencia real del alquiler rápido (ALQ-003) con tablas, bucket de adjuntos y firma del cliente; inlet del teléfono corregido. Sin reservas de `localStorage` como fuente de negocio.
 - **2026-10-06**: conversión Cotización→Obra transaccional y atómica, historial con responsable tomado de la sesión, múltiples visitas técnicas con evidencia y requisición real, búsqueda de inventario en el APU conectada a Supabase, modales con cabecera y acciones fijas, y adaptación móvil de Obras y Proyectos.

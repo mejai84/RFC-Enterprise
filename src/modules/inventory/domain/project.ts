@@ -1,3 +1,5 @@
+import type { ProjectRentalTerms } from "./rental-project";
+
 export const projectTypeOptions = [
   { value: "obra",            label: "Obra",               prefix: "OBRA", requiresQuote: true,  requiresApu: true,  description: "Construcción, adecuación o montaje con actividades costeables." },
   { value: "mantenimiento",   label: "Mantenimiento",      prefix: "MANT", requiresQuote: false, requiresApu: false, description: "Mantenimiento programado o correctivo, sin APU formal." },
@@ -25,6 +27,15 @@ export function projectTypeDescription(type: ProjectType): string {
   return projectTypeOptions.find((o) => o.value === type)?.description ?? "";
 }
 
+/**
+ * Deduce el tipo de proyecto a partir del consecutivo (OBRA-, MANT-, ALQ-, ...).
+ * Evita que un proyecto de alquiler quede clasificado como "otro" al releerlo de la base de datos.
+ */
+export function projectTypeFromCode(code: string): ProjectType {
+  const prefix = code.split("-")[0]?.toUpperCase() ?? "";
+  return projectTypeOptions.find((o) => o.prefix === prefix)?.value ?? "otro";
+}
+
 export type AssignedProjectEmployee = {
   id: string;
   name: string;
@@ -49,6 +60,8 @@ export type Project = {
   /** Cotización de origen cuando la obra fue adjudicada desde el pipeline comercial. */
   sourceQuoteId?: string;
   sourceQuoteCode?: string;
+  /** Condiciones de alquiler (ALQ-001); solo presente en proyectos tipo "alquiler". */
+  rental?: ProjectRentalTerms;
 };
 
 

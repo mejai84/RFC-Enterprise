@@ -21,6 +21,7 @@ export type { InventoryMovement, MovementType } from "./domain/movement";
 export type { Product } from "./domain/product";
 export { inventorySearchText, matchesInventorySearch, normalizeInventorySearch } from "./domain/search";
 export { inventoryUnits, type UnitOfMeasure } from "./domain/unit-of-measure";
-export { getNextProjectCode, initialProjects, projectTypeOptions, projectTypeRequiresApu, projectTypeRequiresQuote, projectTypeDescription, type AssignedProjectEmployee, type Project, type ProjectType } from "./domain/project";
+export { getNextProjectCode, initialProjects, projectTypeOptions, projectTypeRequiresApu, projectTypeRequiresQuote, projectTypeDescription, projectTypeFromCode, type AssignedProjectEmployee, type Project, type ProjectType } from "./domain/project";
+export { computeRentalPeriod, toRentalMoney, type ProjectRentalTerms, type RentalPeriodSummary } from "./domain/rental-project";
 export type { MaterialRequisition, RequisitionItem, RequisitionStatus } from "./domain/requisition";
 export type { ToolLoan, ToolLoanStatus } from "./domain/tool-loan";

@@ -1,4 +1,3 @@
-import { DashboardShell } from "@/app/dashboard-shell";
 import { DashboardExecutiveWorkspace } from "@/modules/inventory/presentation/dashboard-executive-workspace";
 import { RentalsSummaryCard } from "@/modules/rentals/presentation/rentals-summary-card";
 import { AttendanceSummaryCard } from "@/modules/attendance/presentation/attendance-summary-card";
@@ -17,13 +16,15 @@ export const metadata = {
  */
 export default async function DashboardPage() {
   const inventory = await getInventoryProducts();
+  // El shell lo pone `dashboard/layout.tsx`. Si se envolviera aqui tambien, la
+  // barra lateral y la cabecera aparecerian duplicadas.
   return (
-    <DashboardShell>
+    <>
       <div className="exec-summary-grid">
         <AttendanceSummaryCard />
         <RentalsSummaryCard />
       </div>
       <DashboardExecutiveWorkspace initialProducts={inventory.products ?? []} />
-    </DashboardShell>
+    </>
   );
 }

@@ -110,6 +110,8 @@ img, svg { display: block; max-width: 100%; }
 .dashboard-avatar--button { background: transparent; border: 0; cursor: pointer; font: inherit; height: 38px; width: 38px; }
 .dashboard-avatar--button:focus-visible { outline: 3px solid var(--brand-glow); outline-offset: 2px; }
 .dashboard-account-menu { background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(16, 40, 32, .16); display: grid; gap: 2px; min-width: 232px; padding: 8px; position: absolute; right: 0; top: calc(100% + 10px); z-index: 60; }
+/* Las acciones no se parten en dos lineas: «Cerrar sesion» cabe en una. */
+.dashboard-account-menu a, .dashboard-account-menu button { white-space: nowrap; width: 100%; }
 .dashboard-account-identity { border-bottom: 1px solid var(--line); display: grid; gap: 2px; margin: 0 0 6px; padding: 6px 8px 10px; }
 .dashboard-account-identity strong { font-size: 13px; overflow-wrap: anywhere; }
 .dashboard-account-identity small { color: var(--muted); font-size: 11px; }

@@ -57,8 +57,13 @@ export type NavigationSection = { id: ModuleGroupId | null; label: string; hrefs
 
 /**
  * Orden final del menu: los modulos sueltos primero y despues los bloques.
- * Solo entra lo que la persona puede ver. Un bloque con un solo modulo se
- * muestra suelto, porque rotularlo solo anade ruido.
+ *
+ * Cuando a una persona le corresponden pocos modulos, los bloques se aplanan y
+ * no se rotula nada: para alguien que solo registra su jornada, ver dos titulos
+ * de un solo modulo cada uno es ruido. En cuanto el menu tiene volumen, todos los
+ * bloques llevan encabezado plegable, incluso los de un solo modulo. Antes se
+ * aplicaba la regla por bloque, y eso dejaba Informes suelto entre Bodega y
+ * Administracion, donde parece naturalmente parte de Bodega.
  */
 export function navigationSections(permissions: readonly string[]): {
   loose: string[];
@@ -67,14 +72,20 @@ export function navigationSections(permissions: readonly string[]): {
   const allowed = accessibleModules(permissions).map((module) => module.href);
   const grouped = new Set(moduleGroups.flatMap((group) => group.hrefs));
   const loose = allowed.filter((href) => !grouped.has(href));
-  const sections = moduleGroups
-    .map((group) => {
-      const hrefs = group.hrefs.filter((href) => allowed.includes(href));
-      if (hrefs.length === 0) return null;
-      if (hrefs.length === 1) return { id: null as ModuleGroupId | null, label: "", hrefs };
-      return { id: group.id, label: group.label, hrefs };
-    })
-    .filter((section): section is NavigationSection => section !== null);
+  // Con tres modulos o menos no hay menu que agrupar: se muestran todos sueltos.
+  const plainMenu = allowed.length <= 3;
+  const sections = plainMenu
+    ? []
+    : moduleGroups
+        .map((group) => {
+          const hrefs = group.hrefs.filter((href) => allowed.includes(href));
+          if (hrefs.length === 0) return null;
+          return { id: group.id, label: group.label, hrefs };
+        })
+        .filter((section): section is { id: ModuleGroupId; label: string; hrefs: string[] } => section !== null);
+  if (plainMenu) {
+    return { loose: allowed, sections: [] };
+  }
   return { loose, sections };
 }
 

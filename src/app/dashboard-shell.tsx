@@ -367,17 +367,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="dashboard-sidebar-footer">
-          <div className="dashboard-avatar">{initials}</div>
-          <div>
-            <strong>{currentUser.name}</strong>
-            <small>{currentRole}</small>
-          </div>
-          <div className="dashboard-sidebar-account-actions">
-            <Link href="/restablecer-contrasena?mode=change">Cambiar mi contraseña</Link>
-            <button disabled={isSigningOut} onClick={() => void signOut()} type="button">{isSigningOut ? "Saliendo…" : "Cerrar sesión"}</button>
-          </div>
-        </div>
+        {/*
+          Antes el pie de la barra lateral repetia avatar, nombre, rol, cambio de
+          contrasena y cierre de sesion. Todo eso ya vive en el menu de la cuenta,
+          en el icono de perfil de la cabecera. Se quito para que la misma
+          informacion no aparezca en dos sitios a la vez.
+        */}
       </aside>
       <div className="dashboard-workspace">
         <header className="dashboard-topbar">

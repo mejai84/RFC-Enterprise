@@ -108,6 +108,17 @@ export function mapsLink(latitude: number, longitude: number, isApple: boolean):
     : `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
 }
 
+/**
+ * Enlace de búsqueda por texto, para cuando todavía no hay punto capturado.
+ * En iPhone y Android el esquema `https` lo resuelve la app instalada.
+ */
+export function mapsSearchLink(query: string, isApple: boolean): string {
+  const text = query.trim();
+  if (!text) return isApple ? "https://maps.apple.com/" : "https://www.google.com/maps";
+  const encoded = encodeURIComponent(text);
+  return isApple ? `https://maps.apple.com/?q=${encoded}` : `https://maps.google.com/?q=${encoded}`;
+}
+
 export function isAppleDevice(): boolean {
   if (typeof navigator === "undefined") return false;
   const agent = navigator.userAgent || "";

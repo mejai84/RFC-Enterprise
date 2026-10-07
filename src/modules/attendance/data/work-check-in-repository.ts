@@ -6,6 +6,7 @@ import type {
   DeclaredLocationRecord,
   WorkCheckIn,
   CurrentWorkday,
+  WorkdaySegment,
   WorkdaySegmentType,
   WorkCheckInWorkspaceData,
 } from "../domain/work-check-in";
@@ -267,6 +268,56 @@ export async function loadCurrentWorkday(): Promise<CurrentWorkday | null> {
   const { data, error } = await supabase.rpc("current_workday");
   if (error) throw error;
   return mapCurrentWorkday((data?.[0] as Record<string, unknown> | undefined) ?? null);
+}
+
+/**
+ * Tramos de la jornada de hoy, del más reciente al más antiguo.
+ * Los lee la persona autenticada sobre sus propios registros; RLS impide ver
+ * los de otros salvo a los perfiles de consulta autorizados.
+ */
+export async function loadMyWorkdaySegments(): Promise<WorkdaySegment[]> {
+  const supabase = client();
+  if (!supabase) return [];
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id;
+  if (!userId) return [];
+
+  const today = bogotaToday();
+  // El filtro va por la propia persona: aunque RLS deje ver tramos de terceros a
+  // los perfiles de consulta, aquí solo se muestra la jornada del usuario.
+  const { data, error } = await supabase
+    .from("workday_segments")
+    .select(
+      "id, segment_type, project_id, site_name, activity_description, started_at, ended_at, workdays!inner(id, local_date, employees!inner(profile_id))",
+    )
+    .eq("workdays.local_date", today)
+    .eq("workdays.employees.profile_id", userId)
+    .order("started_at", { ascending: false })
+    .limit(40);
+  if (error) throw error;
+
+  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
+    const workday = (Array.isArray(row.workdays) ? row.workdays[0] : row.workdays) as
+      | { id: string }
+      | undefined;
+    const startedAt = String(row.started_at);
+    return {
+      id: String(row.id),
+      workdayId: workday?.id ?? "",
+      type: String(row.segment_type) as WorkdaySegmentType,
+      projectId: (row.project_id as string | undefined) ?? undefined,
+      siteName: String(row.site_name),
+      activityDescription: String(row.activity_description),
+      startedAt,
+      endedAt: (row.ended_at as string | undefined) ?? undefined,
+      localTime: new Intl.DateTimeFormat("es-CO", {
+        timeZone: "America/Bogota",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(new Date(startedAt)),
+    };
+  });
 }
 
 type WorkdayActionInput = {

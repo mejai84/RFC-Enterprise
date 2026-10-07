@@ -44,6 +44,19 @@ export type WorkCheckInWorkspaceData = {
 
 export type WorkdaySegmentType = "work" | "travel" | "break";
 
+/** Tramo registrado dentro de la jornada del día. */
+export type WorkdaySegment = {
+  id: string;
+  workdayId: string;
+  type: WorkdaySegmentType;
+  projectId?: string;
+  siteName: string;
+  activityDescription: string;
+  startedAt: string;
+  endedAt?: string;
+  localTime: string;
+};
+
 export type CurrentWorkday = {
   id: string;
   localDate: string;

@@ -100,8 +100,10 @@ function daysUntil(isoDate: string) {
   return Math.ceil((target - Date.now()) / 86_400_000);
 }
 
-function formatDateTime() {
-  const date = new Date();
+function formatDateTime(fecha?: string | null) {
+  // Sin argumento se usa la hora local; con argumento se muestra la que devolvio
+  // el servidor, que es la unica que vale como hora oficial de un documento.
+  const date = fecha ? new Date(fecha) : new Date();
   return new Intl.DateTimeFormat("es-CO", {
     day: "2-digit",
     month: "short",
@@ -729,27 +731,71 @@ export function DashboardExecutiveWorkspace({
   };
 
   // Aprobar y Despachar Requisición
-  const handleApproveRequisition = (req: MaterialRequisition) => {
+  /**
+   * Despacha una requisición aprobada.
+   *
+   * Antes esto solo cambiaba el estado del navegador: fabricaba el movimiento con
+   * un id local, restaba el stock a mano y abría la remisión. El papel salía pero
+   * en la base el material nunca salía de la bodega. Ahora llama a la función
+   * `dispatch_inventory_requisition`, que genera el movimiento, deja que el
+   * trigger descuente la existencia y marca la requisición, todo en una sola
+   * transacción: o pasa todo, o no pasa nada.
+   *
+   * La remision se arma con los datos que devuelve la base, no con los que
+   * suponia el navegador, para que el vale impreso y la existencia digan lo mismo.
+   */
+  const [dispatchingRequisitionId, setDispatchingRequisitionId] = useState<string | null>(null);
+
+  const handleApproveRequisition = async (req: MaterialRequisition) => {
+    // Un clic de mas no debe intentar despachar dos veces la misma requisicion.
+    if (dispatchingRequisitionId) return;
+    setDispatchingRequisitionId(req.id);
     const item = req.items[0];
     if (!item) return;
-    const prod = products.find((p) => p.id === item.productId) || products[0];
+    const db = inventoryClient();
+    if (!db) {
+      setDispatchingRequisitionId(null);
+      return alert("No fue posible conectar con la base de datos para despachar.");
+    }
 
-    if (item.quantity > prod.available) {
-      return alert(
-        `Stock insuficiente para aprobar requisición. Solicitado: ${item.quantity}, Disponible: ${prod.available}`,
+    const { data, error } = await db.rpc("dispatch_inventory_requisition", {
+      target_requisition: req.id,
+      dispatch_notes: notesInput.trim() || null,
+    });
+
+    if (error) {
+      setDispatchingRequisitionId(null);
+      return alert(error.message);
+    }
+
+    // Tras despachar se relee el estado real: no se supone lo que paso.
+    const { data: movedStock } = await db
+      .from("inventory_movements")
+      .select("id, stock_id, quantity, unit_cost, project_id, occurred_at")
+      .eq("reference", `VALE-${req.code}`)
+      .order("occurred_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!movedStock) {
+      setRequisitions((prev) =>
+        prev.map((r) => (r.id === req.id ? { ...r, status: "dispatched" } : r)),
       );
+      setDispatchingRequisitionId(null);
+      showToast("Material despachado.", "success");
+      return;
     }
 
     const newMov: InventoryMovement = {
-      id: `mov-${Date.now()}`,
-      productId: prod.id,
-      productName: prod.name,
+      id: movedStock.id,
+      productId: movedStock.stock_id,
+      productName: item.productName,
       type: "exit",
-      quantity: item.quantity,
+      quantity: Number(movedStock.quantity),
       unit: item.unit,
-      unitCost: item.unitCost,
-      totalCost: item.quantity * item.unitCost,
-      occurredAt: formatDateTime(),
+      unitCost: Number(movedStock.unit_cost ?? item.unitCost),
+      totalCost: Number(movedStock.quantity) * Number(movedStock.unit_cost ?? item.unitCost),
+      occurredAt: formatDateTime(movedStock.occurred_at),
       reference: `VALE-${req.code}`,
       projectId: req.projectId,
       projectName: req.projectName,
@@ -757,17 +803,20 @@ export function DashboardExecutiveWorkspace({
       notes: `Despachado desde Requisición ${req.code}. ${req.notes || ""}`,
     };
 
+    // El stock ya lo desconto la base de datos; aqui solo se refleja lo que paso.
     setProducts((prev) =>
       prev.map((p) =>
-        p.id === prod.id ? { ...p, available: p.available - item.quantity } : p,
+        p.id === movedStock.stock_id
+          ? { ...p, available: p.available - Number(movedStock.quantity) }
+          : p,
       ),
     );
     setMovements((prev) => [newMov, ...prev]);
     setRequisitions((prev) =>
       prev.map((r) => (r.id === req.id ? { ...r, status: "dispatched" } : r)),
     );
-
     setSelectedVoucherMovement(newMov);
+    setDispatchingRequisitionId(null);
   };
 
   // Préstamo de Herramienta
@@ -1382,9 +1431,12 @@ export function DashboardExecutiveWorkspace({
                   {req.status === "pending" && (
                     <button
                       className="btn-approve-req"
-                      onClick={() => handleApproveRequisition(req)}
+                      disabled={dispatchingRequisitionId !== null}
+                      onClick={() => void handleApproveRequisition(req)}
                     >
-                      ⚡ Aprobar y Despachar
+                      {dispatchingRequisitionId === req.id
+                        ? "Despachando…"
+                        : "⚡ Aprobar y Despachar"}
                     </button>
                   )}
                 </div>

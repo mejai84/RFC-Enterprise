@@ -167,14 +167,12 @@ const measurementUnits: MeasurementUnit[] = [
 type QuoteContext = { quoteId?: string; quoteCode?: string; quoteTitle?: string; quoteStatus?: string };
 type QuoteOption = { id: string; code: string; title: string; client: string; status: string };
 
-/**
- * Al entrar desde una cotización se muestran solo sus actividades. Al entrar
- * directo al módulo se muestran todas las de la empresa: si se filtraran solo
- * las que no pertenecen a ninguna cotización, el usuario no podría encontrar
- * las actividades ya vinculadas, que es lo que se ha vinculado antes.
- */
+/** Al entrar directo se muestran solo APUs generales; los de una cotización
+ * se ven únicamente al abrir su contexto desde Cotizaciones o el buscador. */
 const filterApusByQuoteContext = (items: Apu[], quoteId?: string) =>
-  quoteId ? items.filter((apu) => apu.quoteId === quoteId) : items;
+  quoteId
+    ? items.filter((apu) => apu.quoteId === quoteId)
+    : items.filter((apu) => !apu.quoteId);
 
 export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) {
   const router = useRouter();

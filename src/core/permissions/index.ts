@@ -30,5 +30,5 @@ export const corePermissions = [
 ] as const satisfies readonly Permission[];
 
 export type PermissionCode = (typeof corePermissions)[number]["code"];
-export { accessibleModules, canAccessModule, defaultLandingPath, moduleAccess } from "./module-access";
-export type { ModuleAccess } from "./module-access";
+export { accessibleModules, canAccessModule, defaultLandingPath, moduleAccess, moduleGroups, navigationSections } from "./module-access";
+export type { ModuleAccess, ModuleGroup, ModuleGroupId, NavigationSection } from "./module-access";

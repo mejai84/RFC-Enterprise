@@ -8,6 +8,7 @@ import {
   supabaseUrl,
 } from "@/lib/supabase/config";
 import { getInventoryItemKind, inventoryProducts, type StockProduct } from "@/modules/inventory";
+import { CompanySignature } from "@/core/settings/presentation/company-signature";
 import {
   ATTACHMENT_LABELS,
   nextQuickRentalCode,
@@ -49,7 +50,7 @@ function InvoiceModal({ rental, onClose }: { rental: QuickRental; onClose: () =>
   const total = rentalTotal(rental);
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="invoice-title">
-      <div className="modal-card" style={{ maxWidth: 640, padding: "2rem" }}>
+      <div className="modal-card rental-invoice-modal" style={{ maxWidth: 640, padding: "2rem" }}>
         <div className="modal-header">
           <div>
             <p>Alquiler · RFC Enterprise</p>
@@ -119,12 +120,24 @@ function InvoiceModal({ rental, onClose }: { rental: QuickRental; onClose: () =>
           {/* Firmas */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", marginTop: "2rem" }}>
             <div style={{ paddingTop: 8, textAlign: "center" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/rfc-signature.png" alt="Firma de Jorge Figueroa Castro" style={{ display: "block", height: 42, margin: "0 auto 6px", objectFit: "contain", width: 160 }} />
-              <small>Jorge Figueroa Castro · Representante Legal</small>
+              <CompanySignature
+                document="rentalInvoice"
+                imageClassName="rental-invoice-signature"
+              />
             </div>
-            <div style={{ borderTop: "1px solid #9ca3af", paddingTop: 8, textAlign: "center" }}>
-              <small>Firma cliente · {rental.customerName}</small>
+            <div style={{ textAlign: "center" }}>
+              {rental.deliverySignatureDataUrl ? (
+                <img
+                  alt={`Firma de ${rental.customerName}`}
+                  src={rental.deliverySignatureDataUrl}
+                  style={{ display: "block", height: 42, margin: "0 auto 6px", objectFit: "contain", width: 160 }}
+                />
+              ) : (
+                <div style={{ height: 42, marginBottom: 6 }} />
+              )}
+              <div style={{ borderTop: "1px solid #9ca3af", paddingTop: 6 }}>
+                <small>Firma cliente · {rental.customerName}</small>
+              </div>
             </div>
           </div>
         </div>
@@ -236,6 +249,10 @@ export function QuickRentalWorkspace() {
   const [invoicing, setInvoicing] = useState<QuickRental | null>(null);
   const [pendingRental, setPendingRental] = useState<QuickRental | null>(null);
   const [deliverySignature, setDeliverySignature] = useState("");
+  const [returningRental, setReturningRental] = useState<QuickRental | null>(null);
+  const [returnNotes, setReturnNotes] = useState("Recibido sin novedades");
+  const [extraChargeInput, setExtraChargeInput] = useState("");
+  const [isReturning, setIsReturning] = useState(false);
   const [dailyRateInput, setDailyRateInput] = useState("");
   const [depositInput, setDepositInput] = useState("0");
   const rentalFormRef = useRef<HTMLFormElement>(null);
@@ -283,19 +300,34 @@ export function QuickRentalWorkspace() {
         .order("created_at", { ascending: false });
 
       if (rows) {
-        setRentals(rows.map((r) => ({
-          id: r.id, code: r.code, equipmentId: r.equipment_id ?? "", equipmentName: r.equipment_name,
-          customerName: r.customer_name, customerPhone: r.customer_phone, customerDocument: r.customer_document,
-          pickupAt: r.pickup_at, dueAt: r.due_at, returnedAt: r.returned_at ?? undefined,
-          dailyRate: r.daily_rate, deposit: r.deposit, extraCharge: r.extra_charge ?? 0,
+        const mapped: QuickRental[] = rows.map((r: Record<string, unknown>) => ({
+          id: String(r.id), code: String(r.code), equipmentId: (r.equipment_id as string) ?? "", equipmentName: String(r.equipment_name),
+          customerName: String(r.customer_name), customerPhone: (r.customer_phone as string) ?? "", customerDocument: (r.customer_document as string) ?? "",
+          pickupAt: String(r.pickup_at), dueAt: String(r.due_at), returnedAt: (r.returned_at as string) ?? undefined,
+          dailyRate: Number(r.daily_rate), deposit: Number(r.deposit), extraCharge: Number(r.extra_charge ?? 0),
           status: r.status as QuickRental["status"],
-          deliveryNotes: r.delivery_notes ?? undefined, returnNotes: r.return_notes ?? undefined,
-          companyId: r.company_id, branchId: r.branch_id ?? undefined,
-          attachments: (r.quick_rental_attachments ?? []).map((a: Record<string, string>) => ({
+          deliveryNotes: (r.delivery_notes as string) ?? undefined, returnNotes: (r.return_notes as string) ?? undefined,
+          companyId: r.company_id as string, branchId: (r.branch_id as string) ?? undefined,
+          attachments: ((r.quick_rental_attachments as Array<Record<string, string>>) ?? []).map((a) => ({
             id: a.id, rentalId: a.rental_id, kind: a.kind as AttachmentKind,
             storagePath: a.storage_path, fileName: a.file_name, mimeType: a.mime_type, uploadedAt: a.uploaded_at,
           })),
-        })));
+        }));
+
+        // La firma del cliente vive en el bucket privado. Antes solo existía en
+        // memoria al entregar, así que al recargar la factura perdía la firma.
+        await Promise.all(
+          mapped.map(async (rental) => {
+            const signature = (rental.attachments ?? []).find((a) => a.kind === "signature");
+            if (!signature) return;
+            const { data } = await db.storage
+              .from("rental-attachments")
+              .createSignedUrl(signature.storagePath, 60 * 60 * 6);
+            if (data?.signedUrl) rental.deliverySignatureDataUrl = data.signedUrl;
+          }),
+        );
+
+        setRentals(mapped);
       }
       setLoading(false);
     }
@@ -402,31 +434,48 @@ export function QuickRentalWorkspace() {
     );
   }
 
-  async function returnRental(rental: QuickRental) {
-    const extra       = Number(window.prompt("Cargo adicional por días extra, daños o faltantes (COP):", "0") || 0);
-    const returnNotes = window.prompt("Estado al recibir / novedades:", "Recibido sin novedades")?.trim();
-    if (returnNotes === undefined) return;
+  async function confirmReturn() {
+    if (!returningRental || isReturning) return;
+    const notes = returnNotes.trim();
+    if (notes.length < 3) {
+      showNotice("Escribe el estado en que se recibe el equipo, aunque sea «Recibido sin novedades».");
+      return;
+    }
+    const extra = Math.max(0, Number(extraChargeInput.replace(/\D/g, "")) || 0);
 
     const updates: Partial<QuickRental> = {
       status: "returned", returnedAt: new Date().toISOString(),
-      extraCharge: Math.max(0, extra), returnNotes,
+      extraCharge: extra, returnNotes: notes,
     };
 
     const db = supabase();
-    if (db) {
-      await db.from("quick_rentals").update({
-        status: "returned", returned_at: updates.returnedAt,
-        extra_charge: updates.extraCharge, return_notes: returnNotes,
-      }).eq("id", rental.id);
-    } else {
-      // Sin sesion activa: no se confirma la devolucion, se avisa al usuario.
-      showNotice("No fue posible registrar la devolucion: inicia sesión en RFC Enterprise para persistirla.");
+    if (!db) {
+      showNotice("No fue posible registrar la devolución: inicia sesión en RFC Enterprise para persistirla.");
       return;
     }
 
-    setRentals((prev) => prev.map((r) => r.id === rental.id ? { ...r, ...updates } : r));
-    setProducts((prev) => prev.map((p) => p.id === rental.equipmentId ? { ...p, available: p.available + 1 } : p));
-    showNotice(`${rental.code} cerrado. El equipo volvió a estar disponible.`);
+    setIsReturning(true);
+    try {
+      const { error } = await db.from("quick_rentals").update({
+        status: "returned", returned_at: updates.returnedAt,
+        extra_charge: updates.extraCharge, return_notes: notes,
+      }).eq("id", returningRental.id);
+      // Antes no se revisaba el error y la pantalla anunciaba «cerrado» aunque la
+      // escritura fallara. Un cierre que no se guardó no libera el equipo.
+      if (error) {
+        showNotice(`No fue posible registrar la devolución: ${error.message}`);
+        return;
+      }
+
+      setRentals((prev) => prev.map((r) => r.id === returningRental.id ? { ...r, ...updates } : r));
+      setProducts((prev) => prev.map((p) => p.id === returningRental.equipmentId ? { ...p, available: p.available + 1 } : p));
+      setReturningRental(null);
+      setReturnNotes("Recibido sin novedades");
+      setExtraChargeInput("");
+      showNotice(`${returningRental.code} cerrado. El equipo volvió a estar disponible.`);
+    } finally {
+      setIsReturning(false);
+    }
   }
 
   return (
@@ -541,7 +590,7 @@ export function QuickRentalWorkspace() {
                         </button>
                         {/* Devolución */}
                         {rental.status !== "returned" ? (
-                          <button type="button" className="inventory-action" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => returnRental(rental)}>
+                          <button type="button" className="inventory-action" style={{ fontSize: 12, padding: "4px 10px" }} onClick={() => { setReturnNotes("Recibido sin novedades"); setExtraChargeInput(""); setReturningRental(rental); }}>
                             Registrar devolución
                           </button>
                         ) : (
@@ -561,6 +610,92 @@ export function QuickRentalWorkspace() {
           )}
         </section>
       </section>
+
+      {/* Devolución del equipo: antes eran dos cuadros de texto del navegador, sin
+          forma de revisar lo escrito ni de cancelar limpiamente. */}
+      {returningRental ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="rental-return-title">
+          <div className="modal-card rental-return-modal">
+            <div className="modal-header">
+              <div>
+                <p>Alquiler rápido</p>
+                <h3 id="rental-return-title">Registrar devolución</h3>
+              </div>
+              <button
+                aria-label="Cerrar sin registrar la devolución"
+                className="btn-close-modal"
+                disabled={isReturning}
+                onClick={() => setReturningRental(null)}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+
+            <section className="rental-return-summary" aria-label="Equipo a devolver">
+              <div>
+                <span>Alquiler</span>
+                <strong>{returningRental.code}</strong>
+              </div>
+              <div>
+                <span>Equipo</span>
+                <strong>{returningRental.equipmentName}</strong>
+              </div>
+              <div>
+                <span>Cliente</span>
+                <strong>{returningRental.customerName}</strong>
+              </div>
+              <div>
+                <span>Devolución prevista</span>
+                <strong>{new Date(returningRental.dueAt).toLocaleString("es-CO")}</strong>
+              </div>
+            </section>
+
+            <label className="rental-return-field" htmlFor="rental-return-notes">
+              Estado en que se recibe el equipo
+              <textarea
+                id="rental-return-notes"
+                maxLength={500}
+                onChange={(event) => setReturnNotes(event.target.value)}
+                placeholder="Ej. Completo y en buen estado. Se waterproofizan dos cascos."
+                rows={3}
+                value={returnNotes}
+              />
+            </label>
+
+            <label className="rental-return-field" htmlFor="rental-return-charge">
+              Cargo adicional por días extra, daños o faltantes ($ COP)
+              <input
+                id="rental-return-charge"
+                inputMode="numeric"
+                onChange={(event) => setExtraChargeInput(event.target.value.replace(/\D/g, ""))}
+                placeholder="0"
+                type="text"
+                value={extraChargeInput}
+              />
+            </label>
+
+            <div className="modal-actions">
+              <button
+                className="btn-cancel"
+                disabled={isReturning}
+                onClick={() => setReturningRental(null)}
+                type="button"
+              >
+                Cancelar
+              </button>
+              <button
+                className="inventory-action"
+                disabled={isReturning || returnNotes.trim().length < 3}
+                onClick={() => void confirmReturn()}
+                type="button"
+              >
+                {isReturning ? "Registrando…" : "Confirmar devolución"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Modal de factura */}
       {invoicing && <InvoiceModal rental={invoicing} onClose={() => setInvoicing(null)} />}

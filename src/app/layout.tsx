@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="es-CO" className={`${inter.variable} ${playfair.variable}`}>
       <body><a className="skip-link" href="#main-content">Saltar al contenido principal</a>{children}</body>
     </html>
   );

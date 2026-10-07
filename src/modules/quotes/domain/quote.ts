@@ -281,12 +281,51 @@ export function daysSince(isoDate: string): number {
 
 /** ¿La cotización lleva más de N días en "esperando respuesta"? */
 export function isStale(quote: Quote, thresholdDays = 3): boolean {
-  if (quote.status !== "awaiting_response") return false;
+  return quoteStaleness(quote).days >= thresholdDays;
+}
+
+export type QuoteStalenessLevel = "ok" | "warning" | "critical";
+
+export type QuoteStaleness = {
+  level: QuoteStalenessLevel;
+  /** Días que lleva la cotización esperando una acción. */
+  days: number;
+  /** Texto corto para mostrar en la tarjeta. */
+  label: string;
+};
+
+/**
+ * Semáforo de antigüedad de una cotización.
+ *
+ * Antes solo existía un borde de color que se encendía cuando la quotation llevaba
+ * más de tres días en «esperando respuesta». Eso dejaba fuera dos casos reales: una
+ * cotización enviada al cliente que nadie responde, y una que lleva semanas en
+ * «borrador» sin llegar a enviarse. Y el color solo no dice nada por sí solo, así que
+ * cada nivel lleva su texto.
+ *
+ * Los días se cuentan desde el último movimiento que dejó la cotización en un
+ * estado de espera, y no desde que se creó.
+ */
+export function quoteStaleness(
+  quote: Quote,
+  options: { warningDays?: number; criticalDays?: number } = {},
+): QuoteStaleness {
+  const warningDays = options.warningDays ?? 3;
+  const criticalDays = options.criticalDays ?? 7;
+
+  const waitingStatuses: Quote["status"][] = ["awaiting_response", "sent"];
+  if (!waitingStatuses.includes(quote.status)) {
+    return { level: "ok", days: 0, label: "" };
+  }
+
   const lastChange = quote.history
-    .filter((h) => h.toStatus === "awaiting_response")
+    .filter((h) => waitingStatuses.includes(h.toStatus))
     .sort((a, b) => b.changedAt.localeCompare(a.changedAt))[0];
-  if (!lastChange) return daysSince(quote.updatedAt) >= thresholdDays;
-  return daysSince(lastChange.changedAt) >= thresholdDays;
+  const days = daysSince(lastChange?.changedAt ?? quote.updatedAt);
+
+  if (days >= criticalDays) return { level: "critical", days, label: `${days} días esperando` };
+  if (days >= warningDays) return { level: "warning", days, label: `${days} días esperando` };
+  return { level: "ok", days, label: days > 0 ? `${days} día${days === 1 ? "" : "s"} esperando` : "" };
 }
 
 /** Devuelve el código con sufijo de revisión si aplica (ej. COT-001-2026-OCENSA-CHIMENEA-R1) */

@@ -31,6 +31,8 @@ export {
   getStatusMeta,
   daysSince,
   isStale,
+
+  quoteStaleness,
   getOfferExpiry,
   calculateTotalCost,
   slugifyCodePart,

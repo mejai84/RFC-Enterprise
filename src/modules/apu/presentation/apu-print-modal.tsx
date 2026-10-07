@@ -1,5 +1,6 @@
 "use client";
 
+import { CompanySignature } from "@/core/settings/presentation/company-signature";
 import {
   apuCategoryMeta,
   apuCostTotal,
@@ -135,10 +136,10 @@ export function ApuPrintModal({ apu, onClose }: { apu: Apu; onClose: () => void 
             <p>Revisó</p>
           </div>
           <div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/rfc-signature.png" alt="Firma de Jorge Figueroa Castro" className="apu-print-official-signature" />
-            <p>Jorge Figueroa Castro</p>
-            <small>Representante Legal</small>
+            <CompanySignature
+              document="apuPrint"
+              imageClassName="apu-print-official-signature"
+            />
           </div>
         </footer>
         <footer className="apu-print-bottom-actions no-print">

@@ -1,5 +1,6 @@
 "use client";
 
+import { resolveSignatureForExport } from "@/core/settings/presentation/company-signature";
 import {
   apuCategoryMeta,
   apuCostTotal,
@@ -45,9 +46,9 @@ const applyBorders = (sheet: ExcelSheet, row: number, columns = 6, style: import
   }
 };
 
-async function loadOfficialSignature(workbook: ExcelWorkbook): Promise<number | null> {
+async function loadOfficialSignature(workbook: ExcelWorkbook, signature: { imageUrl: string }): Promise<number | null> {
   try {
-    const response = await fetch("/rfc-signature.png");
+    const response = await fetch(signature.imageUrl);
     if (!response.ok) return null;
     const bytes = new Uint8Array(await response.arrayBuffer());
     let binary = "";
@@ -59,7 +60,7 @@ async function loadOfficialSignature(workbook: ExcelWorkbook): Promise<number | 
 }
 
 /** Hoja consolidada equivalente al resumen del libro RFC de referencia. */
-function addRfcSummarySheet(workbook: ExcelWorkbook, apus: ReadonlyArray<Apu>, signatureImageId: number | null) {
+function addRfcSummarySheet(workbook: ExcelWorkbook, apus: ReadonlyArray<Apu>, signatureImageId: number | null, signatureText: string) {
   const sheet = workbook.addWorksheet("RESUMEN ACTUALIZADO", {
     pageSetup: {
       orientation: "landscape",
@@ -150,7 +151,7 @@ function addRfcSummarySheet(workbook: ExcelWorkbook, apus: ReadonlyArray<Apu>, s
     sheet.addImage(signatureImageId, { tl: { col: 0.4, row: signatureRow - 1 }, ext: { width: 165, height: 48 } });
     sheet.mergeCells(`C${signatureRow}:H${signatureRow + 1}`);
     const signer = sheet.getCell(`C${signatureRow}`);
-    signer.value = "Jorge Figueroa Castro\nRepresentante Legal";
+    signer.value = signatureText;
     signer.font = { bold: true, size: 9, color: { argb: GREEN } };
     signer.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
   }
@@ -162,7 +163,7 @@ function addRfcSummarySheet(workbook: ExcelWorkbook, apus: ReadonlyArray<Apu>, s
  * Escribe una actividad como la plantilla histÃ³rica RFC: una hoja por APU,
  * bloques consecutivos por rubro y cantidad de filas variable en cada bloque.
  */
-function addOfficialRfcSheet(workbook: ExcelWorkbook, apu: Apu, sheetName: string, signatureImageId: number | null) {
+function addOfficialRfcSheet(workbook: ExcelWorkbook, apu: Apu, sheetName: string, signatureImageId: number | null, signatureText: string) {
   const sheet = workbook.addWorksheet(sheetName, {
     pageSetup: {
       orientation: "landscape",
@@ -317,7 +318,7 @@ function addOfficialRfcSheet(workbook: ExcelWorkbook, apu: Apu, sheetName: strin
     sheet.addImage(signatureImageId, { tl: { col: 0.25, row: signatureRow - 1 }, ext: { width: 155, height: 45 } });
     sheet.mergeCells(`C${signatureRow}:F${signatureRow + 1}`);
     const signer = sheet.getCell(`C${signatureRow}`);
-    signer.value = "Jorge Figueroa Castro\nRepresentante Legal";
+    signer.value = signatureText;
     signer.font = { bold: true, size: 9, color: { argb: GREEN } };
     signer.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
   }
@@ -342,12 +343,14 @@ export async function exportApusToXlsx(apus: ReadonlyArray<Apu>, fileLabel = "AP
   workbook.modified = new Date();
 
   const usedNames = new Set<string>();
-  const signatureImageId = await loadOfficialSignature(workbook);
-  addRfcSummarySheet(workbook, apus, signatureImageId);
+  const signature = await resolveSignatureForExport("apuXlsx");
+  const signatureImageId = signature.enabled ? await loadOfficialSignature(workbook, signature) : null;
+  const signatureText = `${signature.name}\n${signature.title}`;
+  addRfcSummarySheet(workbook, apus, signatureImageId, signatureText);
   usedNames.add("resumen actualizado");
   apus.forEach((apu, index) => {
     const sheetName = cleanSheetName(apu.name, `Actividad ${index + 1}`, usedNames);
-    addOfficialRfcSheet(workbook, apu, sheetName, signatureImageId);
+    addOfficialRfcSheet(workbook, apu, sheetName, signatureImageId, signatureText);
   });
 
   const buffer = await workbook.xlsx.writeBuffer();

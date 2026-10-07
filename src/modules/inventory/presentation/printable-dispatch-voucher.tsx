@@ -1,6 +1,7 @@
 "use client";
 
 import type { InventoryMovement, Project } from "../index";
+import { CompanySignature } from "@/core/settings/presentation/company-signature";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -127,10 +128,12 @@ export function PrintableDispatchVoucher({ movement, project, onClose }: Props) 
 
           <footer className="voucher-signatures">
             <div className="signature-line">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="voucher-company-signature" src="/rfc-signature.png" alt="Firma de Jorge Figueroa Castro" />
-              <strong>Jorge Figueroa Castro</strong>
-              <small>Representante Legal · Representaciones Figueroa Castro S.A.S.</small>
+              <CompanySignature
+                className="signature-line-body"
+                document="dispatchVoucher"
+                imageClassName="voucher-company-signature"
+              />
+              <small>Representaciones Figueroa Castro S.A.S.</small>
             </div>
             <div className="signature-line">
               <div className="sig-space" />

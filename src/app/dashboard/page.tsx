@@ -1,15 +1,29 @@
+import { DashboardShell } from "@/app/dashboard-shell";
 import { DashboardExecutiveWorkspace } from "@/modules/inventory/presentation/dashboard-executive-workspace";
+import { RentalsSummaryCard } from "@/modules/rentals/presentation/rentals-summary-card";
+import { AttendanceSummaryCard } from "@/modules/attendance/presentation/attendance-summary-card";
 import { getInventoryProducts } from "@/modules/inventory/application/get-inventory-products";
 
 export const metadata = {
   title: "Dashboard Ejecutivo de Obras y Materiales | RFC Enterprise",
   description:
-    "Monitoreo financiero en tiempo real del gasto de insumos y control de despachos por obra.",
+    "Resumen de la operación: obras, materiales, cotizaciones, alquileres y mi jornada.",
 };
 
+/**
+ * El Resumen se compone en la capa de aplicación: cada tarjeta viene de su módulo
+ * y se muestra según los permisos efectivos de quien mira, de modo que un
+ * trabajador ve su jornada y un gerente ve además los indicadores financieros.
+ */
 export default async function DashboardPage() {
   const inventory = await getInventoryProducts();
   return (
-    <DashboardExecutiveWorkspace initialProducts={inventory.products ?? []} />
+    <DashboardShell>
+      <div className="exec-summary-grid">
+        <AttendanceSummaryCard />
+        <RentalsSummaryCard />
+      </div>
+      <DashboardExecutiveWorkspace initialProducts={inventory.products ?? []} />
+    </DashboardShell>
   );
 }

@@ -1,11 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { accessibleModules, canAccessModule, defaultLandingPath } from "@/core/permissions";
+import { accessibleModules, canAccessModule, defaultLandingPath, moduleGroups, navigationSections } from "@/core/permissions";
 import { useEffectivePermissions } from "@/core/permissions/use-effective-permissions";
 import { initialAdministrator } from "@/core/users";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
@@ -125,6 +125,7 @@ const navigation = [
   { icon: "checklist" as const, label: "Conteos físicos", href: "/counts" },
   { icon: "chart" as const, label: "Informes", href: "/reports" },
   { icon: "users" as const, label: "Empleados", href: "/employees" },
+  { icon: "users" as const, label: "Mi perfil", href: "/perfil" },
   { icon: "settings" as const, label: "Configuración", href: "/settings" },
 ];
 
@@ -138,11 +139,88 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const visibleNavigation = allowedHrefs
     ? navigation.filter(({ href }) => allowedHrefs.has(href))
     : navigation;
+  const navigationByHref = Object.fromEntries(visibleNavigation.map((item) => [item.href, item])) as Record<
+    string,
+    (typeof navigation)[number]
+  >;
+  // Los bloques se calculan con la misma fuente de permisos; sin ellos, la barra
+  // queda como estaba para no dejar el menu vacio mientras se consulta.
+  const menuSections =
+    permissions && permissions.length > 0 ? navigationSections(permissions).sections : [];
+  // Módulos que no pertenecen a ningún bloque, como el resumen: van sueltos arriba.
+  const menuLoose =
+    permissions && permissions.length > 0 ? navigationSections(permissions).loose : ["/dashboard"];
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
+
+  function toggleGroup(id: string) {
+    setCollapsedGroups((current) => {
+      const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
+      try {
+        localStorage.setItem("rfc_nav_groups", JSON.stringify(next));
+      } catch {
+        // Preferencia solo temporal: si no hay almacenamiento, se aplica igual.
+      }
+      return next;
+    });
+  }
+
+  /** El bloque de la página actual nunca se pliega: no se esconde lo que se usa. */
+  function isGroupOpen(id: string, currentPath: string): boolean {
+    if (collapsedGroups.includes(id)) return false;
+    const group = moduleGroups.find((item) => item.id === id);
+    if (group?.hrefs.some((href) => currentPath === href || currentPath.startsWith(`${href}/`))) return true;
+    return true;
+  }
+
+  function renderNavItem(
+    item: (typeof navigation)[number] | undefined,
+    isActive: boolean,
+  ) {
+    if (!item) return null;
+    return (
+      <Link
+        aria-current={isActive ? "page" : undefined}
+        className={`dashboard-nav-item ${isActive ? "is-active" : ""}`}
+        href={item.href}
+        key={item.label}
+        onClick={() => setIsMenuOpen(false)}
+        title={isSidebarCollapsed ? item.label : undefined}
+      >
+        <Icon name={item.icon} />
+        <span>{item.label}</span>
+      </Link>
+    );
+  }
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentUser, setCurrentUser] = useState(initialAdministrator);
   const [currentRole, setCurrentRole] = useState("Usuario del portal");
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  // El menú de la cuenta se cierra al pulsar fuera, con Escape o al cambiar de ruta.
+  useEffect(() => {
+    if (!isAccountMenuOpen) return;
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!accountMenuRef.current?.contains(event.target as Node)) setIsAccountMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsAccountMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isAccountMenuOpen]);
+
+  useEffect(() => {
+    setIsAccountMenuOpen(false);
+  }, [pathname]);
   const initials = useMemo(() => currentUser.name.split(" ").filter(Boolean).map((part) => part[0]).slice(0, 2).join("").toUpperCase() || "RF", [currentUser.name]);
 
   useEffect(() => {
@@ -175,6 +253,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       setIsSidebarCollapsed(localStorage.getItem("rfc_dashboard_sidebar_collapsed") === "true");
+      try {
+        const stored = localStorage.getItem("rfc_nav_groups");
+        if (stored) setCollapsedGroups(JSON.parse(stored) as string[]);
+      } catch {
+        // Si el valor guardado no es valido, todos los bloques empiezan abiertos.
+      }
     } catch {
       // La barra lateral permanece expandida si el almacenamiento no está disponible.
     }
@@ -254,20 +338,32 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
         <p className="dashboard-nav-label">Operación</p>
         <nav className="dashboard-nav" aria-label="Navegación del portal">
-          {visibleNavigation.map(({ icon, label, href }) => {
-            const isActive = pathname === href;
+          {/* Los módulos se agrupan por dominio, pero ninguno se une: cada uno
+              sigue siendo su propia pantalla. El resumen y «Mi perfil» quedan
+              sueltos arriba, y un bloque con un solo módulo también se muestra
+              suelto, porque rotularlo solo añadiría ruido. */}
+          {menuLoose.map((href) => renderNavItem(navigationByHref[href], pathname === href))}
+
+          {menuSections.map((section) => {
+            if (!section.label) {
+              return section.hrefs.map((href) => renderNavItem(navigationByHref[href], pathname === href));
+            }
+            const open = isGroupOpen(section.id!, pathname);
             return (
-              <Link
-                aria-current={isActive ? "page" : undefined}
-                className={`dashboard-nav-item ${isActive ? "is-active" : ""}`}
-                href={href}
-                key={label}
-                onClick={() => setIsMenuOpen(false)}
-                title={isSidebarCollapsed ? label : undefined}
-              >
-                <Icon name={icon} />
-                <span>{label}</span>
-              </Link>
+              <div className="dashboard-nav-group" key={section.id}>
+                <button
+                  aria-expanded={open}
+                  className="dashboard-nav-group-label"
+                  onClick={() => toggleGroup(section.id!)}
+                  type="button"
+                >
+                  <span>{section.label}</span>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    {open ? <path d="M6 9l6 6 6-6" /> : <path d="M6 15l6-6 6 6" />}
+                  </svg>
+                </button>
+                {open ? section.hrefs.map((href) => renderNavItem(navigationByHref[href], pathname === href)) : null}
+              </div>
             );
           })}
         </nav>
@@ -315,9 +411,55 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <button className="dashboard-signout" aria-label="Cerrar sesión y cambiar de usuario" disabled={isSigningOut} onClick={() => void signOut()} type="button">
               <Icon name="logout" /><span>{isSigningOut ? "Saliendo…" : "Cerrar sesión"}</span>
             </button>
-            <Link className="dashboard-password-link" href="/restablecer-contrasena?mode=change">Cambiar contraseña</Link>
-            <div className="dashboard-avatar" aria-label={`Usuario: ${currentUser.name}`}>
-              {initials}
+            {/* El ícono de perfil agrupa las acciones de la cuenta: antes había un
+                botón de cerrar sesión suelto al lado y nada llevaba a «Mi perfil». */}
+            <div className="dashboard-account" ref={accountMenuRef}>
+              <button
+                aria-expanded={isAccountMenuOpen}
+                aria-haspopup="menu"
+                aria-label={`Menú de tu cuenta: ${currentUser.name}`}
+                className="dashboard-avatar dashboard-avatar--button"
+                onClick={() => setIsAccountMenuOpen((open) => !open)}
+                type="button"
+              >
+                {initials}
+              </button>
+              {isAccountMenuOpen ? (
+                <div aria-label="Acciones de la cuenta" className="dashboard-account-menu" role="menu">
+                  <p className="dashboard-account-identity">
+                    <strong>{currentUser.name}</strong>
+                    <small>{currentRole}</small>
+                  </p>
+                  <Link
+                    className="dashboard-account-item"
+                    href="/perfil"
+                    onClick={() => setIsAccountMenuOpen(false)}
+                    role="menuitem"
+                  >
+                    <Icon name="users" />
+                    <span>Mi perfil</span>
+                  </Link>
+                  <Link
+                    className="dashboard-account-item"
+                    href="/restablecer-contrasena?mode=change"
+                    onClick={() => setIsAccountMenuOpen(false)}
+                    role="menuitem"
+                  >
+                    <Icon name="settings" />
+                    <span>Cambiar contraseña</span>
+                  </Link>
+                  <button
+                    className="dashboard-account-item"
+                    disabled={isSigningOut}
+                    onClick={() => { setIsAccountMenuOpen(false); void signOut(); }}
+                    role="menuitem"
+                    type="button"
+                  >
+                    <Icon name="logout" />
+                    <span>{isSigningOut ? "Saliendo…" : "Cerrar sesión"}</span>
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
         </header>

@@ -48,6 +48,18 @@ La pantalla se divide en dos secciones cuando el usuario tiene permisos de consu
 
 La declaración es inmutable: se registra por RPC con hora del servidor y no admite edición ni borrado, ni desde la interfaz ni con permisos directos sobre la tabla (ADR-108, ADR-109).
 
+
+## Identidad, membrete y valores por defecto
+
+Configuración concentra lo que aplica a toda la empresa y se separa por áreas: **Firma y membrete**, **Propuesta** y **Empresa y nómina**. La ficha personal ya no vive ahí: tiene su propio módulo `Mi perfil`, con el cambio de contraseña en un modal (ADR-120).
+
+**Firma y membrete (ADR-115).** El nombre del representante legal y la imagen de la firma salen de la base de datos y se suben desde la pantalla, con un interruptor por tipo de documento: propuestas comerciales, impresión del APU, exportación XLSX, vales de salida y facturas de alquiler. Si la empresa no sube firma, se usa la del sistema.
+
+**Propuesta (ADR-116).** IVA, anticipo, descuento máximo, retención, plazo de entrega, vigencia de la oferta, condiciones de pago, datos bancarios y si el total se imprime también en letras. Vigencia, plazo y condiciones se aplican solos al abrir una cotización nueva.
+
+## Navegación por bloques
+
+La barra lateral agrupa los módulos por dominio sin unirlos (ADR-118): **Comercial** (Cotizaciones, APU), **Obras** (Proyectos, Registro de jornada, Alquiler rápido), **Bodega** (Inventarios, Movimientos, Conteos físicos), **Consultas** (Informes) y **Administración** (Empleados, Mi perfil, Configuración). Cada módulo sigue siendo su propia pantalla y su propia ruta. Un bloque con un solo módulo visible se muestra suelto, y si a la persona solo le corresponde un módulo en toda la aplicación no ve ningún encabezado.
 ## Centro de informes
 
 El módulo de Informes se organiza en vistas Gerenciales, Operativas y Financieras. Consolida cotizaciones, inventario, kardex, proyectos, APU y alquileres rápidos, con filtros, exportación CSV e impresión.

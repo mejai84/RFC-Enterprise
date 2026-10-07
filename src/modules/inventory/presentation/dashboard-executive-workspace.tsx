@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffectivePermissions } from "@/core/permissions/use-effective-permissions";
+
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
@@ -120,6 +122,15 @@ export function DashboardExecutiveWorkspace({
   initialProducts?: StockProduct[];
 }) {
   const [viewerName, setViewerName] = useState("Usuario");
+  // El Resumen se arma según lo que la persona puede ver. Antes mostraba a todos
+  // los indicadores financieros y el conteo de cotizaciones, el APU y las obras,
+  // incluso a quien solo registra su jornada.
+  const { permissions, isLoading: arePermissionsLoading } = useEffectivePermissions();
+  const has = (code: string) => !permissions || permissions.includes(code);
+  const canViewFinancials = has("dashboard.financials.view");
+  const canViewQuotes = has("quotes.view") || has("quotes.manage");
+  const canViewApu = has("apu.view") || has("apu.manage");
+  const canViewProjects = has("projects.view") || has("projects.manage");
   const [scope, setScope] = useState<{ companyId: string; branchId: string } | null>(null);
   // Estado operativo proveniente de Supabase.
   const [products, setProducts] = useState<StockProduct[]>(initialProducts);
@@ -876,6 +887,7 @@ export function DashboardExecutiveWorkspace({
       <section
         className="dashboard-stat-grid exec-stat-grid"
         aria-label="Indicadores financieros consolidados"
+        hidden={!canViewFinancials}
       >
         <article className="stat-card">
           <span>Presupuesto Obras ($ COP)</span>
@@ -970,6 +982,7 @@ export function DashboardExecutiveWorkspace({
       <section
         className="dashboard-module-overview"
         aria-label="Resumen de cotizaciones, APU y obras"
+        hidden={!canViewQuotes && !canViewApu && !canViewProjects}
       >
         <div className="module-overview-heading">
           <div>
@@ -979,7 +992,7 @@ export function DashboardExecutiveWorkspace({
           <small>Actualizado al abrir el dashboard</small>
         </div>
         <div className="module-overview-grid">
-          <article className="module-overview-card is-quotes">
+          <article className="module-overview-card is-quotes" hidden={!canViewQuotes}>
             <div>
               <span className="module-overview-kicker">Cotizaciones</span>
               <strong>{commercialSummary.inProgress.length}</strong>
@@ -991,7 +1004,7 @@ export function DashboardExecutiveWorkspace({
             </small>
             <Link href="/quotes">Abrir cotizaciones →</Link>
           </article>
-          <article className="module-overview-card is-apu">
+          <article className="module-overview-card is-apu" hidden={!canViewApu}>
             <div>
               <span className="module-overview-kicker">APU</span>
               <strong>{apus.length}</strong>

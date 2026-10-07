@@ -6,6 +6,9 @@
  * ───────────────────────────────────────────────────────────── */
 "use client";
 
+import { CompanySignature } from "@/core/settings/presentation/company-signature";
+import { useCompanyConfig } from "@/core/settings/use-company-config";
+
 import {
   useState,
   useMemo,
@@ -30,6 +33,8 @@ import {
   getOfferExpiry,
   calculateTotalCost,
   isStale,
+
+  quoteStaleness,
   loadQuotesWorkspaceData,
   saveQuote,
   convertQuoteToProject,
@@ -316,6 +321,10 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       : null;
   });
   const [showNewForm, setShowNewForm] = useState(false);
+  // Valores por defecto de la empresa: vigencia, plazo y condiciones de pago llegan
+  // desde Configuracion para no escribirlos a mano en cada cotizacion nueva.
+  const { config: companySettings } = useCompanyConfig();
+  const proposalDefaults = companySettings?.proposalDefaults;
   const [quoteToPrint, setQuoteToPrint] = useState<Quote | null>(null);
   const [filterStatus, setFilterStatus] = useState<QuoteStatus | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -1070,7 +1079,7 @@ function KanbanCard({
   onStatusChange: (id: string, status: QuoteStatus, note?: string) => void;
   onPrint: () => void;
 }) {
-  const stale = isStale(quote);
+  const staleness = quoteStaleness(quote);
   const effectiveCode = getEffectiveQuoteCode(quote);
   const expiry = ["sent", "awaiting_response"].includes(quote.status)
     ? getOfferExpiry(quote)
@@ -1078,7 +1087,7 @@ function KanbanCard({
 
   return (
     <div
-      className={`kanban-card ${stale ? "kanban-card--stale" : ""}`}
+      className={`kanban-card ${staleness.level === "warning" ? "kanban-card--stale" : ""} ${staleness.level === "critical" ? "kanban-card--overdue" : ""}`}
       onClick={onSelect}
       tabIndex={0}
       role="button"
@@ -1089,6 +1098,14 @@ function KanbanCard({
           <span className="kanban-card-code" title={effectiveCode}>
             {effectiveCode}
           </span>
+          {staleness.label ? (
+            // El semáforo no es solo color: lleva el texto y el número de días,
+            // porque el color por sí solo no le dice nada a quien no distingue tonos.
+            <span className="kanban-stale-badge" data-level={staleness.level}>
+              {staleness.level === "critical" ? "Vencida · " : ""}
+              {staleness.label}
+            </span>
+          ) : null}
           {quote.revision > 0 && (
             <span className="badge-revision">R{quote.revision}</span>
           )}
@@ -1105,7 +1122,7 @@ function KanbanCard({
           >
             🖨️
           </button>
-          {stale && (
+          {staleness.level !== "ok" && (
             <span
               className="kanban-stale-badge"
               title="Más de 3 días esperando respuesta"
@@ -1295,7 +1312,7 @@ function ListView({
           ) : (
             quotes.map((q) => {
               const meta = getStatusMeta(q.status);
-              const stale = isStale(q);
+              const staleness = quoteStaleness(q);
               const effectiveCode = getEffectiveQuoteCode(q);
               const expiry = ["sent", "awaiting_response"].includes(q.status)
                 ? getOfferExpiry(q)
@@ -1305,7 +1322,7 @@ function ListView({
                 <tr
                   key={q.id}
                   onClick={() => onSelectQuote(q)}
-                  className={stale ? "row-stale" : ""}
+                  className={staleness.level !== "ok" ? "row-stale" : ""}
                   style={{ cursor: "pointer" }}
                 >
                   <td className="cell-code">
@@ -1330,7 +1347,7 @@ function ListView({
                     >
                       {meta.icon} {meta.label}
                     </span>
-                    {stale && <span className="stale-tag">Estancada</span>}
+                    {staleness.label ? <span className="stale-tag">{staleness.label}</span> : null}
                   </td>
                   <td className="cell-value">{formatCOP(q.estimatedValue)}</td>
                   <td>
@@ -2033,6 +2050,10 @@ function NewQuoteModal({
   const [title, setTitle] = useState("");
   const [client, setClient] = useState("");
   const [reqVisit, setReqVisit] = useState(false);
+  // Valores por defecto de la empresa: vigencia, plazo y condiciones de pago llegan
+  // desde Configuracion para no escribirlos a mano en cada cotizacion nueva.
+  const { config: companySettings } = useCompanyConfig();
+  const proposalDefaults = companySettings?.proposalDefaults;
 
   // Vista previa en vivo del código que se generará
   const previewCode = useMemo(() => {
@@ -2182,7 +2203,7 @@ function NewQuoteModal({
                 <input
                   name="validityDays"
                   type="number"
-                  defaultValue={30}
+                  defaultValue={proposalDefaults?.validityDays ?? 30}
                   min={5}
                 />
               </label>
@@ -2195,7 +2216,7 @@ function NewQuoteModal({
               <input
                 name="deliveryTimeWeeks"
                 type="number"
-                defaultValue={3}
+                defaultValue={Math.max(1, Math.round((proposalDefaults?.deliveryDays ?? 30) / 7))}
                 min={1}
               />
             </label>
@@ -2204,7 +2225,7 @@ function NewQuoteModal({
               <input
                 name="paymentTerms"
                 type="text"
-                defaultValue="50% anticipo, 50% contra entrega"
+                defaultValue={proposalDefaults?.paymentTerms ?? "50% anticipo, 50% contra entrega"}
               />
             </label>
           </div>
@@ -2395,14 +2416,7 @@ function PremiumProposalSheet({ quote }: { quote: Quote }) {
       </section>
       <footer className="premium-signature-row">
         <div className="premium-signature">
-          <Image
-            src="/rfc-signature.png"
-            alt="Firma de Jorge Figueroa Castro"
-            width={190}
-            height={55}
-          />
-          <strong>Jorge Figueroa Castro</strong>
-          <span>Representante Legal</span>
+          <CompanySignature document="proposal" />
         </div>
         <strong>
           {formatDate(quote.sentAt || quote.updatedAt).toUpperCase()}
@@ -2672,11 +2686,8 @@ function FormalProposalModal({
           {/* Firmas de aceptación */}
           <div className="proposal-signatures">
             <div className="sig-box">
-              <Image className="sig-rfc-official" src="/rfc-signature.png" alt="Firma de Jorge Figueroa Castro" width={180} height={52} />
+              <CompanySignature document="proposal" imageClassName="sig-rfc-official" />
               <div className="sig-line" />
-              <p>
-                <strong>Jorge Figueroa Castro</strong>
-              </p>
               <p>Representante Legal / Gerencia Técnica</p>
               <p>Representaciones Figueroa Castro S.A.S.</p>
             </div>

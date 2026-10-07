@@ -1360,3 +1360,10 @@
 .technical-documents-versions summary { cursor: pointer; font-weight: 700; }
 .technical-documents-versions ul { display: grid; gap: 5px; margin: 10px 0 0; padding-left: 20px; }
 @media (max-width: 680px) { .technical-documents-intro { flex-direction: column; } .technical-document-grid { grid-template-columns: 1fr; } .technical-documents-status { white-space: normal; } }
+/* Semaforo de antiguedad en la tarjeta: el color acompana al texto, nunca al reves. */
+.kanban-card--overdue { border-left-color: #c0392b; }
+.kanban-stale-badge { border-radius: 999px; font-size: 10px; font-weight: 800; letter-spacing: .02em; padding: 3px 8px; text-transform: uppercase; white-space: nowrap; }
+.kanban-stale-badge[data-level='ok'] { background: #e8f4ec; border: 1px solid #b7dfc5; color: #176b42; }
+.kanban-stale-badge[data-level='warning'] { background: #fef3c7; border: 1px solid #ecd9a8; color: #8a6116; }
+.kanban-stale-badge[data-level='critical'] { background: #fdecea; border: 1px solid #eec3bd; color: #922b21; }
+.kanban-code-rev { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }

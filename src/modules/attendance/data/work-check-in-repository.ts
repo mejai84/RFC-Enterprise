@@ -5,6 +5,8 @@ import type {
   AttendanceProject,
   DeclaredLocationRecord,
   WorkCheckIn,
+  CurrentWorkday,
+  WorkdaySegmentType,
   WorkCheckInWorkspaceData,
 } from "../domain/work-check-in";
 import type { AttendancePeriodKind } from "../domain/attendance-period";
@@ -235,4 +237,82 @@ export async function registerWorkCheckIn(
   });
   if (error) throw new Error(describeWorkCheckInError(error));
   return data as { id: string; checked_in_at: string } | null;
+}
+
+function mapCurrentWorkday(row: Record<string, unknown> | null): CurrentWorkday | null {
+  if (!row?.id) return null;
+  return {
+    id: String(row.id),
+    localDate: String(row.local_date),
+    startedAt: String(row.started_at),
+    endedAt: (row.ended_at as string | null) ?? undefined,
+    status: String(row.status) as CurrentWorkday["status"],
+    currentSegment: row.current_segment_id
+      ? {
+          id: String(row.current_segment_id),
+          type: String(row.current_segment_type) as WorkdaySegmentType,
+          projectId: (row.project_id as string | null) ?? undefined,
+          projectLabel: (row.project_label as string | null) ?? undefined,
+          siteName: String(row.site_name),
+          activityDescription: String(row.activity_description),
+          startedAt: String(row.segment_started_at),
+        }
+      : undefined,
+  };
+}
+
+export async function loadCurrentWorkday(): Promise<CurrentWorkday | null> {
+  const supabase = client();
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc("current_workday");
+  if (error) throw error;
+  return mapCurrentWorkday((data?.[0] as Record<string, unknown> | undefined) ?? null);
+}
+
+type WorkdayActionInput = {
+  projectId: string;
+  siteName: string;
+  activityDescription: string;
+  location?: DeclaredLocationRecord;
+};
+
+function locationParams(location?: DeclaredLocationRecord) {
+  return {
+    p_location_latitude: location?.latitude ?? null,
+    p_location_longitude: location?.longitude ?? null,
+    p_location_accuracy_m: location?.accuracyMeters ?? null,
+    p_location_label: location?.label ?? null,
+  };
+}
+
+export async function startWorkday(input: WorkdayActionInput) {
+  const supabase = client();
+  if (!supabase) throw new Error("Supabase no está configurado.");
+  const { error } = await supabase.rpc("start_workday", {
+    p_project_id: input.projectId || null,
+    p_site_name: input.siteName,
+    p_activity_description: input.activityDescription,
+    ...locationParams(input.location),
+  });
+  if (error) throw new Error(describeWorkCheckInError(error));
+}
+
+export async function changeWorkdaySegment(type: WorkdaySegmentType, input: WorkdayActionInput) {
+  const supabase = client();
+  if (!supabase) throw new Error("Supabase no está configurado.");
+  const { error } = await supabase.rpc("change_workday_segment", {
+    p_segment_type: type,
+    p_project_id: input.projectId || null,
+    p_site_name: input.siteName,
+    p_activity_description: input.activityDescription,
+    ...locationParams(input.location),
+  });
+  if (error) throw new Error(describeWorkCheckInError(error));
+}
+
+export async function finishWorkday(location?: DeclaredLocationRecord) {
+  const supabase = client();
+  if (!supabase) throw new Error("Supabase no está configurado.");
+  const { error } = await supabase.rpc("finish_workday", locationParams(location));
+  if (error) throw new Error(describeWorkCheckInError(error));
 }

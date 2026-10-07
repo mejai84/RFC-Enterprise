@@ -42,6 +42,25 @@ export type WorkCheckInWorkspaceData = {
   checkIns: WorkCheckIn[];
 };
 
+export type WorkdaySegmentType = "work" | "travel" | "break";
+
+export type CurrentWorkday = {
+  id: string;
+  localDate: string;
+  startedAt: string;
+  endedAt?: string;
+  status: "open" | "closed" | "needs_review";
+  currentSegment?: {
+    id: string;
+    type: WorkdaySegmentType;
+    projectId?: string;
+    projectLabel?: string;
+    siteName: string;
+    activityDescription: string;
+    startedAt: string;
+  };
+};
+
 /** Registros que devuelve la consulta gerencial dentro del período activo. */
 export type AttendancePeriodSummary = {
   employeesWithRecord: number;

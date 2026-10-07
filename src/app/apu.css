@@ -321,6 +321,12 @@
 .apu-import-error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
 .apu-import-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
 
+.apu-import-source { display:grid; grid-template-columns:minmax(180px,.65fr) minmax(280px,1.35fr) auto; gap:.75rem; align-items:end; padding:.8rem; border:1px solid var(--line); border-radius:10px; background:var(--canvas); }
+.apu-import-source > div { display:grid; gap:.15rem; align-self:center; }.apu-import-source p { margin:0; color:var(--brand-dark); font-size:.75rem; font-weight:800; letter-spacing:.03em; text-transform:uppercase; }.apu-import-source small { color:var(--muted); font-size:.72rem; }
+.apu-import-source label { display:grid; gap:.3rem; }.apu-import-source label > span { color:var(--muted); font-size:.68rem; font-weight:800; letter-spacing:.03em; text-transform:uppercase; }.apu-import-source select { width:100%; min-height:44px; border:1px solid var(--line); border-radius:8px; padding:.5rem .65rem; background:var(--surface); color:var(--ink); font:inherit; }.apu-import-source select:focus { border-color:var(--brand); outline:none; box-shadow:0 0 0 3px var(--brand-glow); }
+.apu-import-format { align-self:end; min-height:28px; border-radius:999px; padding:.35rem .65rem; background:var(--brand-soft); color:var(--brand-dark); font-size:.68rem; font-weight:800; white-space:nowrap; }.apu-import-format.is-medium { background:#fffbeb; color:#92400e; }
+.apu-import-detected-groups { display:flex; gap:.45rem; flex-wrap:wrap; }.apu-import-detected-groups span { border:1px solid var(--line); border-radius:999px; padding:.3rem .55rem; background:var(--surface); color:var(--muted); font-size:.7rem; }.apu-import-detected-groups strong { color:var(--brand-dark); }
+
 .apu-import-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.6rem; margin: 0; }
 .apu-import-meta > div { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9px; padding: 0.45rem 0.6rem; min-width: 0; }
 .apu-import-meta dt { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.03em; color: #64748b; }
@@ -365,6 +371,7 @@
   .apu-import-body { max-height: calc(96vh - 180px); padding: 0.85rem; }
   .apu-import-ask-actions button { width: 100%; }
   .apu-import-footer button { flex: 1; }
+  .apu-import-source { grid-template-columns:1fr; }.apu-import-format { justify-self:start; }
 }
 
 /* Precio de venta y costo por unidad, juntos en el encabezado - 2026-10-07 */
@@ -409,11 +416,11 @@
 
 .apu-section-bar { border-bottom: 1px solid var(--line); background: #fbfdfc; }
 .apu-section.is-collapsed .apu-section-bar { border-bottom: 0; }
-.apu-section-toggle { display: flex; align-items: center; gap: 0.55rem; width: 100%; min-height: 48px; padding: 0.55rem 0.85rem; border: 0; background: transparent; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+.apu-section-toggle { display: flex; align-items: center; gap: 0.7rem; width: 100%; min-height: 56px; padding: 0.6rem 0.9rem; border: 0; background: transparent; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
 .apu-section-toggle:hover { background: #f1f7f3; }
-.apu-section-chevron { flex: 0 0 auto; width: 20px; font-size: 13px; color: var(--brand-dark); line-height: 1; }
+.apu-section-chevron { flex: 0 0 auto; width: 28px; font-size: 20px; font-weight: 700; color: var(--brand-dark); line-height: 1; }
 .apu-section-heading { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.apu-section-heading strong { font-size: 13.5px; font-weight: 800; color: var(--ink); }
+.apu-section-heading strong { font-size: 14.5px; font-weight: 800; color: var(--ink); }
 .apu-section-heading small { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .apu-section.is-collapsed { background: #fbfdfc; }
 
@@ -478,3 +485,8 @@
 @media (max-width: 640px) { .apu-shortage-actions { flex-direction: column; align-items: stretch; } .apu-shortage-actions button { width: 100%; } }
 .apu-manual-card { max-width: min(620px, 94vw); width: 620px; }
 .apu-inline-link { min-height: 44px; padding: 0 4px; border: 0; background: none; color: var(--brand, #1f6f4a); font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; vertical-align: baseline; }
+.apu-quantity-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.apu-quantity-field input { width: 100%; min-width: 0; min-height: 40px; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--surface); color: var(--ink); font: inherit; font-variant-numeric: tabular-nums; }
+.apu-quantity-field input:focus { outline: 2px solid var(--brand, #1f6f4a); outline-offset: 1px; }
+.apu-quantity-hint { font-size: 11px; color: var(--muted); }
+@media (max-width: 640px) { .apu-quantity-field input { min-height: 44px; } }

@@ -3,17 +3,19 @@
 import { useMemo, useRef, useState } from "react";
 import { apuCategoryMeta, type Apu, type ApuLine } from "@/modules/apu";
 import {
+  inspectApuWorkbook,
   needsQuantityReview,
-  previewApuWorkbook,
   previewToApuLines,
   previewTotals,
   type ApuImportPreview,
+  type ApuWorkbookInspection,
 } from "./apu-xlsx-import";
 
 const formatCOP = (value: number) =>
   value.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
 const categories = ["materials", "equipment", "labor", "transport"] as const;
+const MAX_APU_FILE_SIZE = 20 * 1024 * 1024;
 
 type Props = {
   onClose: () => void;
@@ -34,12 +36,17 @@ type Props = {
  */
 export function ApuImportModal({ onClose, onConfirm }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<ApuImportPreview | null>(null);
+  const [inspection, setInspection] = useState<ApuWorkbookInspection | null>(null);
+  const [selectedSheetName, setSelectedSheetName] = useState("");
   const [fileName, setFileName] = useState("");
   const [excludedRows, setExcludedRows] = useState<ReadonlySet<number>>(new Set());
   const [includeWithoutQuantity, setIncludeWithoutQuantity] = useState(false);
   const [isReading, setIsReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const preview = useMemo<ApuImportPreview | null>(
+    () => inspection?.sheets.find((sheet) => sheet.sheetName === selectedSheetName) ?? null,
+    [inspection, selectedSheetName],
+  );
 
   const totals = useMemo(
     () => (preview ? previewTotals(preview, excludedRows, includeWithoutQuantity) : null),
@@ -56,18 +63,28 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
 
   async function readFile(file: File) {
     setError(null);
-    setPreview(null);
+    setInspection(null);
+    setSelectedSheetName("");
     setExcludedRows(new Set());
     setIsReading(true);
     try {
-      const buffer = await file.arrayBuffer();
-      const result = await previewApuWorkbook(buffer);
-      if (result.lines.length === 0) {
-        setError("El archivo se leyó pero no contiene ninguna línea de recurso. Revisa que tenga el formato del APU exportado.");
-        setIsReading(false);
-        return;
+      if (!file.name.toLowerCase().endsWith(".xlsx")) {
+        throw new Error("Selecciona un archivo .xlsx. Los formatos .xls y .csv no conservan la estructura completa del APU.");
       }
-      setPreview(result);
+      if (file.size <= 0 || file.size > MAX_APU_FILE_SIZE) {
+        throw new Error("El archivo debe pesar menos de 20 MB para poder revisarlo de forma segura en el navegador.");
+      }
+      const buffer = await file.arrayBuffer();
+      const signature = new Uint8Array(buffer, 0, Math.min(buffer.byteLength, 4));
+      if (signature[0] !== 0x50 || signature[1] !== 0x4b) {
+        throw new Error("El contenido no corresponde a un libro de Excel válido.");
+      }
+      const result = await inspectApuWorkbook(buffer);
+      if (!result.sheets.length) {
+        throw new Error("No se encontraron hojas de actividades APU. Las hojas de catálogos, salarios, dotación y resúmenes se excluyen automáticamente.");
+      }
+      setInspection(result);
+      setSelectedSheetName(result.sheets[0].sheetName);
       setFileName(file.name);
     } catch (readError) {
       setError(readError instanceof Error ? readError.message : "No fue posible leer el archivo de Excel.");
@@ -94,9 +111,9 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
 
         <div className="apu-import-body">
           <p className="apu-import-hint">
-            Sube el archivo exportado por RFC Enterprise, edítalo en Excel y vuelve a subirlo. Se puede agregar
-            o quitar líneas de materiales en cada actividad; las cantidades en blanco se señalan aquí antes de
-            guardar nada.
+            Puedes usar el formato RFC compartido o el archivo exportado por el sistema. Se reconocen las hojas
+            de actividades por sus rubros y columnas, aunque cambie la cantidad de filas; catálogos, dotación,
+            salarios y resúmenes quedan fuera de la importación.
           </p>
 
           <label className="apu-import-drop">
@@ -122,6 +139,39 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
             </p>
           ) : null}
 
+          {inspection && inspection.sheets.length > 0 ? (
+            <section className="apu-import-source" aria-labelledby="apu-import-source-title">
+              <div>
+                <p id="apu-import-source-title">Actividad detectada</p>
+                <small>
+                  {inspection.sheets.length} hoja{inspection.sheets.length === 1 ? "" : "s"} de actividad · {inspection.ignoredSheets.length} auxiliar{inspection.ignoredSheets.length === 1 ? "" : "es"} excluida{inspection.ignoredSheets.length === 1 ? "" : "s"}
+                </small>
+              </div>
+              <label>
+                <span>Hoja que deseas importar</span>
+                <select
+                  value={selectedSheetName}
+                  onChange={(event) => {
+                    setSelectedSheetName(event.target.value);
+                    setExcludedRows(new Set());
+                    setIncludeWithoutQuantity(false);
+                  }}
+                >
+                  {inspection.sheets.map((sheet) => (
+                    <option key={sheet.sheetName} value={sheet.sheetName}>
+                      {sheet.name || sheet.sheetName} · {sheet.lines.length} recursos
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {preview ? (
+                <span className={`apu-import-format is-${preview.confidence}`}>
+                  {preview.sourceFormat === "rfc" ? "Formato RFC Enterprise" : preview.sourceFormat === "reference" ? "Formato de referencia" : "Formato compatible detectado"}
+                </span>
+              ) : null}
+            </section>
+          ) : null}
+
           {preview ? (
             <>
               <dl className="apu-import-meta">
@@ -145,7 +195,19 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
                   <dt>Líneas leídas</dt>
                   <dd>{preview.lines.length}</dd>
                 </div>
+                <div>
+                  <dt>Hoja de origen</dt>
+                  <dd>{preview.sheetName}</dd>
+                </div>
               </dl>
+
+              <div className="apu-import-detected-groups" aria-label="Recursos detectados por rubro">
+                {categories.map((category) => (
+                  <span key={category}>
+                    {apuCategoryMeta[category].label}: <strong>{preview.categoryCounts[category]}</strong>
+                  </span>
+                ))}
+              </div>
 
               {withoutQuantity.length > 0 ? (
                 <div className="apu-import-ask">

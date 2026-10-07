@@ -2,12 +2,14 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { apuCategoryMeta, type ApuCategory } from "@/modules/apu";
+import { ApuQuantityField } from "./apu-quantity-field";
+import { roundApuQuantity } from "./apu-quantity";
 
 export type ManualResource = {
   name: string;
   unit: string;
-  quantity: string;
-  yieldPerDay: string;
+  quantity: number;
+  yieldPerDay: number;
   dailyRate: string;
 };
 
@@ -32,13 +34,11 @@ const unitsFor = (category: ApuCategory): string[] => {
  */
 export function ApuManualResourceModal({ category, initialQuery, onClose, onAccept }: Props) {
   const suggested = (initialQuery ?? "").trim();
-  const [values, setValues] = useState<ManualResource>({
-    name: suggested,
-    unit: unitsFor(category)[0],
-    quantity: "1",
-    yieldPerDay: category === "materials" ? "1" : "",
-    dailyRate: "",
-  });
+  const [name, setName] = useState(suggested);
+  const [unit, setUnit] = useState(unitsFor(category)[0]);
+  const [quantityValue, setQuantityValue] = useState(1);
+  const [yieldValue, setYieldValue] = useState(1);
+  const [dailyRate, setDailyRate] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,17 +54,23 @@ export function ApuManualResourceModal({ category, initialQuery, onClose, onAcce
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const name = values.name.trim();
-    if (name.length < 2) {
+    const cleanName = name.trim();
+    if (cleanName.length < 2) {
       setError("Escribe el nombre del recurso.");
       return;
     }
-    const rate = Number(values.dailyRate.replace(/[^\d.,-]/g, "").replace(",", "."));
+    const rate = Number(dailyRate.replace(/[^\d.,-]/g, "").replace(",", "."));
     if (!Number.isFinite(rate) || rate < 0) {
       setError("La tarifa debe ser un número mayor o igual a cero.");
       return;
     }
-    onAccept({ ...values, name });
+    onAccept({
+      name: cleanName,
+      unit,
+      quantity: roundApuQuantity(quantityValue),
+      yieldPerDay: category === "materials" ? 1 : roundApuQuantity(yieldValue),
+      dailyRate,
+    });
   }
 
   return (
@@ -88,8 +94,8 @@ export function ApuManualResourceModal({ category, initialQuery, onClose, onAcce
           <label className="writeoffs-field is-wide">
             <span>Nombre del recurso *</span>
             <input
-              value={values.name}
-              onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
               placeholder={category === "labor" ? "Ej. Ayudante de obra" : "Ej. Rastrillo con placa"}
               aria-label="Nombre del recurso"
               title="Nombre del recurso"
@@ -101,8 +107,8 @@ export function ApuManualResourceModal({ category, initialQuery, onClose, onAcce
             <label className="writeoffs-field">
               <span>Unidad</span>
               <select
-                value={values.unit}
-                onChange={(event) => setValues((current) => ({ ...current, unit: event.target.value }))}
+                value={unit}
+                onChange={(event) => setUnit(event.target.value)}
                 aria-label="Unidad del recurso"
                 title="Unidad en que se compra o se mide"
               >
@@ -118,8 +124,8 @@ export function ApuManualResourceModal({ category, initialQuery, onClose, onAcce
               <span>{rateLabel} *</span>
               <input
                 inputMode="numeric"
-                value={values.dailyRate}
-                onChange={(event) => setValues((current) => ({ ...current, dailyRate: event.target.value }))}
+                value={dailyRate}
+                onChange={(event) => setDailyRate(event.target.value)}
                 placeholder="0"
                 aria-label={rateLabel}
                 title={rateLabel}
@@ -128,26 +134,24 @@ export function ApuManualResourceModal({ category, initialQuery, onClose, onAcce
 
             <label className="writeoffs-field">
               <span>Cantidad</span>
-              <input
-                inputMode="decimal"
-                value={values.quantity}
-                onChange={(event) => setValues((current) => ({ ...current, quantity: event.target.value }))}
-                placeholder="1"
-                aria-label="Cantidad del recurso"
+              <ApuQuantityField
+                value={quantityValue}
+                onCommit={setQuantityValue}
+                ariaLabel="Cantidad del recurso"
                 title="Cantidad que necesita la actividad"
+                placeholder="1"
               />
             </label>
 
             {category !== "materials" ? (
               <label className="writeoffs-field">
                 <span>Rendimiento diario</span>
-                <input
-                  inputMode="decimal"
-                  value={values.yieldPerDay}
-                  onChange={(event) => setValues((current) => ({ ...current, yieldPerDay: event.target.value }))}
-                  placeholder="1"
-                  aria-label="Rendimiento diario del recurso"
+                <ApuQuantityField
+                  value={yieldValue}
+                  onCommit={setYieldValue}
+                  ariaLabel="Rendimiento diario del recurso"
                   title="Rendimiento: cuánto produce o avanza por día"
+                  placeholder="1"
                 />
               </label>
             ) : null}

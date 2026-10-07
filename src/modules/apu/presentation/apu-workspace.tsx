@@ -45,6 +45,8 @@ import { ApuImportModal } from "./apu-import-modal";
 import { ApuNewModal } from "./apu-new-modal";
 import { ApuManualResourceModal, type ManualResource } from "./apu-manual-resource-modal";
 import { ApuMoneyField } from "./apu-money-field";
+import { ApuQuantityField } from "./apu-quantity-field";
+import { formatApuQuantity, parseApuQuantityInput, safeApuQuantity } from "./apu-quantity";
 import { ApuUnitCombobox } from "./apu-unit-combobox";
 import { exportApuToXlsx } from "./apu-xlsx-export";
 import { ApuResourcePicker } from "./apu-resource-picker";
@@ -295,7 +297,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   const selectedCost = selected ? apuCostTotal(selected) : 0;
   /** Actividades creadas pero todavía sin recursos: no aportan al total. */
   const pendingCount = visibleApus.filter((apu) => apu.lines.length === 0).length;
-  const selectedQuantity = selected ? Number(selected.workQuantity) || 0 : 0;
+  const selectedQuantity = selected ? safeApuQuantity(selected.workQuantity) : 0;
   const unitCost = selectedQuantity > 0 ? selectedCost / selectedQuantity : 0;
   const unitSelling = selectedQuantity > 0 && selected ? apuSellingTotal(selected) / selectedQuantity : 0;
   const hasRealQuantity = selectedQuantity > 1;
@@ -501,21 +503,14 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   /** Confirma el alta manual: agrega la línea completa y deja el buscador en blanco. */
   function acceptManualResource(values: ManualResource) {
     if (!selected || !manualResource) return;
-    const quantity = Number(values.quantity.replace(",", "."));
-    const yieldPerDay = Number(values.yieldPerDay.replace(",", "."));
-    const rate = Number(values.dailyRate.replace(/[^\d.,-]/g, "").replace(",", "."));
+    const rate = parseApuQuantityInput(values.dailyRate);
     const line: ApuLine = {
       id: newId(),
       category: manualResource.category,
       name: values.name,
-      quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
-      yieldPerDay:
-        manualResource.category === "materials"
-          ? 1
-          : Number.isFinite(yieldPerDay) && yieldPerDay > 0
-            ? yieldPerDay
-            : 1,
-      dailyRate: Number.isFinite(rate) && rate > 0 ? rate : 0,
+      quantity: safeApuQuantity(values.quantity) || 1,
+      yieldPerDay: manualResource.category === "materials" ? 1 : safeApuQuantity(values.yieldPerDay) || 1,
+      dailyRate: safeApuQuantity(rate),
       unit: values.unit || undefined,
     };
     setApus((current) =>
@@ -921,7 +916,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 <div>
                   <p>{selected.code} · {selected.unit}</p>
                   <h2>{selected.name}</h2>
-                  <small>Cantidad de obra: {selected.workQuantity.toLocaleString("es-CO")} {selected.unit}</small>
+                  <small>Cantidad de obra: {formatApuQuantity(selected.workQuantity)} {selected.unit}</small>
                   <small className="apu-price-share">
                     {analysisTotals.selectedShare.toFixed(1)}% del total del presupuesto
                   </small>
@@ -939,7 +934,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                     <span>Costo por {selected.unit}</span>
                     <strong>{formatCOP(unitCost)}</strong>
                     <small>
-                      {formatCOP(selectedCost)} <em>÷ {selected.workQuantity.toLocaleString("es-CO")} {selected.unit}</em>
+                      {formatCOP(selectedCost)} <em>÷ {formatApuQuantity(selected.workQuantity)} {selected.unit}</em>
                     </small>
                   </div>
                 </div>
@@ -953,7 +948,15 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
               <div className="apu-selected-toolbar">
                 <label><span>Actividad</span><input value={selected.name} onChange={(event) => updateApu({ ...selected, name: event.target.value })} /></label>
                 <label><span>Unidad</span><ApuUnitCombobox value={selected.unit} onChange={(unit) => updateApu({ ...selected, unit })} /></label>
-                <label><span>Cantidad de obra</span><input type="number" min="0.01" step="any" value={selected.workQuantity} onChange={(event) => updateApu({ ...selected, workQuantity: Number(event.target.value) || 1 })} /></label>
+                <label>
+                  <span>Cantidad de obra</span>
+                  <ApuQuantityField
+                    value={selected.workQuantity}
+                    onCommit={(next) => updateApu({ ...selected, workQuantity: next > 0 ? next : 1 })}
+                    ariaLabel="Cantidad de obra de la actividad"
+                    title="Cantidad de obra: es el divisor del costo por unidad"
+                  />
+                </label>
               </div>
 
               <div className="apu-actions-bar" role="group" aria-label="Acciones del APU seleccionado">
@@ -1019,7 +1022,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                   <div className="apu-financial-card">
                     <p>Costo Directo Real</p>
                     <strong>{formatCOP(apuCostTotal(selected))}</strong>
-                    <small>{formatCOP(apuCostTotal(selected) / selected.workQuantity)} / {selected.unit}</small>
+                    <small>{formatCOP(selectedQuantity > 0 ? apuCostTotal(selected) / selectedQuantity : 0)} / {selected.unit}</small>
                   </div>
                   <div className="apu-financial-card">
                     <p>Ganancia Estimada</p>
@@ -1029,7 +1032,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                   <div className="apu-financial-card is-selling">
                     <p>Precio Venta Cotizado</p>
                     <strong>{formatCOP(apuSellingTotal(selected))}</strong>
-                    <small>{formatCOP(apuSellingTotal(selected) / selected.workQuantity)} / {selected.unit} (unitario)</small>
+                    <small>{formatCOP(selectedQuantity > 0 ? apuSellingTotal(selected) / selectedQuantity : 0)} / {selected.unit} (unitario)</small>
                   </div>
                 </div>
               </section>
@@ -1103,9 +1106,9 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                         {shortages.map((row) => (
                           <tr key={row.line.id}>
                             <td>{row.product.name}</td>
-                            <td>{row.required.toLocaleString("es-CO")} {row.product.unit}</td>
-                            <td>{row.available.toLocaleString("es-CO")} {row.product.unit}</td>
-                            <td><strong>{row.missing.toLocaleString("es-CO")} {row.product.unit}</strong></td>
+                            <td>{formatApuQuantity(row.required)} {row.product.unit}</td>
+                            <td>{formatApuQuantity(row.available)} {row.product.unit}</td>
+                            <td><strong>{formatApuQuantity(row.missing)} {row.product.unit}</strong></td>
                           </tr>
                         ))}
                       </tbody>
@@ -1216,8 +1219,20 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                                 {line.laborPositionId ? <small>{line.laborCode} · Nivel {line.laborLevel} · {line.laborActivityType === "propias" ? "Actividad propia" : "Actividad no propia"}</small> : null}
                                 {line.transportItemId ? <small>Transporte · {line.transportCode || "Flete"} · {line.unit || "viaje"}</small> : null}
                               </td>
-                              <td><input type="text" inputMode="decimal" defaultValue={line.quantity} onBlur={(event) => updateLine(line.id, "quantity", parseDecimal(event.target.value))} aria-label={`Cantidad de ${line.name}`} /></td>
-                              <td><input type="text" inputMode="decimal" defaultValue={line.yieldPerDay} onBlur={(event) => updateLine(line.id, "yieldPerDay", parseDecimal(event.target.value))} aria-label={`Rendimiento diario de ${line.name}`} /></td>
+                              <td>
+                                <ApuQuantityField
+                                  value={line.quantity}
+                                  onCommit={(next) => updateLine(line.id, "quantity", next)}
+                                  ariaLabel={`Cantidad de ${line.name}`}
+                                />
+                              </td>
+                              <td>
+                                <ApuQuantityField
+                                  value={line.yieldPerDay}
+                                  onCommit={(next) => updateLine(line.id, "yieldPerDay", next)}
+                                  ariaLabel={`Rendimiento diario de ${line.name}`}
+                                />
+                              </td>
                               <td>
                                 <ApuMoneyField
                                   value={line.dailyRate}

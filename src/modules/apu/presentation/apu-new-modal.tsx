@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ApuUnitCombobox } from "./apu-unit-combobox";
+import { ApuQuantityField } from "./apu-quantity-field";
+import { roundApuQuantity } from "./apu-quantity";
 
 type Props = {
   defaultName?: string;
@@ -19,8 +21,16 @@ type Props = {
 export function ApuNewModal({ defaultName, defaultUnit, nextCode, onClose, onCreate }: Props) {
   const [name, setName] = useState(defaultName ?? "");
   const [unit, setUnit] = useState(defaultUnit ?? "m²");
-  const [quantity, setQuantity] = useState("1");
+  const [quantityValue, setQuantityValue] = useState(1);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    function onKey(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -29,8 +39,7 @@ export function ApuNewModal({ defaultName, defaultUnit, nextCode, onClose, onCre
       setError("Escribe el nombre de la actividad.");
       return;
     }
-    const parsed = Number(quantity.replace(",", "."));
-    if (!Number.isFinite(parsed) || parsed <= 0) {
+    if (!Number.isFinite(quantityValue) || quantityValue <= 0) {
       setError("La cantidad de obra debe ser un número mayor que cero.");
       return;
     }
@@ -38,7 +47,7 @@ export function ApuNewModal({ defaultName, defaultUnit, nextCode, onClose, onCre
       setError("Elige la unidad de medida de la actividad.");
       return;
     }
-    onCreate({ name: cleanName, unit: unit.trim(), workQuantity: parsed });
+    onCreate({ name: cleanName, unit: unit.trim(), workQuantity: roundApuQuantity(quantityValue) });
   }
 
   return (
@@ -78,15 +87,14 @@ export function ApuNewModal({ defaultName, defaultUnit, nextCode, onClose, onCre
             </label>
             <label className="writeoffs-field">
               <span>Cantidad de obra *</span>
-              <input
-                inputMode="decimal"
-                value={quantity}
-                onChange={(event) => setQuantity(event.target.value)}
-                placeholder="1"
-                aria-label="Cantidad de obra de la actividad"
+              <ApuQuantityField
+                value={quantityValue}
+                onCommit={setQuantityValue}
+                ariaLabel="Cantidad de obra de la actividad"
                 title="Cantidad de obra: es el divisor del costo por unidad"
+                placeholder="1"
               />
-              <small>Es el divisor del costo por unidad. Si la dejas en 1, el costo por unidad será igual al total.</small>
+              <small>Admite decimales con coma o punto. Es el divisor del costo por unidad.</small>
             </label>
           </div>
 

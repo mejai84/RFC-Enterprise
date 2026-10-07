@@ -240,3 +240,9 @@ Las entradas y salidas se insertan en el Kardex de Supabase. El disparador de ba
 Las requisiciones se emiten mediante `create_inventory_requisition`, que conserva la obra, el solicitante y la instantánea de cantidad/unidad/costo de cada existencia solicitada.
 
 La conversión Cotización→Obra deja persistida la obra en `projects` con su presupuesto y fechas, y la cotización queda enlazada (`project_id`) con trazabilidad en `quote_history`. El costo de materiales se sigue calculando por los despachos del Kardex vinculados a la obra, sin escrituras locales.
+
+### Integridad operativa de obra (2026-10-07)
+
+Las asignaciones de personal se guardan por obra y empleado. Una reapertura registra motivo, fecha real previa y nueva fecha estimada junto con el cambio de estado. Los ajustes actualizan el presupuesto y su historial en una misma transacción y no permiten dejarlo por debajo del costo acumulado del Kardex. Las líneas de requisición se consultan siempre desde `inventory_requisition_lines`, por lo que la ficha de obra no presenta solicitudes vacías después de recargar.
+
+La presentación de costos, Kardex, requisiciones y fichas de obra usa el mismo sistema Graphite del portal: contraste alto para números y decisiones, bordes para relacionar bloques de información y animaciones solo decorativas que no alteran ni ocultan los estados de operación.

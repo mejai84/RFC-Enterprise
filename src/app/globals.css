@@ -8,6 +8,7 @@
 @import "./rentals.css";
 @import "./attendance.css";
 @import "./responsive-devices.css";
+@import "./graphite-theme.css";
 
 :root {
   --ink: #0c1f18;

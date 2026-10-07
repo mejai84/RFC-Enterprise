@@ -68,6 +68,8 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [scope, setScope] = useState<{ companyId: string; branchId: string } | null>(null);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [customLocations, setCustomLocations] = useState<string[]>([]);
   const supabase = useMemo(() => isSupabaseConfigured && supabaseUrl && supabasePublishableKey ? createBrowserClient(supabaseUrl, supabasePublishableKey) : null, []);
 
   useEffect(() => {
@@ -78,9 +80,11 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       const { data: membership } = await supabase.from("user_roles").select("company_id, branch_id").eq("user_id", auth.user.id).limit(1).maybeSingle();
       if (!membership?.company_id || !membership.branch_id) return;
       setScope({ companyId: membership.company_id, branchId: membership.branch_id });
-      const [{ data: remoteProjects }, { data: remoteMovements }] = await Promise.all([
+      const [{ data: remoteProjects }, { data: remoteMovements }, { data: remoteCategories }, { data: remoteLocations }] = await Promise.all([
         supabase.from("projects").select("id, code, name, client, location, material_budget, status, start_date, estimated_end_date, actual_end_date, created_at").eq("company_id", membership.company_id).order("created_at", { ascending: false }),
-        supabase.from("inventory_movements").select("id, stock_id, movement_type, quantity, unit_cost, reference, notes, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)").eq("company_id", membership.company_id).order("occurred_at", { ascending: false }),
+        supabase.from("inventory_movements").select("id, stock_id, movement_type, quantity, unit_cost, reference, notes, responsible_name, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)").eq("company_id", membership.company_id).order("occurred_at", { ascending: false }),
+        supabase.from("inventory_categories").select("name").eq("company_id", membership.company_id).eq("is_active", true).order("name"),
+        supabase.from("inventory_locations").select("warehouse, aisle, shelf, level, bin").eq("company_id", membership.company_id).eq("branch_id", membership.branch_id).eq("is_active", true).order("warehouse"),
       ]);
       if (remoteProjects) setProjects(remoteProjects.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date, type: project.code.startsWith("MANT-") ? "mantenimiento" : project.code.startsWith("OBRA-") ? "obra" : "otro" })));
       if (remoteMovements) setMovements(remoteMovements.map((movement) => {
@@ -88,8 +92,10 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
         const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items);
         const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects;
         const type: MovementType = movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : movement.movement_type === "adjustment_in" || movement.movement_type === "adjustment_out" ? "adjustment" : "return";
-        return { id: movement.id, productId: movement.stock_id, productName: item?.name, type, quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(movement.occurred_at)), reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined };
+        return { id: movement.id, productId: movement.stock_id, productName: item?.name, type, quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(movement.occurred_at)), reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, responsible: movement.responsible_name ?? undefined, notes: movement.notes ?? undefined };
       }));
+      if (remoteCategories) setCustomCategories(remoteCategories.map((category) => category.name));
+      if (remoteLocations) setCustomLocations(remoteLocations.map((location) => [location.warehouse, location.aisle, location.shelf, location.level, location.bin].filter(Boolean).join(" · ")));
     })();
   }, [supabase]);
 
@@ -106,8 +112,6 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const [pageSize, setPageSize] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
-  const [customLocations, setCustomLocations] = useState<string[]>([]);
   const [customUnits, setCustomUnits] = useState<string[]>([]);
   const [customBrands, setCustomBrands] = useState<string[]>([]);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -228,6 +232,32 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     setTimeout(() => setToastMessage(null), 4500);
   }
 
+  async function createCategory(event: FormEvent) {
+    event.preventDefault();
+    const name = newCategoryName.trim();
+    if (!name || !supabase || !scope) return;
+    const { data, error } = await supabase.from("inventory_categories").insert({ company_id: scope.companyId, name }).select("name").single();
+    if (error || !data) return showToast(error?.message ?? "No fue posible crear la categoría.", "error");
+    setCustomCategories((current) => [...new Set([...current, data.name])]);
+    setNewCategoryName("");
+    showToast("Categoría creada en la base de datos.");
+  }
+
+  async function createLocation(event: FormEvent) {
+    event.preventDefault();
+    const value = newLocationName.trim();
+    if (!value || !supabase || !scope) return;
+    const parts = value.split("·").map((part) => part.trim()).filter(Boolean);
+    const [warehouse, aisle, shelf, level, bin] = parts;
+    if (!warehouse) return showToast("Indica al menos la bodega o ubicación principal.", "error");
+    const { data, error } = await supabase.from("inventory_locations").upsert({ company_id: scope.companyId, branch_id: scope.branchId, warehouse, aisle: aisle ?? null, shelf: shelf ?? null, level: level ?? null, bin: bin ?? null }, { onConflict: "branch_id,warehouse,aisle,shelf,level,bin" }).select("warehouse, aisle, shelf, level, bin").single();
+    if (error || !data) return showToast(error?.message ?? "No fue posible crear la ubicación.", "error");
+    const label = [data.warehouse, data.aisle, data.shelf, data.level, data.bin].filter(Boolean).join(" · ");
+    setCustomLocations((current) => [...new Set([...current, label])]);
+    setNewLocationName("");
+    showToast("Ubicación creada en la base de datos.");
+  }
+
   // Abrir modal de movimiento con producto precargado
   function openMovementModal(product?: StockProduct, defaultType: MovementType = "exit") {
     const target = product;
@@ -306,7 +336,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     const dbMovementType = movementType === "entry" || movementType === "return" ? "entry" : movementType === "exit" ? "exit" : adjustmentDirection === "increase" ? "adjustment_in" : "adjustment_out";
     const { data: savedMovement, error } = await supabase
       .from("inventory_movements")
-      .insert({ stock_id: selectedProduct.id, company_id: scope.companyId, branch_id: scope.branchId, movement_type: dbMovementType, quantity: qty, unit_cost: unitCost, reference: ref, notes: notesInput.trim() || null, occurred_at: new Date().toISOString(), project_id: movementType === "exit" ? project?.id ?? null : null })
+      .insert({ stock_id: selectedProduct.id, company_id: scope.companyId, branch_id: scope.branchId, movement_type: dbMovementType, quantity: qty, unit_cost: unitCost, reference: ref, notes: notesInput.trim() || null, responsible_name: responsibleInput.trim() || null, occurred_at: new Date().toISOString(), project_id: movementType === "exit" ? project?.id ?? null : null })
       .select("id")
       .single();
     if (error || !savedMovement) {
@@ -1203,8 +1233,8 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
           <div className="panel-title"><div><p>Administración</p><h2>Catálogos y ubicaciones</h2></div></div>
           <p className="panel-intro">Crea categorías y ubicaciones. Los registros usados se desactivan o reasignan; no se eliminan.</p>
           <div className="inventory-settings-grid">
-            <article className="project-card"><h3>Nueva categoría</h3><form className="inventory-settings-form" onSubmit={e=>{e.preventDefault();const value=newCategoryName.trim();if(!value)return;setCustomCategories(v=>[...v,value]);setNewCategoryName("");showToast("Categoría creada.")}}><label htmlFor="new-category">Nombre de categoría</label><input id="new-category" placeholder="Ej. Soldadura y oxicorte" value={newCategoryName} onChange={e=>setNewCategoryName(e.target.value)}/><button className="inventory-action" type="submit">Crear categoría</button></form>{customCategories.map(x=><p key={x}>{x}</p>)}</article>
-            <article className="project-card"><h3>Nueva ubicación</h3><form className="inventory-settings-form" onSubmit={e=>{e.preventDefault();const value=newLocationName.trim();if(!value)return;setCustomLocations(v=>[...v,value]);setNewLocationName("");showToast("Ubicación creada.")}}><label htmlFor="new-location">Ruta de ubicación</label><input id="new-location" placeholder="Bodega · Pasillo · Estante · Nivel" value={newLocationName} onChange={e=>setNewLocationName(e.target.value)}/><button className="inventory-action" type="submit">Crear ubicación</button></form>{customLocations.map(x=><p key={x}>{x}</p>)}</article>
+            <article className="project-card"><h3>Nueva categoría</h3><form className="inventory-settings-form" onSubmit={createCategory}><label htmlFor="new-category">Nombre de categoría</label><input id="new-category" placeholder="Ej. Soldadura y oxicorte" value={newCategoryName} onChange={e=>setNewCategoryName(e.target.value)}/><button className="inventory-action" type="submit">Crear categoría</button></form>{customCategories.map(x=><p key={x}>{x}</p>)}</article>
+            <article className="project-card"><h3>Nueva ubicación</h3><form className="inventory-settings-form" onSubmit={createLocation}><label htmlFor="new-location">Ruta de ubicación</label><input id="new-location" placeholder="Bodega · Pasillo · Estante · Nivel" value={newLocationName} onChange={e=>setNewLocationName(e.target.value)}/><button className="inventory-action" type="submit">Crear ubicación</button></form>{customLocations.map(x=><p key={x}>{x}</p>)}</article>
           </div>
         </section>
       )}

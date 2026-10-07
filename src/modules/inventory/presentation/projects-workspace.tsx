@@ -178,13 +178,25 @@ export function ProjectsWorkspace({
       const { data: membership } = await supabase.from("user_roles").select("company_id, branch_id").eq("user_id", auth.user.id).limit(1).maybeSingle();
       if (!membership?.company_id || !membership.branch_id) return;
       setScope({ companyId: membership.company_id, branchId: membership.branch_id });
-      const [{ data: remoteProjects }, { data: remoteMovements }, { data: remoteLoans }, { data: remoteReqs }] = await Promise.all([
+      const [{ data: remoteProjects }, { data: remoteMovements }, { data: remoteLoans }, { data: remoteReqs }, { data: remoteAssignments }, { data: remoteAdjustments }] = await Promise.all([
         supabase.from("projects").select("id, code, name, client, location, material_budget, status, start_date, estimated_end_date, actual_end_date, created_at, rental_daily_rate, rental_extension_rate, rental_late_fee_per_day, rental_notes").eq("company_id", membership.company_id).order("created_at", { ascending: false }),
         supabase.from("inventory_movements").select("id, stock_id, movement_type, quantity, unit_cost, reference, notes, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)").eq("company_id", membership.company_id).order("occurred_at", { ascending: false }),
         supabase.from("inventory_tool_loans").select("id,code,stock_id,worker_name,project_id,status,notes,created_at,expected_return_date,returned_at,inventory_stock!inner(inventory_items!inner(name)),projects(name)").eq("company_id",membership.company_id).order("created_at",{ascending:false}),
-        supabase.from("inventory_requisitions").select("id,code,project_id,requested_by_name,status,created_at,notes,projects(name)").eq("company_id",membership.company_id).order("created_at",{ascending:false}),
+        supabase.from("inventory_requisitions").select("id,code,project_id,requested_by_name,status,created_at,notes,projects(name),lines:inventory_requisition_lines(stock_id,item_name_snapshot,requested_quantity,unit_snapshot,unit_cost_snapshot)").eq("company_id",membership.company_id).order("created_at",{ascending:false}),
+        supabase.from("project_employees").select("project_id,employee:employees(id,full_name,job_title)").eq("company_id", membership.company_id),
+        supabase.from("project_budget_adjustments").select("id,project_id,amount,reason,created_at").eq("company_id", membership.company_id).order("created_at", { ascending: true }),
       ]);
-      if (remoteProjects) setProjects(remoteProjects.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date, type: projectTypeFromCode(project.code), rental: { dailyRate: project.rental_daily_rate === null ? undefined : Number(project.rental_daily_rate), extensionRate: project.rental_extension_rate === null ? undefined : Number(project.rental_extension_rate), lateFeePerDay: project.rental_late_fee_per_day === null ? undefined : Number(project.rental_late_fee_per_day), notes: project.rental_notes ?? undefined } })));
+      const assignmentsByProject = new Map<string, AssignedProjectEmployee[]>();
+      for (const row of remoteAssignments ?? []) {
+        const employee = Array.isArray(row.employee) ? row.employee[0] : row.employee;
+        if (!employee) continue;
+        assignmentsByProject.set(row.project_id, [...(assignmentsByProject.get(row.project_id) ?? []), { id: employee.id, name: employee.full_name, title: employee.job_title }]);
+      }
+      const adjustmentsByProject = new Map<string, NonNullable<Project["budgetAdjustments"]>>();
+      for (const row of remoteAdjustments ?? []) {
+        adjustmentsByProject.set(row.project_id, [...(adjustmentsByProject.get(row.project_id) ?? []), { id: row.id, amount: Number(row.amount), reason: row.reason, responsible: responsibleName, occurredAt: row.created_at }]);
+      }
+      if (remoteProjects) setProjects(remoteProjects.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date, type: projectTypeFromCode(project.code), assignedEmployees: assignmentsByProject.get(project.id) ?? [], budgetAdjustments: adjustmentsByProject.get(project.id) ?? [], rental: { dailyRate: project.rental_daily_rate === null ? undefined : Number(project.rental_daily_rate), extensionRate: project.rental_extension_rate === null ? undefined : Number(project.rental_extension_rate), lateFeePerDay: project.rental_late_fee_per_day === null ? undefined : Number(project.rental_late_fee_per_day), notes: project.rental_notes ?? undefined } })));
       if (remoteMovements) setMovements(remoteMovements.map((movement) => {
         const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock;
         const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items);
@@ -192,7 +204,7 @@ export function ProjectsWorkspace({
         return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: formatDateTime(new Date(movement.occurred_at)), reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined };
       }));
       if (remoteLoans) setToolLoans(remoteLoans.map((loan) => { const stock=Array.isArray(loan.inventory_stock)?loan.inventory_stock[0]:loan.inventory_stock; const item=stock && (Array.isArray(stock.inventory_items)?stock.inventory_items[0]:stock.inventory_items); const project=Array.isArray(loan.projects)?loan.projects[0]:loan.projects; return {id:loan.id,code:loan.code,toolId:loan.stock_id,toolName:item?.name??"Herramienta",workerName:loan.worker_name,projectId:loan.project_id??"",projectName:project?.name??"Sin obra",loanDate:loan.created_at,expectedReturnDate:loan.expected_return_date??undefined,actualReturnDate:loan.returned_at??undefined,status:loan.status as ToolLoan["status"],notes:loan.notes??undefined}; }));
-      if (remoteReqs) setRequisitions(remoteReqs.map((row) => { const project=Array.isArray(row.projects)?row.projects[0]:row.projects; return {id:row.id,code:row.code,projectId:row.project_id,projectName:project?.name??"Obra",requestedBy:row.requested_by_name,status:row.status === "submitted" ? "pending" : row.status as MaterialRequisition["status"],createdAt:row.created_at,notes:row.notes??undefined,items:[]}; }));
+      if (remoteReqs) setRequisitions(remoteReqs.map((row) => { const project=Array.isArray(row.projects)?row.projects[0]:row.projects; return {id:row.id,code:row.code,projectId:row.project_id,projectName:project?.name??"Obra",requestedBy:row.requested_by_name,status:row.status === "submitted" ? "pending" : row.status as MaterialRequisition["status"],createdAt:row.created_at,notes:row.notes??undefined,items:(row.lines ?? []).map((line) => ({ productId: line.stock_id, productName: line.item_name_snapshot, quantity: Number(line.requested_quantity), unit: line.unit_snapshot, unitCost: Number(line.unit_cost_snapshot) }))}; }));
     })();
   }, [supabase]);
 
@@ -287,16 +299,14 @@ export function ProjectsWorkspace({
     );
   }
 
-  function addEmployeeToProject() {
-    if (!selectedProject) return;
+  async function addEmployeeToProject() {
+    if (!selectedProject || !supabase) return;
     const employee = availableEmployees.find(
       (item) => item.id === employeeToAssignId,
     );
-    if (
-      !employee ||
-      selectedProject.assignedEmployees?.some((item) => item.id === employee.id)
-    )
-      return;
+    if (!employee || selectedProject.assignedEmployees?.some((item) => item.id === employee.id)) return;
+    const { error } = await supabase.rpc("assign_project_employee", { target_project: selectedProject.id, target_employee: employee.id });
+    if (error) return alert(error.message);
     setProjects((current) =>
       current.map((project) => {
         if (project.id !== selectedProject.id) return project;
@@ -307,8 +317,10 @@ export function ProjectsWorkspace({
     setEmployeeToAssignId("");
   }
 
-  function removeAssignedEmployee(employeeId: string) {
-    if (!selectedProject) return;
+  async function removeAssignedEmployee(employeeId: string) {
+    if (!selectedProject || !supabase) return;
+    const { error } = await supabase.rpc("remove_project_employee", { target_project: selectedProject.id, target_employee: employeeId });
+    if (error) return alert(error.message);
     setProjects((current) =>
       current.map((project) =>
         project.id === selectedProject.id
@@ -717,7 +729,7 @@ export function ProjectsWorkspace({
     );
     setIsEditProjectModalOpen(false);
   };
-  function reopenProject() {
+  async function reopenProject() {
     if (!selectedProject || selectedProject.status !== "completed") return;
     const reason = window.prompt("Motivo obligatorio para reabrir la obra:");
     if (!reason?.trim()) return;
@@ -727,6 +739,9 @@ export function ProjectsWorkspace({
     );
     if (!newEndDate || newEndDate < (selectedProject.startDate || ""))
       return alert("Indique una fecha posterior al inicio de la obra.");
+    if (!supabase) return alert("No fue posible conectar con la base de datos.");
+    const { error } = await supabase.rpc("reopen_project", { target_project: selectedProject.id, reopen_reason: reason.trim(), target_estimated_end_date: newEndDate });
+    if (error) return alert(error.message);
     setProjects((current) =>
       current.map((project) =>
         project.id === selectedProject.id
@@ -749,7 +764,7 @@ export function ProjectsWorkspace({
     ]);
   }
 
-  const handleBudgetAdjustment = (e: FormEvent) => {
+  const handleBudgetAdjustment = async (e: FormEvent) => {
     e.preventDefault();
     const amount = Number(budgetAdjustment);
     if (
@@ -763,20 +778,23 @@ export function ProjectsWorkspace({
       return alert(
         "El nuevo presupuesto no puede ser menor al gasto acumulado.",
       );
+    if (!supabase) return alert("No fue posible conectar con la base de datos.");
+    const { data: nextBudget, error } = await supabase.rpc("adjust_project_budget", { target_project: selectedProject.id, adjustment_amount: amount, adjustment_reason: budgetReason.trim() });
+    if (error || nextBudget === null) return alert(error?.message ?? "No fue posible guardar el ajuste.");
     setProjects((current) =>
       current.map((project) =>
         project.id === selectedProject.id
           ? {
               ...project,
-              budget: project.budget + amount,
+              budget: Number(nextBudget),
               budgetAdjustments: [
                 ...(project.budgetAdjustments || []),
                 {
-                  id: `budget-${Date.now()}`,
+                  id: crypto.randomUUID(),
                   amount,
                   reason: budgetReason.trim(),
                   responsible: budgetResponsible.trim(),
-                  occurredAt: new Date().toLocaleDateString("es-CO"),
+                  occurredAt: new Date().toISOString(),
                 },
               ],
             }

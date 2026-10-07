@@ -202,6 +202,8 @@ La evolución se ejecutará en este orden para que cada fase entregue control op
 <!-- Registro 2026-10-02: la relación Cotización-Obra es bidireccional: una cotización adjudicada abre su obra y la ficha de obra muestra su Cotización de origen con retorno directo al detalle comercial. -->
 <!-- Registro 2026-10-02: el historial de una cotización se presenta como línea de tiempo con eventos separados: responsable, fecha, transición de estado y nota en bloques legibles; el control de actualización se adapta a móvil. -->
 <!-- Registro 2026-10-07: Alquiler rápido evoluciona a cabecera de entrega/factura y líneas de equipo; una firma y un documento pueden cubrir varios equipos, con devolución parcial por línea. -->
+<!-- Registro 2026-10-07: Operaciones de obra persiste personal asignado, reaperturas, ajustes presupuestales, líneas de requisición, categorías, ubicaciones y responsable de Kardex. La interfaz confirma únicamente respuestas exitosas de base de datos. -->
+<!-- Registro 2026-10-07: Toda la interfaz del portal adopta el sistema visual RFC Graphite: superficies oscuras, borde técnico, tipografía Inter, acciones monocromas y movimiento sutil compatible con reducción de movimiento. -->
 ## Persistencia operativa (actualización 2026-10-06)
 
 Inventarios y Movimientos confirman altas, entradas, salidas, mínimos, ubicaciones y obras en Supabase antes de reflejarlas en pantalla. La creación de artículo usa una operación transaccional que registra ficha, existencia y movimiento de apertura como una sola unidad.

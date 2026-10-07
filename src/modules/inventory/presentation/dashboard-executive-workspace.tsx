@@ -170,7 +170,7 @@ export function DashboardExecutiveWorkspace({
     if (!supabase) return;
 
     const loadSharedOperations = async () => {
-      const [projectResult, requisitionResult, quoteResult, apuResult, movementResult] = await Promise.all([
+      const [projectResult, requisitionResult, quoteResult, apuResult, movementResult, toolLoanResult] = await Promise.all([
         supabase
           .from("projects")
           .select("id,code,name,client,location,material_budget,status,start_date,estimated_end_date,actual_end_date,created_at")
@@ -183,6 +183,7 @@ export function DashboardExecutiveWorkspace({
         supabase.from("quotes").select("*").order("created_at", { ascending: false }),
         supabase.from("apu_analyses").select("*").order("created_at", { ascending: false }),
         supabase.from("inventory_movements").select("id,stock_id,movement_type,quantity,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inner(inventory_items!inner(name,unit)),projects(name)").order("occurred_at", { ascending: false }),
+        supabase.from("inventory_tool_loans").select("id,code,stock_id,worker_name,project_id,status,notes,created_at,expected_return_date,returned_at,delivery_signature_data,return_signature_data,inventory_stock!inner(inventory_items!inner(name)),projects(name)").order("created_at", { ascending: false }).limit(50),
       ]);
 
       if (!projectResult.error && projectResult.data?.length) {
@@ -234,6 +235,47 @@ export function DashboardExecutiveWorkspace({
       if (!quoteResult.error && quoteResult.data) setQuotes(quoteResult.data as Quote[]);
       if (!apuResult.error && apuResult.data) setApus(apuResult.data as Apu[]);
       if (!movementResult.error && movementResult.data) setMovements(movementResult.data.map((movement) => { const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock; const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items); const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects; return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: movement.occurred_at, reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined }; }));
+      // Los prestamos se leen de la base. Antes esta lista solo se llenaba al
+      // prestar desde esta pantalla, de modo que al recargar aparecia vacia y
+      // nadie veia los prestamos que si existian.
+      if (!toolLoanResult.error && toolLoanResult.data) {
+        setToolLoans(
+          toolLoanResult.data.map((loan) => {
+            const stock = Array.isArray(loan.inventory_stock)
+              ? loan.inventory_stock[0]
+              : loan.inventory_stock;
+            const item =
+              stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items);
+            const project = Array.isArray(loan.projects) ? loan.projects[0] : loan.projects;
+            return {
+              id: loan.id,
+              code: loan.code ?? "Sin codigo",
+              toolId: loan.stock_id,
+              toolName: item?.name ?? "Herramienta",
+              workerName: loan.worker_name,
+              projectId: loan.project_id ?? "",
+              projectName: project?.name ?? "Sin obra",
+              loanDate: new Intl.DateTimeFormat("es-CO", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              }).format(new Date(loan.created_at)),
+              expectedReturnDate: loan.expected_return_date ?? undefined,
+              actualReturnDate: loan.returned_at
+                ? new Intl.DateTimeFormat("es-CO", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  }).format(new Date(loan.returned_at))
+                : undefined,
+              status: loan.status as ToolLoan["status"],
+              notes: loan.notes ?? undefined,
+              deliverySignatureDataUrl: loan.delivery_signature_data ?? undefined,
+              returnSignatureDataUrl: loan.return_signature_data ?? undefined,
+            };
+          }),
+        );
+      }
     };
 
     void loadSharedOperations();
@@ -538,7 +580,13 @@ export function DashboardExecutiveWorkspace({
   const [responsibleInput, setResponsibleInput] = useState("Maestro de Obra");
   const [notesInput, setNotesInput] = useState("");
   const [workerNameInput, setWorkerNameInput] = useState("");
-  const [toolNameInput, setToolNameInput] = useState("Pulidora Angular 7in");
+  // La herramienta se elige del inventario, no se escribe a mano: sin la
+  // referencia a la existencia el trigger no podria descontar la unidad.
+  const [toolStockId, setToolStockId] = useState("");
+  const [toolLabelInput, setToolLabelInput] = useState("");
+  const [toolExpectedReturn, setToolExpectedReturn] = useState("");
+  const [toolReturnStatus, setToolReturnStatus] = useState<"returned" | "damaged">("returned");
+  const [isSavingToolLoan, setIsSavingToolLoan] = useState(false);
   const [dispatchSignature, setDispatchSignature] = useState("");
   const [returnSignature, setReturnSignature] = useState("");
   const [toolSignature, setToolSignature] = useState("");
@@ -820,34 +868,81 @@ export function DashboardExecutiveWorkspace({
   };
 
   // Préstamo de Herramienta
-  const handleToolLoanSubmit = (e: FormEvent) => {
+  /**
+   * Registra el préstamo en la base de datos.
+   *
+   * Antes se fabricaba el préstamo entero en el navegador: id, código y
+   * referencia de herramienta inventados, y un mensaje de "registrado
+   * correctamente" sin que se escribiera nada. Además la herramienta se escribía
+   * como texto suelto, sin referencia a la existencia, así que no había forma de
+   * descontar la unidad correcta.
+   *
+   * Ahora la herramienta se elige del inventario y el préstamo lo crea la función
+   * create_tool_loan, que genera el código, guarda la firma de entrega y deja que
+   * el trigger descuente la unidad. Aquí no se resta disponibilidad: eso es
+   * trabajo de la base de datos, y hacerlo aquí descontaría doble.
+   */
+  const handleToolLoanSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (isSavingToolLoan) return;
+    const db = inventoryClient();
+    if (!db) return alert("No fue posible conectar con la base de datos para prestar.");
     if (!workerNameInput.trim())
-      return alert("Ingrese el nombre del trabajador.");
+      return alert("Ingrese el nombre de quien recibe la herramienta.");
+    if (!toolStockId)
+      return alert("Seleccione la herramienta que se va a entregar.");
     if (!toolSignature)
       return alert("Captura la firma de quien recibe la herramienta.");
-    const prj = projects.find((p) => p.id === selectedProjectId);
+    if (!selectedProjectId)
+      return alert("Seleccione la obra a la que se asigna la herramienta.");
 
-    const newLoan: ToolLoan = {
-      id: `loan-${Date.now()}`,
-      code: `PRST-2026-${String(toolLoans.length + 1).padStart(3, "0")}`,
-      toolId: `tool-${Date.now()}`,
-      toolName: toolNameInput,
-      workerName: workerNameInput,
-      projectId: prj?.id || "prj-01",
-      projectName: prj?.name || "Obra General",
-      loanDate: new Date().toISOString().split("T")[0],
-      status: "active",
-      notes: notesInput,
-      deliverySignatureDataUrl: toolSignature,
-    };
+    setIsSavingToolLoan(true);
+    try {
+      const { data, error } = await db.rpc("create_tool_loan", {
+        target_project: selectedProjectId,
+        target_stock: toolStockId,
+        receiver_name: workerNameInput.trim(),
+        target_expected_return: toolExpectedReturn || null,
+        loan_notes: notesInput.trim() || null,
+        delivery_signature: toolSignature,
+      });
 
-    setToolLoans((prev) => [newLoan, ...prev]);
-    setActiveModal(null);
-    setWorkerNameInput("");
-    setNotesInput("");
-    setToolSignature("");
-    showToast("Préstamo de herramienta registrado correctamente.", "success");
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      const saved = Array.isArray(data) ? data[0] : data;
+      setToolLoans((prev) => [
+        {
+          id: saved.loan_id,
+          code: saved.loan_code,
+          toolId: toolStockId,
+          toolName: toolLabelInput,
+          workerName: workerNameInput.trim(),
+          projectId: selectedProjectId,
+          projectName:
+            projects.find((pr) => pr.id === selectedProjectId)?.name ?? "Obra sin nombre",
+          loanDate: new Date().toISOString().slice(0, 10),
+          expectedReturnDate: toolExpectedReturn || undefined,
+          status: "active",
+          notes: notesInput.trim() || undefined,
+          deliverySignatureDataUrl: toolSignature,
+        },
+        ...prev,
+      ]);
+
+      setActiveModal(null);
+      setWorkerNameInput("");
+      setNotesInput("");
+      setToolSignature("");
+      setToolStockId("");
+      setToolLabelInput("");
+      setToolExpectedReturn("");
+      showToast("Préstamo de herramienta registrado.", "success");
+    } finally {
+      setIsSavingToolLoan(false);
+    }
   };
 
   // Registrar devolución de herramienta
@@ -858,32 +953,60 @@ export function DashboardExecutiveWorkspace({
     setActiveModal("tool-return");
   };
 
-  const handleReturnToolLoan = (e: FormEvent) => {
+  /**
+   * Registra la devolución en la base de datos.
+   *
+   * Antes solo cambiaba el estado en memoria y mostraba "registrada
+   * correctamente" sin escribir nada. Ahora llama a return_tool_loan, que valida
+   * que el préstamo siga activo y guarda la firma de devolución. La unidad vuelve
+   * a bodega por el trigger, no por un más uno escrito aquí.
+   */
+  const handleReturnToolLoan = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selectedToolLoan) return;
+    if (!selectedToolLoan || isSavingToolLoan) return;
     if (!toolReturnSignature)
       return alert("Captura la firma de quien entrega la herramienta.");
 
-    setToolLoans((prev) =>
-      prev.map((l) =>
-        l.id === selectedToolLoan.id
-          ? {
-              ...l,
-              status: "returned",
-              actualReturnDate: new Date().toISOString().split("T")[0],
-              returnSignatureDataUrl: toolReturnSignature,
-              notes: [l.notes, toolReturnNotes.trim()]
-                .filter(Boolean)
-                .join("\nDevolución: "),
-            }
-          : l,
-      ),
-    );
-    setActiveModal(null);
-    setSelectedToolLoan(null);
-    setToolReturnSignature("");
-    setToolReturnNotes("");
-    showToast("Devolución de herramienta registrada correctamente.", "success");
+    const db = inventoryClient();
+    if (!db) return alert("No fue posible conectar con la base de datos para devolver.");
+
+    setIsSavingToolLoan(true);
+    try {
+      const { error } = await db.rpc("return_tool_loan", {
+        target_loan: selectedToolLoan.id,
+        return_notes: toolReturnNotes.trim() || null,
+        return_signature: toolReturnSignature,
+        final_status: toolReturnStatus,
+      });
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      setToolLoans((prev) =>
+        prev.map((l) =>
+          l.id === selectedToolLoan.id
+            ? {
+                ...l,
+                status: toolReturnStatus,
+                actualReturnDate: new Date().toISOString().slice(0, 10),
+                returnSignatureDataUrl: toolReturnSignature,
+                notes: [l.notes, toolReturnNotes.trim()]
+                  .filter(Boolean)
+                  .join("\nDevolución: "),
+              }
+            : l,
+        ),
+      );
+      setActiveModal(null);
+      setSelectedToolLoan(null);
+      setToolReturnSignature("");
+      setToolReturnNotes("");
+      showToast("Devolución de herramienta registrada.", "success");
+    } finally {
+      setIsSavingToolLoan(false);
+    }
   };
 
   return (
@@ -1835,12 +1958,29 @@ export function DashboardExecutiveWorkspace({
             <form onSubmit={handleToolLoanSubmit}>
               <div className="form-group">
                 <label>Herramienta / Equipo a Entregar:</label>
+                {/* Se elige del inventario, no se escribe el nombre a mano. Es lo
+                    que permite que el descuento de la unidad sea real. */}
+                <SearchableProductPicker
+                  products={products}
+                  value={toolStockId}
+                  onChange={(stockId) => {
+                    setToolStockId(stockId);
+                    setToolLabelInput(
+                      products.find((item) => item.id === stockId)?.name ?? "",
+                    );
+                  }}
+                  formatDetail={(item) =>
+                    `${item.sku ?? "Sin sku"} · Disponible: ${item.available} ${item.unit ?? "und"}`
+                  }
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Fecha esperada de devolución (opcional):</label>
                 <input
-                  type="text"
-                  required
-                  value={toolNameInput}
-                  onChange={(e) => setToolNameInput(e.target.value)}
-                  placeholder="ej. Pulidora DeWalt 7in, Soldador Inverter..."
+                  type="date"
+                  value={toolExpectedReturn}
+                  onChange={(e) => setToolExpectedReturn(e.target.value)}
                 />
               </div>
 
@@ -1883,8 +2023,8 @@ export function DashboardExecutiveWorkspace({
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-submit">
-                  Confirmar Préstamo de Herramienta
+                <button disabled={isSavingToolLoan} type="submit" className="btn-submit">
+                  {isSavingToolLoan ? "Guardando…" : "Confirmar Préstamo de Herramienta"}
                 </button>
               </div>
             </form>
@@ -1925,6 +2065,26 @@ export function DashboardExecutiveWorkspace({
               </section>
 
               <div className="form-group">
+                <label htmlFor="tool-return-status">¿Cómo se recibe la herramienta?</label>
+                {/* El estado no es solo un color: dice con palabras qué pasó con la
+                    unidad, porque una dañada no vuelve a estar disponible. */}
+                <select
+                  id="tool-return-status"
+                  value={toolReturnStatus}
+                  onChange={(e) => setToolReturnStatus(e.target.value as "returned" | "damaged")}
+                >
+                  <option value="returned">Devuelta en buen estado</option>
+                  <option value="damaged">Devuelta dañada</option>
+                </select>
+                {toolReturnStatus === "damaged" ? (
+                  <p className="form-hint">
+                    Una herramienta dañada queda fuera de la bodega y no vuelve a estar
+                    disponible hasta que se registre su baja.
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="tool-return-notes">Estado y observaciones de devolución</label>
                 <textarea
                   id="tool-return-notes"
@@ -1952,8 +2112,8 @@ export function DashboardExecutiveWorkspace({
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-submit">
-                  Confirmar devolución
+                <button disabled={isSavingToolLoan} type="submit" className="btn-submit">
+                  {isSavingToolLoan ? "Guardando…" : "Confirmar devolución"}
                 </button>
               </div>
             </form>

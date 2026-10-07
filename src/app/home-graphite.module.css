@@ -1,0 +1,55 @@
+.graphiteHome {
+  --graphite-canvas: #0a0a0a;
+  --graphite-surface: #111;
+  --graphite-line: #292929;
+  --graphite-ink: #f5f5f5;
+  --graphite-muted: #a3a3a3;
+  --graphite-accent: #ff8a33;
+  background: var(--graphite-canvas);
+  color: var(--graphite-ink);
+  font-family: var(--font-sans, Inter, system-ui, sans-serif);
+}
+
+.graphiteHome :global(.site-hero) {
+  background: #0a0a0a;
+  border-bottom: 1px solid var(--graphite-line);
+}
+.graphiteHome :global(.site-hero::after) {
+  background: linear-gradient(90deg, rgba(10,10,10,.96), rgba(10,10,10,.74) 48%, rgba(10,10,10,.30)), linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px);
+  background-size: auto, 72px 72px, 72px 72px;
+}
+.graphiteHome :global(.site-nav) { border-bottom: 1px solid var(--graphite-line); padding-bottom: 18px; }
+.graphiteHome :global(.site-logo b) { font-family: var(--font-sans, Inter, sans-serif); font-size: 10px; letter-spacing: .15em; }
+.graphiteHome :global(.site-nav-links a), .graphiteHome :global(.site-portal-access) { color: var(--graphite-muted); }
+.graphiteHome :global(.site-nav-cta) { border-color: #555; border-radius: 7px; color: var(--graphite-ink); }
+.graphiteHome :global(.site-nav-cta:hover) { background: #f5f5f5; color: #111; }
+.graphiteHome :global(.site-hero-content) { max-width: 880px; }
+.graphiteHome :global(.site-hero-parallax-logo) { border-color: #555; border-radius: 8px; }
+.graphiteHome :global(.site-kicker), .graphiteHome :global(.site-section-label) { color: var(--graphite-accent); }
+.graphiteHome :global(.site-hero h1), .graphiteHome :global(.site-intro h2), .graphiteHome :global(.site-work h2), .graphiteHome :global(.site-section-heading h2), .graphiteHome :global(.site-process h2), .graphiteHome :global(.site-contact h2), .graphiteHome :global(.site-metalmecanica-copy h2) { font-family: var(--font-sans, Inter, sans-serif); font-weight: 500; letter-spacing: -.065em; }
+.graphiteHome :global(.site-button) { background: #f5f5f5; border: 1px solid #fff; border-radius: 8px; color: #111; }
+.graphiteHome :global(.site-button:hover) { background: #fff; }
+.graphiteHome :global(.site-hero-footer) { border-color: #333; color: var(--graphite-muted); }
+.graphiteHome :global(.site-capability-strip) { background: #111; border-bottom: 1px solid var(--graphite-line); border-top: 1px solid var(--graphite-line); color: var(--graphite-muted); }
+.graphiteHome :global(.site-capability-strip span) { background: var(--graphite-accent); }
+.graphiteHome :global(.site-intro), .graphiteHome :global(.site-process) { background: #0a0a0a; }
+.graphiteHome :global(.site-intro div > p), .graphiteHome :global(.site-process-list p), .graphiteHome :global(.site-contact-intro > p:not(.site-section-label)) { color: var(--graphite-muted); }
+.graphiteHome :global(.site-work) { background: #111; }
+.graphiteHome :global(.site-work-copy > p:not(.site-section-label)) { color: var(--graphite-muted); }
+.graphiteHome :global(.dark-link) { color: var(--graphite-ink); }
+.graphiteHome :global(.site-services), .graphiteHome :global(.site-metalmecanica) { background: #111; border-bottom: 1px solid var(--graphite-line); border-top: 1px solid var(--graphite-line); }
+.graphiteHome :global(.site-metalmecanica::after) { background: linear-gradient(90deg, rgba(10,10,10,.94), rgba(10,10,10,.68) 54%, rgba(10,10,10,.22)); }
+.graphiteHome :global(.site-services-grid), .graphiteHome :global(.site-service), .graphiteHome :global(.site-process-list), .graphiteHome :global(.site-process-list li) { border-color: var(--graphite-line); }
+.graphiteHome :global(.site-service-line) { background: var(--graphite-accent); }
+.graphiteHome :global(.site-statement) { background: #1a1a1a; border-bottom: 1px solid #444; border-top: 1px solid #444; color: var(--graphite-ink); }
+.graphiteHome :global(.site-contact) { background: #111; }
+.graphiteHome :global(.site-address) { border-color: var(--graphite-ink); }
+.graphiteHome :global(.site-contact-form) { background: #171717; border-color: #3a3a3a; border-radius: 10px; }
+.graphiteHome :global(.site-contact-form label) { color: var(--graphite-ink); }
+.graphiteHome :global(.site-contact-form input), .graphiteHome :global(.site-contact-form select), .graphiteHome :global(.site-contact-form textarea) { background: #0a0a0a; border-color: #424242; border-radius: 7px; color: var(--graphite-ink); }
+.graphiteHome :global(.site-form-button) { background: #f5f5f5; border-radius: 7px; color: #111; }
+.graphiteHome :global(.site-footer) { background: #0a0a0a; border-top: 1px solid var(--graphite-line); }
+
+@media (prefers-reduced-motion: reduce) {
+  .graphiteHome *, .graphiteHome *::before, .graphiteHome *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

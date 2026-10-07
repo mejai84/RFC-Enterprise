@@ -137,6 +137,30 @@ export function DashboardExecutiveWorkspace({
   // Estado operativo proveniente de Supabase.
   const [products, setProducts] = useState<StockProduct[]>(initialProducts);
 
+  /**
+   * Refleja en pantalla la existencia que quedo en la base de datos.
+   *
+   * El trigger descuenta o repone el stock cuando se escribe el movimiento. Si aqui
+   * se sumara o restara a mano, la pantalla mostraria un numero distinto del real y
+   * las validaciones de disponibilidad acabarian rechazando despachos validos.
+   */
+  const refreshStockQuantity = async (
+    db: NonNullable<ReturnType<typeof inventoryClient>>,
+    stockId: string,
+  ) => {
+    const { data } = await db
+      .from("inventory_stock")
+      .select("quantity")
+      .eq("id", stockId)
+      .maybeSingle();
+    if (!data) return;
+    const disponible = Number(data.quantity);
+    setProducts((prev) =>
+      prev.map((item) => (item.id === stockId ? { ...item, available: disponible } : item)),
+    );
+  };
+
+
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -669,13 +693,7 @@ export function DashboardExecutiveWorkspace({
       signatureDataUrl: dispatchSignature,
     };
 
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === selectedProduct.id
-          ? { ...p, available: p.available - qty }
-          : p,
-      ),
-    );
+    await refreshStockQuantity(db, selectedProduct.id);
     setMovements((prev) => [newMovement, ...prev]);
 
     setSelectedVoucherMovement(newMovement);
@@ -722,13 +740,7 @@ export function DashboardExecutiveWorkspace({
       signatureDataUrl: returnSignature,
     };
 
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === selectedProduct.id
-          ? { ...p, available: p.available + qty }
-          : p,
-      ),
-    );
+    await refreshStockQuantity(db, selectedProduct.id);
     setMovements((prev) => [newMovement, ...prev]);
 
     setActiveModal(null);
@@ -851,14 +863,8 @@ export function DashboardExecutiveWorkspace({
       notes: `Despachado desde Requisición ${req.code}. ${req.notes || ""}`,
     };
 
-    // El stock ya lo desconto la base de datos; aqui solo se refleja lo que paso.
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === movedStock.stock_id
-          ? { ...p, available: p.available - Number(movedStock.quantity) }
-          : p,
-      ),
-    );
+    // El stock ya lo desconto la base de datos; aqui solo se refleja lo que quedo.
+    await refreshStockQuantity(db, movedStock.stock_id);
     setMovements((prev) => [newMov, ...prev]);
     setRequisitions((prev) =>
       prev.map((r) => (r.id === req.id ? { ...r, status: "dispatched" } : r)),

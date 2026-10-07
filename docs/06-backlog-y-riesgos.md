@@ -14,7 +14,7 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 [07 · Registro de decisiones](07-registro-de-decisiones.md).
 
 <!-- Registro 2026-10-07: Los puntos de riesgo por operaciones locales en Obras se retiran al persistir personal, reaperturas, ajustes y catálogos. Permanece como dependencia controlada el préstamo desde Resumen hasta que el trigger de custodia esté aplicado. -->
-<!-- Registro 2026-10-07: Riesgo de inconsistencia visual reducido mediante tokens Graphite globales; toda pantalla nueva debe reutilizar sus superficies, contraste, controles y preferencia `prefers-reduced-motion`. -->
+<!-- Registro 2026-10-07: RFC Graphite queda limitado al sitio público de inicio; los módulos operativos no heredan tokens ni estilos globales de la landing. -->
 
 ## Riesgos abiertos
 

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ContactForm } from "./contact-form";
 import { ParallaxVideo } from "./parallax-video";
+import styles from "./home-graphite.module.css";
 
 const services = [
   {
@@ -30,7 +31,7 @@ const approach = [
 
 export default function Home() {
   return (
-    <main className="site-page" id="main-content" tabIndex={-1}>
+    <main className={`site-page ${styles.graphiteHome}`} id="main-content" tabIndex={-1}>
       <section className="site-hero" id="inicio">
         <ParallaxVideo className="site-hero-video" poster="/hero-caucasia-rfc.png" source="/rfc-caucasia-oil-station.mp4" speed={0.1} />
         <nav className="site-nav" aria-label="Navegación principal">

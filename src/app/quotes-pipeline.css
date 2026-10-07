@@ -1327,3 +1327,36 @@
 .quote-request-body { background: var(--canvas); border: 1px solid var(--line); border-radius: 9px; margin: 0 0 14px; padding: 11px 13px; }
 .quote-request-body summary { color: var(--brand-dark); cursor: pointer; font-size: 12.5px; font-weight: 800; }
 .quote-request-body pre { color: var(--ink); font-family: inherit; font-size: 13px; line-height: 1.55; margin: 10px 0 0; max-height: 260px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+
+.technical-documents { display: grid; gap: 18px; }
+.technical-documents-intro { align-items: start; display: flex; gap: 18px; justify-content: space-between; }
+.technical-documents-kicker { color: var(--brand); font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.technical-documents h3 { font-size: 21px; margin: 4px 0 6px; }
+.technical-documents-intro p:last-child { color: var(--muted); font-size: 13px; max-width: 640px; }
+.technical-documents-status { border: 1px solid var(--line); border-radius: 999px; font-size: 12px; font-weight: 750; padding: 7px 10px; white-space: nowrap; }
+.technical-documents-status.is-approved { background: var(--brand-soft); border-color: #b8ddc8; color: var(--brand-dark); }
+.technical-documents-status.is-sent { background: #eff6ff; border-color: #bed7f4; color: #20548f; }
+.technical-documents-status.is-changes_requested { background: #fff3f4; border-color: #efc4cb; color: #9a2738; }
+.technical-documents-alert { border-radius: 8px; font-size: 13px; font-weight: 650; padding: 10px 12px; }
+.technical-documents-alert.is-error { background: #fff1ef; border: 1px solid #efc6c0; color: #8f2e25; }
+.technical-documents-alert.is-success { background: var(--brand-soft); border: 1px solid #b8ddc8; color: var(--brand-dark); }
+.technical-document-grid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.technical-document-card { border: 1px solid var(--line); border-radius: 12px; display: grid; gap: 9px; padding: 16px; }
+.technical-document-card > div { align-items: center; display: flex; gap: 10px; }
+.technical-document-card > div span { align-items: center; background: var(--brand-soft); border-radius: 50%; color: var(--brand-dark); display: inline-flex; font-size: 12px; font-weight: 800; height: 27px; justify-content: center; width: 27px; }
+.technical-document-card h4 { font-size: 15px; }
+.technical-document-card p, .technical-document-card small { color: var(--muted); font-size: 12px; }
+.technical-document-card a { color: var(--brand-dark); font-size: 13px; font-weight: 750; overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 3px; }
+.technical-document-upload { border: 1px dashed #9fcab0; border-radius: 8px; color: var(--brand-dark); cursor: pointer; font-size: 12px; font-weight: 750; padding: 9px 10px; text-align: center; }
+.technical-document-upload input { display: block; font-size: 11px; margin-top: 6px; max-width: 100%; }
+.technical-document-review { display: grid; gap: 10px; }
+.technical-document-review > div { display: flex; flex-wrap: wrap; gap: 10px; }
+.technical-document-review label { display: grid; font-size: 13px; font-weight: 750; gap: 5px; }
+.technical-document-review label small { color: var(--muted); font-weight: 500; }
+.technical-document-review textarea { border: 1px solid var(--line); border-radius: 8px; padding: 10px; resize: vertical; }
+.technical-document-secondary { background: #fff; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font-size: 13px; font-weight: 750; padding: 10px 13px; }
+.technical-documents-approved { background: var(--brand-soft); border: 1px solid #b8ddc8; border-radius: 9px; color: var(--brand-dark); font-size: 13px; font-weight: 700; padding: 12px; }
+.technical-documents-versions { border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; padding-top: 13px; }
+.technical-documents-versions summary { cursor: pointer; font-weight: 700; }
+.technical-documents-versions ul { display: grid; gap: 5px; margin: 10px 0 0; padding-left: 20px; }
+@media (max-width: 680px) { .technical-documents-intro { flex-direction: column; } .technical-document-grid { grid-template-columns: 1fr; } .technical-documents-status { white-space: normal; } }

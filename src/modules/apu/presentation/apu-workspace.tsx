@@ -468,34 +468,30 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   }
 
   /** Crea una actividad a partir de la vista previa de un archivo de Excel. */
-  function createApuFromImport(draft: {
+  function createApusFromImport(drafts: Array<{
     code: string;
     name: string;
     unit: string;
     workQuantity: number;
     lines: ApuLine[];
     importedCount: number;
-  }) {
+  }>) {
+    if (!drafts.length) return;
     const now = new Date().toISOString();
-    const generated = `APU-${String(apus.length + 1).padStart(3, "0")}`;
-    const apu: Apu = {
-      id: newId(),
-      // El código del archivo solo se respeta si no está repetido en el sistema.
-      code: draft.code && !apus.some((item) => item.code === draft.code) ? draft.code : generated,
-      name: draft.name || "Actividad importada",
-      unit: draft.unit || "und",
-      workQuantity: draft.workQuantity > 0 ? draft.workQuantity : 1,
-      lines: draft.lines,
-      quoteId: quoteContext?.quoteId,
-      quoteCode: quoteContext?.quoteCode,
-      createdAt: now,
-      updatedAt: now,
-    };
-    setApus((current) => [apu, ...current]);
-    setSelectedId(apu.id);
+    const usedCodes = new Set(apus.map((item) => item.code));
+    let sequence = apus.length + 1;
+    const imported = drafts.map((draft) => {
+      let generated = `APU-${String(sequence++).padStart(3, "0")}`;
+      while (usedCodes.has(generated)) generated = `APU-${String(sequence++).padStart(3, "0")}`;
+      const code = draft.code && !usedCodes.has(draft.code) ? draft.code : generated;
+      usedCodes.add(code);
+      return { id: newId(), code, name: draft.name || "Actividad importada", unit: draft.unit || "und", workQuantity: draft.workQuantity > 0 ? draft.workQuantity : 1, lines: draft.lines, quoteId: quoteContext?.quoteId, quoteCode: quoteContext?.quoteCode, createdAt: now, updatedAt: now } satisfies Apu;
+    });
+    setApus((current) => [...imported, ...current]);
+    setSelectedId(imported[0].id);
     setIsImportOpen(false);
     setSaveState("saving");
-    setSaveMessage(`Importadas ${draft.importedCount} líneas desde Excel. Revísalas y pulsa Guardar APU para confirmarlas en la base de datos.`);
+    setSaveMessage(`Importadas ${imported.length} actividades y ${drafts.reduce((sum, draft) => sum + draft.importedCount, 0)} líneas desde Excel. Revísalas y pulsa Guardar APU para confirmarlas en la base de datos.`);
   }
 
   function updateApu(apu: Apu) {
@@ -1281,7 +1277,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
         </section>
       </section>
       {printingApu ? <ApuPrintModal apu={printingApu} onClose={() => setPrintingApu(null)} /> : null}
-      {isImportOpen ? <ApuImportModal onClose={() => setIsImportOpen(false)} onConfirm={createApuFromImport} /> : null}
+      {isImportOpen ? <ApuImportModal onClose={() => setIsImportOpen(false)} onConfirm={createApusFromImport} /> : null}
       {isNewModalOpen ? (
         <ApuNewModal
           nextCode={nextApuCode}

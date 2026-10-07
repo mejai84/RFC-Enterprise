@@ -41,6 +41,7 @@ import {
 import { apuCostBreakdown, apuSellingBreakdown, type Apu } from "@/modules/apu";
 import { prepareRealDataStorage } from "@/shared/browser/real-data-storage";
 import { TechnicalVisitEditor } from "@/modules/quotes/presentation/technical-visit-editor";
+import { TechnicalDocumentsEditor } from "@/modules/quotes/presentation/technical-documents-editor";
 
 /* ── Helpers de formato ─────────────────────────────────────── */
 
@@ -679,6 +680,14 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     }
   }, [companyId, branchId, isConverting]);
 
+  const handleTechnicalDocumentWorkflow = useCallback((quoteId: string, status: QuoteStatus, message: string) => {
+    const updatedAt = new Date().toISOString();
+    const apply = (quote: Quote): Quote => quote.id === quoteId ? { ...quote, status, updatedAt } : quote;
+    setQuotes((current) => current.map(apply));
+    setSelectedQuote((current) => current ? apply(current) : current);
+    setActionNotice(message);
+  }, []);
+
   /* ── Crear nueva cotización ────────────────────────────── */
   const handleCreateQuote = useCallback(
     (e: FormEvent<HTMLFormElement>) => {
@@ -966,6 +975,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           sessionActor={sessionActor}
           onCreateRevision={handleCreateRevision}
           onConvertToProject={handleConvertToProject}
+          onTechnicalDocumentWorkflow={handleTechnicalDocumentWorkflow}
           onPrintProposal={(q) => {
             setQuoteToPrint(q);
           }}
@@ -1396,7 +1406,7 @@ function ListView({
  * DETAIL MODAL CON PESTAÑAS, COSTEO Y ACCIONES
  * ═══════════════════════════════════════════════════════════════ */
 
-type ModalTab = "general" | "breakdown" | "visit" | "history";
+type ModalTab = "general" | "breakdown" | "visit" | "documents" | "history";
 
 function DetailModal({
   quote,
@@ -1410,6 +1420,7 @@ function DetailModal({
   sessionActor,
   onCreateRevision,
   onConvertToProject,
+  onTechnicalDocumentWorkflow,
   onPrintProposal,
 }: {
   quote: Quote;
@@ -1423,6 +1434,7 @@ function DetailModal({
   sessionActor: string;
   onCreateRevision: (id: string, reason: string) => void;
   onConvertToProject: (quote: Quote) => Promise<void>;
+  onTechnicalDocumentWorkflow: (id: string, status: QuoteStatus, message: string) => void;
   onPrintProposal: (quote: Quote) => void;
 }) {
   const [activeTab, setActiveTab] = useState<ModalTab>("general");
@@ -1630,6 +1642,12 @@ function DetailModal({
             onClick={() => setActiveTab("history")}
           >
             📜 Historial & Estados
+          </button>
+          <button
+            className={`quote-tab-btn ${activeTab === "documents" ? "active" : ""}`}
+            onClick={() => setActiveTab("documents")}
+          >
+            Documentos técnicos
           </button>
         </div>
 
@@ -1878,6 +1896,17 @@ function DetailModal({
                   required: true,
                   status,
                 })
+              }
+            />
+          </div>
+        )}
+
+        {activeTab === "documents" && (
+          <div className="quote-tab-content">
+            <TechnicalDocumentsEditor
+              quoteId={quote.id}
+              onWorkflowStatusChanged={(status, message) =>
+                onTechnicalDocumentWorkflow(quote.id, status, message)
               }
             />
           </div>

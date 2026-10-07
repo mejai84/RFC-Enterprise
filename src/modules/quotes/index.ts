@@ -16,6 +16,9 @@ export type {
   QuoteVisits,
 } from "./domain/quote";
 
+export type { QuoteTechnicalDocument, TechnicalDocumentStatus, TechnicalDocumentType } from "./domain/technical-document";
+export { technicalDocumentLabels, technicalDocumentTypes } from "./domain/technical-document";
+
 export {
   technicalVisitChecklistTemplates,
   getQuoteVisits,

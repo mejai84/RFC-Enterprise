@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { apuCategoryMeta, type Apu, type ApuLine } from "@/modules/apu";
+import { apuCategoryMeta, type ApuLine } from "@/modules/apu";
 import {
   inspectApuWorkbook,
   needsQuantityReview,
@@ -19,14 +19,14 @@ const MAX_APU_FILE_SIZE = 20 * 1024 * 1024;
 
 type Props = {
   onClose: () => void;
-  onConfirm: (draft: {
+  onConfirm: (drafts: Array<{
     code: string;
     name: string;
     unit: string;
     workQuantity: number;
     lines: ApuLine[];
     importedCount: number;
-  }) => void;
+  }>) => void;
 };
 
 /**
@@ -38,22 +38,29 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [inspection, setInspection] = useState<ApuWorkbookInspection | null>(null);
   const [selectedSheetName, setSelectedSheetName] = useState("");
+  const [selectedSheetNames, setSelectedSheetNames] = useState<ReadonlySet<string>>(new Set());
+  const [optionsBySheet, setOptionsBySheet] = useState<Record<string, { excludedRows: ReadonlySet<number>; includeWithoutQuantity: boolean }>>({});
   const [fileName, setFileName] = useState("");
-  const [excludedRows, setExcludedRows] = useState<ReadonlySet<number>>(new Set());
-  const [includeWithoutQuantity, setIncludeWithoutQuantity] = useState(false);
   const [isReading, setIsReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const preview = useMemo<ApuImportPreview | null>(
     () => inspection?.sheets.find((sheet) => sheet.sheetName === selectedSheetName) ?? null,
     [inspection, selectedSheetName],
   );
+  const selectedPreviews = useMemo(
+    () => inspection?.sheets.filter((sheet) => selectedSheetNames.has(sheet.sheetName)) ?? [],
+    [inspection, selectedSheetNames],
+  );
+  const currentOptions = optionsBySheet[selectedSheetName] ?? { excludedRows: new Set<number>(), includeWithoutQuantity: false };
+  const excludedRows = currentOptions.excludedRows;
+  const includeWithoutQuantity = currentOptions.includeWithoutQuantity;
+  function updateCurrentOptions(update: (current: { excludedRows: ReadonlySet<number>; includeWithoutQuantity: boolean }) => { excludedRows: ReadonlySet<number>; includeWithoutQuantity: boolean }) {
+    if (!selectedSheetName) return;
+    setOptionsBySheet((current) => ({ ...current, [selectedSheetName]: update(current[selectedSheetName] ?? { excludedRows: new Set<number>(), includeWithoutQuantity: false }) }));
+  }
 
   const totals = useMemo(
     () => (preview ? previewTotals(preview, excludedRows, includeWithoutQuantity) : null),
-    [preview, excludedRows, includeWithoutQuantity],
-  );
-  const usableLines = useMemo(
-    () => (preview ? previewToApuLines(preview, excludedRows, includeWithoutQuantity) : []),
     [preview, excludedRows, includeWithoutQuantity],
   );
   const willNeedReview = useMemo(
@@ -65,7 +72,8 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
     setError(null);
     setInspection(null);
     setSelectedSheetName("");
-    setExcludedRows(new Set());
+    setSelectedSheetNames(new Set());
+    setOptionsBySheet({});
     setIsReading(true);
     try {
       if (!file.name.toLowerCase().endsWith(".xlsx")) {
@@ -85,6 +93,7 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
       }
       setInspection(result);
       setSelectedSheetName(result.sheets[0].sheetName);
+      setSelectedSheetNames(new Set([result.sheets[0].sheetName]));
       setFileName(file.name);
     } catch (readError) {
       setError(readError instanceof Error ? readError.message : "No fue posible leer el archivo de Excel.");
@@ -142,28 +151,32 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
           {inspection && inspection.sheets.length > 0 ? (
             <section className="apu-import-source" aria-labelledby="apu-import-source-title">
               <div>
-                <p id="apu-import-source-title">Actividad detectada</p>
+                <p id="apu-import-source-title">Actividades detectadas</p>
                 <small>
-                  {inspection.sheets.length} hoja{inspection.sheets.length === 1 ? "" : "s"} de actividad · {inspection.ignoredSheets.length} auxiliar{inspection.ignoredSheets.length === 1 ? "" : "es"} excluida{inspection.ignoredSheets.length === 1 ? "" : "s"}
+                  {inspection.sheets.length} hoja{inspection.sheets.length === 1 ? "" : "s"} de actividad. Marca una o varias para importar.
                 </small>
               </div>
-              <label>
-                <span>Hoja que deseas importar</span>
-                <select
-                  value={selectedSheetName}
-                  onChange={(event) => {
-                    setSelectedSheetName(event.target.value);
-                    setExcludedRows(new Set());
-                    setIncludeWithoutQuantity(false);
-                  }}
-                >
-                  {inspection.sheets.map((sheet) => (
-                    <option key={sheet.sheetName} value={sheet.sheetName}>
-                      {sheet.name || sheet.sheetName} · {sheet.lines.length} recursos
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="apu-import-sheet-picker">
+                <div className="apu-import-sheet-picker-header">
+                  <span>Hojas de actividad para importar</span>
+                  <button type="button" onClick={() => setSelectedSheetNames(new Set(inspection.sheets.map((sheet) => sheet.sheetName)))}>Seleccionar todas</button>
+                </div>
+                <div className="apu-import-sheet-list">
+                  {inspection.sheets.map((sheet) => {
+                    const checked = selectedSheetNames.has(sheet.sheetName);
+                    const active = sheet.sheetName === selectedSheetName;
+                    return <div className={`apu-import-sheet-option ${active ? "is-active" : ""}`} key={sheet.sheetName}>
+                      <input id={`apu-sheet-${sheet.sheetName}`} type="checkbox" checked={checked} onChange={(event) => {
+                        setSelectedSheetNames((current) => { const next = new Set(current); if (event.target.checked) next.add(sheet.sheetName); else next.delete(sheet.sheetName); return next; });
+                        if (event.target.checked) setSelectedSheetName(sheet.sheetName);
+                      }} />
+                      <label htmlFor={`apu-sheet-${sheet.sheetName}`}><strong>{sheet.name || sheet.sheetName}</strong><small>{sheet.lines.length} recursos · {sheet.sourceFormat === "rfc" ? "Formato RFC" : "Formato compatible"}</small></label>
+                      <button type="button" onClick={() => setSelectedSheetName(sheet.sheetName)} aria-pressed={active}>Ver</button>
+                    </div>;
+                  })}
+                </div>
+                {inspection.ignoredSheets.length ? <details className="apu-import-ignored-sheets"><summary>{inspection.ignoredSheets.length} hoja(s) informativa(s) no se importarán</summary><ul>{inspection.ignoredSheets.map((sheet) => <li key={sheet.sheetName}><strong>{sheet.sheetName}</strong>: {sheet.reason}</li>)}</ul></details> : null}
+              </div>
               {preview ? (
                 <span className={`apu-import-format is-${preview.confidence}`}>
                   {preview.sourceFormat === "rfc" ? "Formato RFC Enterprise" : preview.sourceFormat === "reference" ? "Formato de referencia" : "Formato compatible detectado"}
@@ -219,7 +232,7 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
                   <div className="apu-import-ask-actions">
                     <button
                       type="button"
-                      onClick={() => setIncludeWithoutQuantity(false)}
+                      onClick={() => updateCurrentOptions((current) => ({ ...current, includeWithoutQuantity: false }))}
                       aria-pressed={!includeWithoutQuantity}
                       title="No traer estas líneas al APU; se descartan de la importación"
                     >
@@ -227,7 +240,7 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setIncludeWithoutQuantity(true)}
+                      onClick={() => updateCurrentOptions((current) => ({ ...current, includeWithoutQuantity: true }))}
                       aria-pressed={includeWithoutQuantity}
                       title="Traerlas con cantidad 1 para que puedas ajustarlas en la actividad"
                     >
@@ -292,11 +305,11 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
                               <button
                                 type="button"
                                 onClick={() =>
-                                  setExcludedRows((current) => {
-                                    const next = new Set(current);
+                                  updateCurrentOptions((current) => {
+                                    const next = new Set(current.excludedRows);
                                     if (next.has(line.rowNumber)) next.delete(line.rowNumber);
                                     else next.add(line.rowNumber);
-                                    return next;
+                                    return { ...current, excludedRows: next };
                                   })
                                 }
                                 aria-pressed={!excluded}
@@ -345,20 +358,17 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
           <button
             type="button"
             onClick={() => {
-              if (!preview) return;
-              onConfirm({
-                code: preview.code,
-                name: preview.name,
-                unit: preview.unit,
-                workQuantity: preview.workQuantity,
-                lines: usableLines,
-                importedCount: usableLines.length,
-              });
+              if (!selectedPreviews.length) return;
+              onConfirm(selectedPreviews.map((sheet) => {
+                const options = optionsBySheet[sheet.sheetName] ?? { excludedRows: new Set<number>(), includeWithoutQuantity: false };
+                const lines = previewToApuLines(sheet, options.excludedRows, options.includeWithoutQuantity);
+                return { code: sheet.code, name: sheet.name, unit: sheet.unit, workQuantity: sheet.workQuantity, lines, importedCount: lines.length };
+              }).filter((draft) => draft.lines.length > 0));
             }}
-            disabled={!preview || usableLines.length === 0}
-            title="Crear la actividad con estas líneas en la base de datos"
+            disabled={!selectedPreviews.length || selectedPreviews.some((sheet) => previewToApuLines(sheet, optionsBySheet[sheet.sheetName]?.excludedRows ?? new Set<number>(), optionsBySheet[sheet.sheetName]?.includeWithoutQuantity ?? false).length === 0)}
+            title="Crear las actividades seleccionadas con sus líneas en el APU"
           >
-            {preview ? `Importar ${usableLines.length} línea(s)` : "Importar"}
+            {selectedPreviews.length ? `Importar ${selectedPreviews.length} actividad${selectedPreviews.length === 1 ? "" : "es"} seleccionada${selectedPreviews.length === 1 ? "" : "s"}` : "Marca actividades para importar"}
           </button>
         </div>
       </div>

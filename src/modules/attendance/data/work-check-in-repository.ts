@@ -13,8 +13,8 @@ import type {
 import type { AttendancePeriodKind } from "../domain/attendance-period";
 import { bogotaToday } from "../domain/attendance-period";
 
-/** Perfiles que, además de consultar su propia declaración, pueden ver la del equipo. */
-export const REVIEW_ROLE_CODES = ["administrator", "resident_engineer", "auditor", "management"] as const;
+/** Permiso que permite consultar las declaraciones del equipo, no solo las propias. */
+export const TEAM_VIEW_PERMISSION = "attendance.team.view";
 
 function client() {
   if (!isSupabaseConfigured || !supabaseUrl || !supabasePublishableKey) return null;
@@ -46,15 +46,22 @@ export function describeWorkCheckInError(cause: unknown): string {
 async function resolveCompany(supabase: NonNullable<ReturnType<typeof client>>, userId: string) {
   const { data, error } = await supabase
     .from("user_roles")
-    .select("company_id, roles(code)")
+    .select("company_id")
     .eq("user_id", userId)
     .limit(1)
     .maybeSingle();
   if (error) throw error;
   if (!data?.company_id) throw new Error("Tu cuenta no tiene una empresa asignada.");
-  const role = Array.isArray(data.roles) ? data.roles[0] : data.roles;
-  const canReview = REVIEW_ROLE_CODES.includes((role?.code ?? "") as (typeof REVIEW_ROLE_CODES)[number]);
-  return { companyId: data.company_id as string, canReview };
+
+  // La consulta al equipo se decide por permiso efectivo, no por una lista de
+  // roles escrita en el cliente: asi el menu, las rutas y las vistas consultan
+  // la misma fuente y no pueden contradecirse.
+  const { data: permissionRows } = await supabase.rpc("my_effective_permissions");
+  const permissions = ((permissionRows ?? []) as Array<{ code: string }>).map((row) => row.code);
+  return {
+    companyId: data.company_id as string,
+    canReview: permissions.includes(TEAM_VIEW_PERMISSION),
+  };
 }
 
 function mapCheckIn(row: Record<string, unknown>): WorkCheckIn {

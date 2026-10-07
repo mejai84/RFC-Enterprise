@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { accessibleModules, canAccessModule, defaultLandingPath } from "@/core/permissions";
+import { useEffectivePermissions } from "@/core/permissions/use-effective-permissions";
 import { initialAdministrator } from "@/core/users";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import { createBrowserClient } from "@supabase/ssr";
@@ -128,6 +130,14 @@ const navigation = [
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { permissions, isLoading: arePermissionsLoading } = useEffectivePermissions();
+  // Mientras se resuelve no se oculta nada todavía: se espera, para que el menú
+  // no aparezca completo y luego se retire medio.
+  const allowedHrefs = permissions ? new Set(accessibleModules(permissions).map((module) => module.href)) : null;
+  const isDenied = permissions !== null && !canAccessModule(pathname, permissions);
+  const visibleNavigation = allowedHrefs
+    ? navigation.filter(({ href }) => allowedHrefs.has(href))
+    : navigation;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [currentUser, setCurrentUser] = useState(initialAdministrator);
@@ -169,6 +179,23 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       // La barra lateral permanece expandida si el almacenamiento no está disponible.
     }
   }, []);
+
+  useEffect(() => {
+    if (!isDenied || !permissions) return;
+    const landing = defaultLandingPath(permissions);
+    if (landing === pathname) return;
+    // Escribir la URL no habilita nada: si el módulo no está permitido, la persona
+    // se dirige a su propio punto de partida.
+    window.location.replace(landing);
+  }, [isDenied, permissions, pathname]);
+
+  useEffect(() => {
+    // Un trabajador operativo no debe caer en un resumen que no puede ver.
+    if (arePermissionsLoading || !permissions) return;
+    if (pathname === "/" && !canAccessModule("/dashboard", permissions)) {
+      window.location.replace(defaultLandingPath(permissions));
+    }
+  }, [arePermissionsLoading, permissions, pathname]);
 
   function toggleSidebar() {
     setIsSidebarCollapsed((current) => {
@@ -227,7 +254,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
         <p className="dashboard-nav-label">Operación</p>
         <nav className="dashboard-nav" aria-label="Navegación del portal">
-          {navigation.map(({ icon, label, href }) => {
+          {visibleNavigation.map(({ icon, label, href }) => {
             const isActive = pathname === href;
             return (
               <Link
@@ -294,7 +321,22 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
-        {children}
+        {isDenied ? (
+          <main className="dashboard-content" id="main-content">
+            <div className="access-denied dashboard-panel" role="alert">
+              <h1>No tienes acceso a esta sección</h1>
+              <p>
+                Tu rol no incluye este módulo. Si necesitas trabajar ahí, pídele a administración
+                que ajuste tus permisos.
+              </p>
+              <Link className="btn-primary" href={permissions ? defaultLandingPath(permissions) : "/attendance"}>
+                Ir a mi sección principal
+              </Link>
+            </div>
+          </main>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );

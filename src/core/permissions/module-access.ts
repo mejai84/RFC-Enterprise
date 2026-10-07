@@ -4,7 +4,12 @@ export type ModuleAccess = {
   permissions: string[];
 };
 
-/** A module is visible when the person has at least one of its operations. */
+/**
+ * Módulos de la plataforma y el permiso que abre cada uno.
+ *
+ * El menú lateral y la guarda de ruta consultan esta misma tabla, de modo que lo
+ * que se ve y lo que se puede escribir no pueden quedar desalineados.
+ */
 export const moduleAccess: ModuleAccess[] = [
   { href: "/dashboard", label: "Resumen", permissions: ["dashboard.view", "dashboard.financials.view", "dashboard.intelligence.view"] },
   { href: "/quotes", label: "Cotizaciones", permissions: ["quotes.view", "quotes.manage"] },
@@ -23,4 +28,17 @@ export const moduleAccess: ModuleAccess[] = [
 export function canAccessModule(pathname: string, permissions: readonly string[]) {
   const definition = moduleAccess.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
   return !definition || definition.permissions.some((permission) => permissions.includes(permission));
+}
+
+/** Módulos visibles para la persona, en el orden en que aparecen en el menú. */
+export function accessibleModules(permissions: readonly string[]): ModuleAccess[] {
+  return moduleAccess.filter((item) => item.permissions.some((permission) => permissions.includes(permission)));
+}
+
+/**
+ * Ruta de arranque según el primer módulo permitido. Un trabajador operativo que
+ * solo tiene acceso a su jornada entra directo allí, no a un resumen que no puede ver.
+ */
+export function defaultLandingPath(permissions: readonly string[]): string {
+  return accessibleModules(permissions)[0]?.href ?? "/attendance";
 }

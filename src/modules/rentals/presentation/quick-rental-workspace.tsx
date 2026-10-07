@@ -117,8 +117,10 @@ function InvoiceModal({ rental, onClose }: { rental: QuickRental; onClose: () =>
 
           {/* Firmas */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", marginTop: "2rem" }}>
-            <div style={{ borderTop: "1px solid #9ca3af", paddingTop: 8, textAlign: "center" }}>
-              <small>Firma entrega · RFC Enterprise</small>
+            <div style={{ paddingTop: 8, textAlign: "center" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/rfc-signature.png" alt="Firma de Jorge Figueroa Castro" style={{ display: "block", height: 42, margin: "0 auto 6px", objectFit: "contain", width: 160 }} />
+              <small>Jorge Figueroa Castro · Representante Legal</small>
             </div>
             <div style={{ borderTop: "1px solid #9ca3af", paddingTop: 8, textAlign: "center" }}>
               <small>Firma cliente · {rental.customerName}</small>
@@ -223,10 +225,8 @@ function AttachmentsPanel({ rental }: { rental: QuickRental }) {
 
 // ─── Workspace principal ──────────────────────────────────────────────────────
 export function QuickRentalWorkspace() {
-  const [products, setProducts] = useState<StockProduct[]>(() => {
-    if (typeof window === "undefined") return [...inventoryProducts];
-    try { return JSON.parse(localStorage.getItem("rfc_inventory_products") || "null") as StockProduct[] || [...inventoryProducts]; } catch { return [...inventoryProducts]; }
-  });
+  // Catalogo de referencia: viene del catalogo local, nunca de localStorage como confirmacion.
+  const [products, setProducts] = useState<StockProduct[]>(() => [...inventoryProducts]);
   const [rentals, setRentals] = useState<QuickRental[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
@@ -255,8 +255,8 @@ export function QuickRentalWorkspace() {
     async function load() {
       const db = supabase();
       if (!db) {
-        // Fallback localStorage
-        try { setRentals(JSON.parse(localStorage.getItem("rfc_quick_rentals") || "[]") as QuickRental[]); } catch { /**/ }
+        // Sin sesion no se confirma nada: lista vacia y error explícito.
+        setRentals([]);
         setLoading(false);
         return;
       }
@@ -364,8 +364,9 @@ export function QuickRentalWorkspace() {
         showNotice(`Alquiler creado, pero la firma no pudo guardarse: ${signatureError instanceof Error ? signatureError.message : "intente adjuntarla desde el registro"}.`);
       }
     } else {
-      const stored: QuickRental[] = JSON.parse(localStorage.getItem("rfc_quick_rentals") || "[]");
-      localStorage.setItem("rfc_quick_rentals", JSON.stringify([rental, ...stored]));
+      // Sin sesion activa: no se confirma el alquiler, se avisa al usuario.
+      showNotice("No fue posible guardar el alquiler: inicia sesión en RFC Enterprise para persistirlo en Supabase.");
+      return;
     }
 
     setRentals((prev) => [rental, ...prev]);
@@ -395,8 +396,9 @@ export function QuickRentalWorkspace() {
         extra_charge: updates.extraCharge, return_notes: returnNotes,
       }).eq("id", rental.id);
     } else {
-      const stored: QuickRental[] = JSON.parse(localStorage.getItem("rfc_quick_rentals") || "[]");
-      localStorage.setItem("rfc_quick_rentals", JSON.stringify(stored.map((r) => r.id === rental.id ? { ...r, ...updates } : r)));
+      // Sin sesion activa: no se confirma la devolucion, se avisa al usuario.
+      showNotice("No fue posible registrar la devolucion: inicia sesión en RFC Enterprise para persistirla.");
+      return;
     }
 
     setRentals((prev) => prev.map((r) => r.id === rental.id ? { ...r, ...updates } : r));

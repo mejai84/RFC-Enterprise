@@ -2643,6 +2643,7 @@ function FormalProposalModal({
           {/* Firmas de aceptación */}
           <div className="proposal-signatures">
             <div className="sig-box">
+              <Image className="sig-rfc-official" src="/rfc-signature.png" alt="Firma de Jorge Figueroa Castro" width={180} height={52} />
               <div className="sig-line" />
               <p>
                 <strong>Jorge Figueroa Castro</strong>

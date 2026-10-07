@@ -1632,6 +1632,7 @@
 .sig-space { border-bottom: 1px solid #9ca3af; height: 40px; margin-bottom: 8px; }
 .signature-line strong { display: block; font-size: 12px; }
 .signature-line small { color: #6b7280; font-size: 10.5px; }
+.voucher-company-signature { display:block; height:48px; margin:0 auto 7px; object-fit:contain; width:170px; }
 
 /* Print Media Rules */
 @media print {

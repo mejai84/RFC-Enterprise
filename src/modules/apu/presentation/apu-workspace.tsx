@@ -48,7 +48,7 @@ import { ApuMoneyField } from "./apu-money-field";
 import { ApuQuantityField } from "./apu-quantity-field";
 import { formatApuQuantity, parseApuQuantityInput, safeApuQuantity } from "./apu-quantity";
 import { ApuUnitCombobox } from "./apu-unit-combobox";
-import { exportApuToXlsx } from "./apu-xlsx-export";
+import { exportApusToXlsx } from "./apu-xlsx-export";
 import { ApuResourcePicker } from "./apu-resource-picker";
 import { ApuTransportPicker } from "./apu-transport-picker";
 
@@ -231,6 +231,21 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
 
   function toggleShortagePanel() {
     setIsShortageCollapsed((current) => !current);
+  }
+  async function exportVisibleApus() {
+    if (!visibleApus.length) return;
+    setIsExporting(true);
+    try {
+      const fileLabel = quoteContext?.quoteCode ? `APU-${quoteContext.quoteCode}` : "APU-RFC";
+      await exportApusToXlsx(visibleApus, fileLabel);
+      setSaveState("idle");
+      setSaveMessage(`${visibleApus.length} actividad(es) exportada(s) en un libro RFC, una hoja por actividad.`);
+    } catch (error) {
+      setSaveState("error");
+      setSaveMessage(error instanceof Error ? error.message : "No fue posible generar el archivo XLSX.");
+    } finally {
+      setIsExporting(false);
+    }
   }
   const [projectToLink, setProjectToLink] = useState("");
   const [costType, setCostType] = useState<ProjectBoqCost["costType"]>("committed");
@@ -969,11 +984,11 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 <button
                   type="button"
                   className="apu-print-btn apu-action-secondary"
-                  onClick={() => void exportApuToXlsx(selected)}
+                  onClick={() => void exportVisibleApus()}
                   disabled={isExporting}
-                  title="Descarga el APU en Excel conservando columnas, estilos e impresión"
+                  title="Descarga todas las actividades del contexto actual en un libro RFC, una hoja por actividad"
                 >
-                  {isExporting ? "⏳ Generando…" : "📊 Exportar XLSX"}
+                  {isExporting ? "⏳ Generando…" : `📊 Exportar ${visibleApus.length} APU(s)`}
                 </button>
                 <button
                   type="button"

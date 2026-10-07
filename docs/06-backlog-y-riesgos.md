@@ -48,6 +48,7 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 | APU-010 | Media | Historial de precios y vigencias | Proveedores, ciudades o sedes y alerta de variación de materiales y equipos |
 | APU-011 | Media | Cuadrillas reutilizables | Productividad presupuestada contra real, factor prestacional y horas extra |
 | APU-013 | Baja | Control avanzado del APU | Órdenes de cambio, evidencias adjuntas, AIU, impuestos y contingencias configurables, con permisos finos de revisión, aprobación y exportación |
+| APU-014 | Baja | Plantilla RFC con catálogos de apoyo | La exportación actual entrega una hoja oficial por actividad y puede reimportarse sin hojas auxiliares. Si Operación requiere volver a distribuir tablas maestras de materiales, salarios, dotación o transporte, se debe definir la fuente vigente y su régimen de actualización antes de agregarlas al libro. |
 | REP-002 | Media | Informes por período y rentabilidad | Filtros por período, indicadores de rentabilidad real y permisos por rol para exportaciones sensibles |
 | SITE-002 | Media | Envío directo de solicitudes web | Edge Function que envía la solicitud validada al buzón corporativo con proveedor transaccional y antispam |
 | DOC-001 | Media | Manual de usuario al día | Regenerar el manual desde [15 · Manual de usuario](15-manual-de-usuario.md) para que incluya visitas múltiples, requisición desde visita técnica, auditoría del historial y búsqueda de inventario en el APU |

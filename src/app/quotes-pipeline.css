@@ -1080,6 +1080,7 @@
   margin-right: auto;
 }
 .sig-box p { margin: 2px 0; }
+.sig-rfc-official { display:block; height:52px; margin:0 auto 3px; object-fit:contain; width:180px; }
 
 /* Plantilla premium basada en los formatos comerciales RFC 2026 */
 .proposal-legacy { display: none; }

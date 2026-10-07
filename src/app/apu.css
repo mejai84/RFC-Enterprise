@@ -159,6 +159,8 @@
 .apu-print-signatures { display:grid; grid-template-columns:repeat(3,1fr); gap:32px; margin-top:40px; text-align:center; }
 .apu-print-signature-line { border-bottom:1px solid #333; margin-bottom:6px; height:48px; }
 .apu-print-signatures p { margin:0; font-size:11px; font-weight:700; color:#444; }
+.apu-print-signatures small { color:#444; display:block; font-size:10px; margin-top:2px; }
+.apu-print-official-signature { display:block; height:48px; margin:0 auto 6px; object-fit:contain; width:172px; }
 .apu-print-bottom-actions { border-top:1px solid #d7d7d7; display:flex; justify-content:flex-end; margin-top:28px; padding-top:16px; }
 @media (max-width:600px) { .apu-print-overlay { align-items:stretch; padding:10px; }.apu-print-controls { justify-content:space-between; top:4px; }.apu-print-controls button { min-height:44px; padding:9px 11px; }.apu-print-sheet { border-radius:6px; padding:24px 16px; }.apu-print-category { overflow-x:auto; }.apu-print-category table { min-width:610px; }.apu-print-bottom-actions button { min-height:44px; width:100%; } }
 

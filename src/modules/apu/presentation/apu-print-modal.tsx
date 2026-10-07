@@ -135,8 +135,10 @@ export function ApuPrintModal({ apu, onClose }: { apu: Apu; onClose: () => void 
             <p>Revisó</p>
           </div>
           <div>
-            <div className="apu-print-signature-line" />
-            <p>Aprobó</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/rfc-signature.png" alt="Firma de Jorge Figueroa Castro" className="apu-print-official-signature" />
+            <p>Jorge Figueroa Castro</p>
+            <small>Representante Legal</small>
           </div>
         </footer>
         <footer className="apu-print-bottom-actions no-print">

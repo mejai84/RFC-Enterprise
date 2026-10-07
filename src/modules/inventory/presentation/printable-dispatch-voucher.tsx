@@ -127,9 +127,10 @@ export function PrintableDispatchVoucher({ movement, project, onClose }: Props) 
 
           <footer className="voucher-signatures">
             <div className="signature-line">
-              <div className="sig-space" />
-              <strong>Entregado por (Almacén)</strong>
-              <small>Representaciones Figueroa Castro S.A.S.</small>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="voucher-company-signature" src="/rfc-signature.png" alt="Firma de Jorge Figueroa Castro" />
+              <strong>Jorge Figueroa Castro</strong>
+              <small>Representante Legal · Representaciones Figueroa Castro S.A.S.</small>
             </div>
             <div className="signature-line">
               <div className="sig-space" />

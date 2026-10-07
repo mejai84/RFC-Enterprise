@@ -189,6 +189,10 @@ export type ToolLoan = {
 - Cada tramo puede asociarse a una obra y un frente. Al cambiar de frente se cierra el tramo previo y comienza el siguiente; esto permite posteriormente contrastar horas declaradas por frente con el consumo y costo del proyecto, sin asumir que son horas liquidadas de nómina.
 - La ubicación es evidencia voluntaria y puntual del registro, nunca un requisito para imputar una actividad o costo y nunca seguimiento en segundo plano.
 
+## Alquiler rápido con varios equipos
+
+- Una entrega se registra con una cabecera por cliente y varias líneas de equipo. La factura consolida sus líneas y cada equipo conserva su propia tarifa, garantía, recargo y devolución.
+
 - Buscar artículo presenta coincidencias en vivo por nombre, código, marca, categoría o ubicación.
 - Seleccionar una coincidencia restaura filtros restrictivos para que el resultado se vea en el catálogo.
 - La configuración de categorías y ubicaciones usa formularios alineados, con etiquetas e icono identificador.

@@ -1,0 +1,238 @@
+import { createBrowserClient } from "@supabase/ssr";
+import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import type {
+  AttendanceEmployee,
+  AttendanceProject,
+  DeclaredLocationRecord,
+  WorkCheckIn,
+  WorkCheckInWorkspaceData,
+} from "../domain/work-check-in";
+import type { AttendancePeriodKind } from "../domain/attendance-period";
+import { bogotaToday } from "../domain/attendance-period";
+
+/** Perfiles que, además de consultar su propia declaración, pueden ver la del equipo. */
+export const REVIEW_ROLE_CODES = ["administrator", "resident_engineer", "auditor", "management"] as const;
+
+function client() {
+  if (!isSupabaseConfigured || !supabaseUrl || !supabasePublishableKey) return null;
+  return createBrowserClient(supabaseUrl, supabasePublishableKey);
+}
+
+/**
+ * Errores de negocio que la RPC emite en texto claro para la persona, no para el
+ * desarrollador. Cualquier otro fallo de Supabase se resume sin mostrar códigos
+ * técnicos al usuario final.
+ */
+export function describeWorkCheckInError(cause: unknown): string {
+  const raw = cause instanceof Error ? cause.message : String(cause ?? "");
+  const known: Array<[RegExp, string]> = [
+    [/no está vinculada a un empleado activo/i, "Tu cuenta aún no está asociada a un empleado activo. Pide a administración que la vincule."],
+    [/no autenticado|jwt|token/i, "Tu sesión no está activa. Vuelve a iniciar sesión."],
+    [/obra elegida no pertenece/i, "La obra que elegiste no pertenece a tu empresa."],
+    [/sitio entre 3 y 160/i, "Indica el sitio o frente de trabajo."],
+    [/actividad entre 3 y 500/i, "Describe la actividad que estás realizando."],
+    [/no se puede modificar ni eliminar/i, "Los registros de jornada no se pueden editar ni eliminar."],
+    [/violates row-level security|row-level security/i, "No tienes permiso para registrar esta jornada."],
+  ];
+  for (const [pattern, message] of known) {
+    if (pattern.test(raw)) return message;
+  }
+  return "No fue posible guardar el registro. Revisa los datos e inténtalo de nuevo.";
+}
+
+async function resolveCompany(supabase: NonNullable<ReturnType<typeof client>>, userId: string) {
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("company_id, roles(code)")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.company_id) throw new Error("Tu cuenta no tiene una empresa asignada.");
+  const role = Array.isArray(data.roles) ? data.roles[0] : data.roles;
+  const canReview = REVIEW_ROLE_CODES.includes((role?.code ?? "") as (typeof REVIEW_ROLE_CODES)[number]);
+  return { companyId: data.company_id as string, canReview };
+}
+
+function mapCheckIn(row: Record<string, unknown>): WorkCheckIn {
+  const employee = (Array.isArray(row.employee) ? row.employee[0] : row.employee) as { full_name?: string } | null;
+  const project = (Array.isArray(row.project) ? row.project[0] : row.project) as
+    | { code?: string; name?: string }
+    | null;
+  const checkedInAt = String(row.checked_in_at);
+  const localDate = (row.local_date as string | undefined) ?? checkedInAt.slice(0, 10);
+  return {
+    id: String(row.id),
+    employeeId: String(row.employee_id),
+    employeeName: employee?.full_name ?? (row.employee_name as string | undefined) ?? "Empleado",
+    projectId: (row.project_id as string | undefined) ?? undefined,
+    projectLabel: (row.project_label as string | undefined) ?? (project ? `${project.code} · ${project.name}` : undefined),
+    siteName: String(row.site_name),
+    activityDescription: String(row.activity_description),
+    checkedInAt,
+    localDate,
+    localTime: (row.local_time as string | undefined) ?? checkedInAt.slice(11, 16),
+    location:
+      typeof row.location_latitude === "number" && typeof row.location_longitude === "number"
+        ? {
+            latitude: row.location_latitude,
+            longitude: row.location_longitude,
+            accuracyMeters:
+              typeof row.location_accuracy_m === "number" ? row.location_accuracy_m : null,
+            label: (row.location_label as string | undefined) ?? undefined,
+          }
+        : undefined,
+  };
+}
+
+export async function loadWorkCheckInWorkspaceData(): Promise<WorkCheckInWorkspaceData | null> {
+  const supabase = client();
+  if (!supabase) return null;
+  const { data: auth, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!auth.user) return null;
+
+  const { companyId, canReview } = await resolveCompany(supabase, auth.user.id);
+
+  const [ownEmployeeResult, projectsResult, employeesResult, checkInsResult] = await Promise.all([
+    // El vínculo con el empleado sale de la sesión: nunca se elige a mano.
+    supabase
+      .from("employees")
+      .select("id, full_name, job_title")
+      .eq("profile_id", auth.user.id)
+      .eq("company_id", companyId)
+      .eq("is_active", true)
+      .maybeSingle(),
+    supabase
+      .from("projects")
+      .select("id, code, name, location")
+      .eq("company_id", companyId)
+      .in("status", ["pending", "active"])
+      .order("name"),
+    supabase
+      .from("employees")
+      .select("id, full_name, job_title")
+      .eq("company_id", companyId)
+      .eq("is_active", true)
+      .order("full_name"),
+    supabase.rpc("list_work_check_ins", {
+      p_from: bogotaToday(),
+      p_to: bogotaToday(),
+      p_employee_id: null,
+      p_project_id: null,
+      p_search: null,
+      p_limit: 12,
+    }),
+  ]);
+
+  const own = ownEmployeeResult.data as { id: string; full_name: string; job_title: string | null } | null;
+  const linkedEmployee: AttendanceEmployee | undefined = own
+    ? { id: own.id, fullName: own.full_name, jobTitle: own.job_title ?? undefined }
+    : undefined;
+
+  return {
+    employeeName: linkedEmployee?.fullName,
+    canReview,
+    projects: ((projectsResult.data ?? []) as Array<{ id: string; code: string; name: string; location: string | null }>).map(
+      (project) => ({ id: project.id, label: `${project.code} · ${project.name}`, location: project.location ?? "" }),
+    ),
+    // Un empleado sin vínculo no registra: se le informa sin exponer la lista del equipo.
+    employees: canReview
+      ? ((employeesResult.data ?? []) as Array<{ id: string; full_name: string; job_title: string | null }>).map(
+          (row) => ({ id: row.id, fullName: row.full_name, jobTitle: row.job_title ?? undefined }),
+        )
+      : linkedEmployee
+        ? [linkedEmployee]
+        : [],
+    checkIns: ((checkInsResult.data ?? []) as Array<Record<string, unknown>>).map(mapCheckIn),
+  };
+}
+
+/**
+ * Carga las declaraciones del período. El filtro de período viaja al servidor para
+ * que el día local se resuelva en Postgres y no dependa del huso del navegador.
+ */
+export async function loadAttendanceConsultation(input: {
+  kind: AttendancePeriodKind;
+  from: string;
+  to: string;
+  employeeId: string;
+  projectId: string;
+  search: string;
+}): Promise<WorkCheckIn[]> {
+  const supabase = client();
+  if (!supabase) throw new Error("Supabase no está configurado.");
+  const { data, error } = await supabase.rpc("list_work_check_ins", {
+    p_from: input.from,
+    p_to: input.to,
+    p_employee_id: input.employeeId || null,
+    p_project_id: input.projectId || null,
+    p_search: input.search.trim() || null,
+    p_limit: 800,
+  });
+  if (error) throw error;
+  return ((data ?? []) as Array<Record<string, unknown>>).map(mapCheckIn);
+}
+
+export async function loadAttendanceEmployees(): Promise<AttendanceEmployee[]> {
+  const supabase = client();
+  if (!supabase) return [];
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return [];
+  const { companyId } = await resolveCompany(supabase, auth.user.id);
+  const { data } = await supabase
+    .from("employees")
+    .select("id, full_name, job_title")
+    .eq("company_id", companyId)
+    .eq("is_active", true)
+    .order("full_name");
+  return ((data ?? []) as Array<{ id: string; full_name: string; job_title: string | null }>).map((row) => ({
+    id: row.id,
+    fullName: row.full_name,
+    jobTitle: row.job_title ?? undefined,
+  }));
+}
+
+export async function loadAttendanceProjects(): Promise<AttendanceProject[]> {
+  const supabase = client();
+  if (!supabase) return [];
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return [];
+  const { companyId } = await resolveCompany(supabase, auth.user.id);
+  const { data } = await supabase
+    .from("projects")
+    .select("id, code, name, location")
+    .eq("company_id", companyId)
+    .in("status", ["pending", "active"])
+    .order("name");
+  return ((data ?? []) as Array<{ id: string; code: string; name: string; location: string | null }>).map((project) => ({
+    id: project.id,
+    label: `${project.code} · ${project.name}`,
+    location: project.location ?? "",
+  }));
+}
+
+/**
+ * Alta de la declaración. El navegador no inserta: llama a la RPC, que toma la hora
+ * del servidor y resuelve empleado y empresa a partir de la sesión.
+ */
+export async function registerWorkCheckIn(
+  projectId: string,
+  siteName: string,
+  activityDescription: string,
+  location?: DeclaredLocationRecord,
+) {
+  const supabase = client();
+  if (!supabase) throw new Error("Supabase no está configurado.");
+  const { data, error } = await supabase.rpc("register_work_check_in", {
+    p_project_id: projectId || null,
+    p_site_name: siteName,
+    p_activity_description: activityDescription,
+    p_location_latitude: location?.latitude ?? null,
+    p_location_longitude: location?.longitude ?? null,
+    p_location_accuracy_m: location?.accuracyMeters ?? null,
+    p_location_label: location?.label ?? null,
+  });
+  if (error) throw new Error(describeWorkCheckInError(error));
+  return data as { id: string; checked_in_at: string } | null;
+}

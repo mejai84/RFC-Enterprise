@@ -23,7 +23,10 @@ const securityHeaders = [
   },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+    // La geolocalizacion se permite solo dentro de RFC Enterprise y solo cuando el
+    // empleado pulsa el boton del Registro de jornada. Con `geolocation=()` la
+    // funcion quedaba inutilizable en todo el sitio (ADR-110).
+    value: "camera=(), microphone=(), geolocation=(self), browsing-topics=()",
   },
   {
     key: "Content-Security-Policy",

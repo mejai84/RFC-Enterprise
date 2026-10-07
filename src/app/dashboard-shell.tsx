@@ -9,7 +9,7 @@ import { initialAdministrator } from "@/core/users";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import { createBrowserClient } from "@supabase/ssr";
 
-type IconName = "grid" | "briefcase" | "building" | "boxes" | "arrows" | "checklist" | "chart" | "users" | "logout" | "menu" | "bell" | "close" | "sidebar" | "settings";
+type IconName = "grid" | "briefcase" | "building" | "boxes" | "arrows" | "checklist" | "chart" | "users" | "clock" | "logout" | "menu" | "bell" | "close" | "sidebar" | "settings";
 
 function Icon({ name }: { name: IconName }) {
   const paths: Record<IconName, ReactNode> = {
@@ -65,6 +65,7 @@ function Icon({ name }: { name: IconName }) {
         <path d="M3.5 20c.5-3.4 2.4-5 5.5-5s5 1.6 5.5 5M16 5.5a3 3 0 0 1 0 5M17 15c2.1.1 3.5 1.8 3.8 5" />
       </>
     ),
+    clock: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3.5 2" /></>,
     logout: (
       <>
         <path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4" />
@@ -115,6 +116,7 @@ const navigation = [
   { icon: "briefcase" as const, label: "Cotizaciones", href: "/quotes" },
   { icon: "checklist" as const, label: "APU", href: "/apu" },
   { icon: "building" as const, label: "Proyectos & Obras", href: "/projects" },
+  { icon: "clock" as const, label: "Registro de jornada", href: "/attendance" },
   { icon: "briefcase" as const, label: "Alquiler rápido", href: "/rentals" },
   { icon: "boxes" as const, label: "Inventarios", href: "/inventory" },
   { icon: "arrows" as const, label: "Movimientos", href: "/movements" },

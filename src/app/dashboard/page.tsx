@@ -18,13 +18,16 @@ export default async function DashboardPage() {
   const inventory = await getInventoryProducts();
   // El shell lo pone `dashboard/layout.tsx`. Si se envolviera aqui tambien, la
   // barra lateral y la cabecera aparecerian duplicadas.
+  // El saludo y los indicadores ejecutivos van primero. Las tarjetas personales
+  // (mi jornada, alquileres) se muestran despues: un gerente las busca abajo y un
+  // trabajador las encuentra cuando mira hacia el final del bloque.
   return (
     <>
+      <DashboardExecutiveWorkspace initialProducts={inventory.products ?? []} />
       <div className="exec-summary-grid">
         <AttendanceSummaryCard />
         <RentalsSummaryCard />
       </div>
-      <DashboardExecutiveWorkspace initialProducts={inventory.products ?? []} />
     </>
   );
 }

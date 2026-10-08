@@ -166,8 +166,8 @@ const measurementUnits: MeasurementUnit[] = [
   { name: "Grado Celsius", symbol: "°C", aliases: ["celsius", "grado", "temperatura"] },
 ];
 
-type QuoteContext = { quoteId?: string; quoteCode?: string; quoteTitle?: string; quoteStatus?: string };
-type QuoteOption = { id: string; code: string; title: string; client: string; status: string };
+type QuoteContext = { quoteId?: string; quoteCode?: string; quoteTitle?: string; quoteStatus?: string; laborRateTableId?: string };
+type QuoteOption = { id: string; code: string; title: string; client: string; status: string; laborRateTableId?: string };
 
 /** Al entrar directo se muestran solo APUs generales; los de una cotización
  * se ven únicamente al abrir su contexto desde Cotizaciones o el buscador. */
@@ -201,7 +201,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   const [boqItems, setBoqItems] = useState<ProjectBoqItem[]>([]);
   const [boqCosts, setBoqCosts] = useState<ProjectBoqCost[]>([]);
   /** Datos de la cotización de origen, para buscar y ubicar cada actividad. */
-  const [quoteOrigin, setQuoteOrigin] = useState<Map<string, { code: string; title: string; client: string; status: string }>>(new Map());
+  const [quoteOrigin, setQuoteOrigin] = useState<Map<string, { code: string; title: string; client: string; status: string; laborRateTableId?: string }>>(new Map());
   const [quoteSearch, setQuoteSearch] = useState("");
   const [search, setSearch] = useState("");
   /** Rubros plegados. Solo es una preferencia visual, no afecta los datos guardados. */
@@ -274,6 +274,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
       .filter((quote) => [quote.code, quote.title, quote.client].some((value) => value.toLocaleLowerCase("es-CO").includes(search)))
       .slice(0, 6);
   }, [quoteOptions, quoteSearch]);
+  const activeLaborTableId = quoteContext?.laborRateTableId ?? (quoteContext?.quoteId ? quoteOrigin.get(quoteContext.quoteId)?.laborRateTableId : undefined);
 
   function openQuoteApu(quote: QuoteOption) {
     const params = new URLSearchParams({
@@ -281,6 +282,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
       quoteCode: quote.code,
       quoteTitle: quote.title,
       quoteStatus: quote.status,
+      ...(quote.laborRateTableId ? { laborRateTableId: quote.laborRateTableId } : {}),
     });
     router.push(`/apu?${params.toString()}`);
   }
@@ -402,14 +404,14 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
 
   useEffect(() => {
     let active = true;
-    getLaborPositionCatalog()
+    getLaborPositionCatalog(activeLaborTableId)
       .then((catalog) => { if (active) setLaborCatalog(catalog); })
       .catch(() => {
         if (active) setLaborCatalog({ positions: [], source: "fallback", warning: "No fue posible cargar el catálogo de cargos. Intenta actualizar la página." });
       })
       .finally(() => { if (active) setIsLaborLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [activeLaborTableId]);
 
   useEffect(() => {
     let active = true;

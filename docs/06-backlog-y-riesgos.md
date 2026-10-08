@@ -83,3 +83,5 @@ Lo ya resuelto se retir√≥ de aqu√≠ y qued√≥ registrado como decisiones en
 
 - **Pendiente de evoluci√≥n ‚Äî importaci√≥n de tablas salariales:** los formatos de clientes no son homog√©neos. La primera entrega permite crear tabla y cargos manualmente; la pr√≥xima debe a√±adir asistente de importaci√≥n con vista previa y mapeo de columnas, sin interpretar autom√°ticamente hojas informativas.
 
+
+- **SAL-002 ó ImportaciÛn documental de salarios:** Excel se importa con selecciÛn de hoja, mapeo y vista previa. PDF y Word quedan como fuente documental hasta implementar extracciÛn asistida con confirmaciÛn obligatoria; no se debe publicar una tabla inferida autom·ticamente.

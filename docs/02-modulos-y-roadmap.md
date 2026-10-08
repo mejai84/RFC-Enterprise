@@ -221,3 +221,5 @@ Circuito de abastecimiento (pendiente el eslabÃ³n de compra): APU â†’ conversiÃ³
 
 - **Tablas salariales versionadas (en curso):** ConfiguraciÃ³n incorpora Costos y tablas salariales para administrar tablas de mano de obra por cliente, vigencia, actividad y cargo; Cotizaciones selecciona una tabla y conserva su copia de valores.
 
+
+- **Costos / tablas salariales (2026-10-08):** la tabla elegida por cada cotización alimenta el selector de cargos del APU. Se persiste el vínculo cargo–nivel–tabla y se distingue auxilio legal de transporte de viáticos operativos. Pendiente: ampliar el importador para Word/PDF con una etapa de revisión humana; Excel ya usa mapeo y vista previa.

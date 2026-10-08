@@ -348,6 +348,8 @@ export type ProjectLaborInput = {
   dotacion: number;
   hours: HoursInput;
   perDiem: ProjectPerDiemValues;
+  /** Hotel y transporte operativo aplican solo a cargos desplazados. */
+  aplicaViaticos?: boolean;
 };
 
 export type PerDiemRow = {
@@ -418,7 +420,8 @@ export function computeProjectLabor(input: ProjectLaborInput): ProjectLaborResul
   const subTotalHoja = subTotalAntesSalud - saludYPension;
 
   const perDiemRows: PerDiemRow[] = perDiemConcepts.map((concept) => {
-    const raw = input.perDiem[concept.key] ?? 0;
+    const isTravelExpense = concept.key === "hotel" || concept.key === "transporte";
+    const raw = isTravelExpense && !input.aplicaViaticos ? 0 : input.perDiem[concept.key] ?? 0;
     const total =
       concept.mode === "regla" ? raw * diasAlojamiento * personal : raw * personal;
     return {
@@ -504,6 +507,8 @@ export type QuoteLaborSnapshot = {
   }[];
   /** Conceptos por obra, tal como los escribió el dueño. */
   perDiem: ProjectPerDiemValues;
+  viaticos?: Record<string, boolean>;
+  viaticReasons?: Record<string, string>;
   hours: HoursInput;
   /** Resultado por cargo, ya congelado. */
   resultados: {

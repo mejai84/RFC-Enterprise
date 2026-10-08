@@ -17,6 +17,8 @@ export type LaborPosition = {
   validTo: string;
   sourceDocument: string;
   summary: string;
+  receivesHotel?: boolean;
+  receivesOperationalTransport?: boolean;
 };
 
 export type LaborPositionCatalog = {

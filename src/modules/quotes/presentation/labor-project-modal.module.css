@@ -305,3 +305,24 @@
     width: 100%;
   }
 }
+.labor-project-viatic {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 8px;
+  align-items: center;
+}
+
+.labor-project-viatic input[type="checkbox"] {
+  width: 18px;
+  min-height: 18px;
+}
+
+.labor-project-viatic small {
+  grid-column: 2;
+  color: #64748b;
+}
+
+.labor-project-viatic-reason {
+  grid-column: span 2;
+}

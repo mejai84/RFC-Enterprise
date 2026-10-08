@@ -665,3 +665,7 @@ La ruta p√∫blica `/` presenta el s√≠mbolo RFC de carga durante un m√≠nimo de dos
 
 ## 2026-10-08 ‚Äî Vi√°ticos por desplazamiento en mano de obra
 Hotel y transporte operativo se modelan como vi√°ticos de desplazamiento, separados del auxilio legal de transporte. Por defecto aplican a Conductor y Capataz, porque se desplazan a los frentes de obra; los dem√°s cargos locales no los reciben. Cada l√≠nea del APU podr√° registrar una excepci√≥n justificada cuando el proyecto lo requiera.
+
+## 2026-10-08 ó Costeo salarial por cargo y vi·ticos
+
+Los cargos del APU se resuelven desde la tabla salarial elegida en la cotizaciÛn. Cada cargo toma el valor de su nivel dentro de esa tabla y queda congelado al guardar la oferta. Hotel y transporte operativo son vi·ticos de desplazamiento: Capataz y Conductor los reciben por defecto; cualquier otro cargo exige una justificaciÛn que queda dentro de la instant·nea de la cotizaciÛn. Los dem·s conceptos de la obra se calculan por separado del auxilio legal de transporte.

@@ -43,6 +43,8 @@ export type ProjectLaborDraft = {
   dotacion: Record<string, number>;
   /** Solo los cargos que el usuario dejó marcados. */
   incluidos: string[];
+  viaticos: Record<string, boolean>;
+  viaticReasons: Record<string, string>;
   snapshot: QuoteLaborSnapshot;
 };
 
@@ -73,6 +75,8 @@ export function LaborProjectModal({
   const [personal, setPersonal] = useState<Record<string, number>>({});
   const [dotacion, setDotacion] = useState<Record<string, number>>({});
   const [incluidos, setIncluidos] = useState<string[]>([]);
+  const [viaticos, setViaticos] = useState<Record<string, boolean>>({});
+  const [viaticReasons, setViaticReasons] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!tableId || !supabaseUrl || !supabasePublishableKey) return;
@@ -85,9 +89,25 @@ export function LaborProjectModal({
       .eq("labor_rate_table_id", tableId)
       .order("sort_order")
       .order("name")
-      .then(({ data, error: loadError }) => {
-        if (loadError) setError(loadError.message);
-        else setEntries((data ?? []) as Entry[]);
+      .then(async ({ data, error: loadError }) => {
+        if (loadError) {
+          setError(loadError.message);
+        } else {
+          const baseEntries = (data ?? []) as Entry[];
+          const { data: roleRows, error: rolesError } = await supabase
+            .from("labor_rate_roles")
+            .select("id,code,name,labor_rate_entry_id")
+            .eq("labor_rate_table_id", tableId)
+            .eq("is_active", true)
+            .order("name");
+          if (rolesError) setError(rolesError.message);
+          const byEntry = new Map(baseEntries.map((entry) => [entry.id, entry]));
+          const roleEntries = (roleRows ?? []).flatMap((role) => {
+            const rate = byEntry.get(role.labor_rate_entry_id);
+            return rate ? [{ ...rate, id: role.id, code: role.code, name: role.name }] : [];
+          });
+          setEntries(roleEntries.length ? roleEntries : baseEntries);
+        }
         setCargando(false);
       });
   }, [tableId]);
@@ -124,10 +144,11 @@ export function LaborProjectModal({
             dotacion: dotacion[code] ?? 0,
             hours,
             perDiem,
+            aplicaViaticos: viaticos[code] ?? /capataz|conductor/i.test(entry.name),
           });
         })
         .filter((r): r is NonNullable<typeof r> => r !== null),
-    [entries, incluidos, personal, dias, diasAlojamiento, dotacion, hours, perDiem],
+    [entries, incluidos, personal, dias, diasAlojamiento, dotacion, hours, perDiem, viaticos],
   );
 
   const totalObra = resultados.reduce((sum, r) => sum + r.totalPeriodo, 0);
@@ -142,6 +163,15 @@ export function LaborProjectModal({
 
   function guardar() {
     if (resultados.length === 0) return;
+    const exception = resultados.find((result) => {
+      const isDefault = /capataz|conductor/i.test(result.input.nombre);
+      const applies = viaticos[result.input.codigo ?? ""] ?? isDefault;
+      return applies && !isDefault && !viaticReasons[result.input.codigo ?? ""]?.trim();
+    });
+    if (exception) {
+      setError(`Indique por que ${exception.input.nombre} requiere viaticos de desplazamiento.`);
+      return;
+    }
     onSave({
       dias,
       diasAlojamiento,
@@ -152,6 +182,8 @@ export function LaborProjectModal({
       personal,
       dotacion,
       incluidos,
+      viaticos,
+      viaticReasons,
       snapshot: {
         dias,
         diasAlojamiento,
@@ -172,6 +204,8 @@ export function LaborProjectModal({
           };
         }),
         perDiem,
+        viaticos,
+        viaticReasons,
         hours,
         resultados: resultados.map((r) => ({
           codigo: r.input.codigo ?? "",
@@ -337,6 +371,8 @@ export function LaborProjectModal({
               {entries.map((entry) => {
                 const activo = incluidos.includes(entry.code);
                 const resultado = resultados.find((r) => r.input.codigo === entry.code);
+                const viaticoPredeterminado = /capataz|conductor/i.test(entry.name);
+                const aplicaViaticos = viaticos[entry.code] ?? viaticoPredeterminado;
                 return (
                   <div key={entry.id} className={`${styles["labor-project-entry"]} ${activo ? "is-on" : ""}`}>
                     <label className={styles["labor-project-check"]}>
@@ -384,6 +420,17 @@ export function LaborProjectModal({
                             }
                           />
                         </label>
+                        <label className={styles["labor-project-viatic"]}>
+                          <input type="checkbox" checked={aplicaViaticos} onChange={(e) => setViaticos({ ...viaticos, [entry.code]: e.target.checked })} />
+                          Hotel y transporte operativo
+                          <small>{viaticoPredeterminado ? "Aplican por defecto a este cargo desplazado." : "Solo active si este cargo viaja al frente de obra."}</small>
+                        </label>
+                        {aplicaViaticos && !viaticoPredeterminado ? (
+                          <label className={styles["labor-project-viatic-reason"]}>
+                            Motivo de la excepcion
+                            <input value={viaticReasons[entry.code] ?? ""} onChange={(e) => setViaticReasons({ ...viaticReasons, [entry.code]: e.target.value })} placeholder="Ej. desplazamiento temporal al frente" />
+                          </label>
+                        ) : null}
                         {resultado ? (
                           <p className={styles["labor-project-entry-total"]}>
                             <span>

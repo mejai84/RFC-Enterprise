@@ -253,3 +253,7 @@ Las tarifas de mano de obra se administran por empresa, cliente/contrato, versi√
 
 ## Vi√°ticos de mano de obra
 El auxilio legal de transporte forma parte de la tarifa salarial. Hotel y transporte operativo son vi√°ticos por desplazamiento: se aplican por defecto a Conductor y Capataz y se pueden habilitar excepcionalmente por l√≠nea de APU, con motivo y trazabilidad.
+
+## Costeo por cargo y vi·ticos (2026-10-08)
+
+La cotizaciÛn selecciona la tabla salarial vigente y el APU obtiene los cargos de esa tabla, aplicando el valor del nivel correspondiente. La instant·nea de cotizaciÛn conserva el c·lculo para auditorÌa. El auxilio legal de transporte pertenece al salario; hotel y transporte operativo son vi·ticos por desplazamiento, predeterminados para Capataz y Conductor y excepcionales para otros cargos con motivo documentado.

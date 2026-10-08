@@ -10,5 +10,5 @@ export function LoginSplash() {
     const timer = window.setTimeout(() => setVisible(false), reduced ? 800 : 3000);
     return () => window.clearTimeout(timer);
   }, []);
-  return visible ? <BrandLoader label="Bienvenido a RFC Enterprise" overlay onClick={() => setVisible(false)} /> : null;
+  return visible ? <BrandLoader label="Bienvenido a RFC Enterprise" overlay /> : null;
 }

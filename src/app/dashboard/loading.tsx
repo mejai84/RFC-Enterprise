@@ -1,15 +1,13 @@
-import styles from "./loading.module.css";
+import styles from "../loading.module.css";
 
 /**
- * Loader premium de la aplicación: blanco, con el logo 3D como pieza central.
- * Se muestra mientras viaja una ruta. No explica ni añade pasos: solo identidad.
+ * Loader del Resumen: este si carga operaciones reales, asi que dice lo que se
+ * esta trayendo en vez de una frase generica.
  */
-export default function Loading() {
+export default function DashboardLoading() {
   return (
     <div className={styles.screen} role="status" aria-live="polite" aria-label="Cargando">
       <div className={styles.logoWrap}>
-        {/* El logo en 3D es la pieza principal; en movimiento reducido se deja
-            quieto como cualquier otro logotipo. */}
         <video
           className={styles.logoVideo}
           src="/Create_3D_logo_video_20261007161453.mp4"
@@ -21,7 +19,7 @@ export default function Loading() {
           aria-hidden="true"
         />
       </div>
-      <p className={styles.text}>Preparando tu espacio de trabajo…</p>
+      <p className={styles.text}>Cargando las obras y los materiales…</p>
       <span className={styles.bar} aria-hidden="true" />
     </div>
   );

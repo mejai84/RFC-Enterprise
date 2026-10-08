@@ -9,7 +9,7 @@ type QuoteRow = {
   cost_breakdown: Quote["costBreakdown"] | null; technical_visit: Quote["technicalVisit"] | null; technical_visits: Quote["technicalVisits"] | null; request_body: string | null;
   validity_days: number | null; sent_at: string | null; delivery_time_weeks: number | null;
   payment_terms: string | null; folder_url: string | null; received_at: string; deadline: string | null;
-  next_action: string | null; project_id: string | null; notes: string | null; created_at: string; updated_at: string;
+  next_action: string | null; project_id: string | null; notes: string | null; labor_rate_table_id: string | null; labor_rate_snapshot: Record<string, unknown> | null; created_at: string; updated_at: string;
 };
 
 function client() {
@@ -30,7 +30,7 @@ function toQuote(row: QuoteRow, history: QuoteHistoryEntry[]): Quote {
     validityDays: row.validity_days ?? undefined, sentAt: row.sent_at ?? undefined,
     deliveryTimeWeeks: row.delivery_time_weeks ?? undefined, paymentTerms: row.payment_terms ?? undefined,
     folderUrl: row.folder_url ?? undefined, receivedAt: row.received_at, deadline: row.deadline ?? undefined,
-    nextAction: row.next_action ?? undefined, projectId: row.project_id ?? undefined, notes: row.notes ?? undefined,
+    nextAction: row.next_action ?? undefined, projectId: row.project_id ?? undefined, notes: row.notes ?? undefined, laborRateTableId: row.labor_rate_table_id ?? undefined, laborRateSnapshot: row.labor_rate_snapshot ?? undefined,
     history, createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }

@@ -218,3 +218,6 @@ Visitas técnicas: una cotización o obra admite varias visitas numeradas (`VISI
 
 Circuito de abastecimiento (pendiente el eslabón de compra): APU → conversión a obra → requisición al almacén → **orden de compra (COM-01, no construido)** → entrada al inventario → despacho a la obra. El APU costea el requerimiento aunque el artículo no tenga existencias hoy.
 <!-- Registro 2026-10-08: La portada pública usa una secuencia WebP del logo RFC controlada por desplazamiento: al bajar avanza y al subir retrocede, sin video ni imagen-póster intermedia. La vista explosiva de estructura emplea una segunda secuencia con el mismo comportamiento dentro de su panel; ambas cargan fotogramas por proximidad, conservan una imagen inicial y respetan reducción de movimiento. La composición se adapta a una columna desde 860 px y a acciones de ancho completo desde 520 px. -->
+
+- **Tablas salariales versionadas (en curso):** Configuración incorpora Costos y tablas salariales para administrar tablas de mano de obra por cliente, vigencia, actividad y cargo; Cotizaciones selecciona una tabla y conserva su copia de valores.
+

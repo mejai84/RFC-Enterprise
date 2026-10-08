@@ -246,3 +246,7 @@ La conversión Cotización→Obra deja persistida la obra en `projects` con su p
 Las asignaciones de personal se guardan por obra y empleado. Una reapertura registra motivo, fecha real previa y nueva fecha estimada junto con el cambio de estado. Los ajustes actualizan el presupuesto y su historial en una misma transacción y no permiten dejarlo por debajo del costo acumulado del Kardex. Las líneas de requisición se consultan siempre desde `inventory_requisition_lines`, por lo que la ficha de obra no presenta solicitudes vacías después de recargar.
 
 La presentación de costos, Kardex, requisiciones y fichas de obra conserva el sistema visual operativo del portal; la identidad Graphite se limita al sitio público de inicio y no altera estos módulos.
+
+## Tablas salariales por cliente
+Las tarifas de mano de obra se administran por empresa, cliente/contrato, versión y vigencia. Cada cargo conserva salario básico, transporte, alimentación, componente no salarial y total diario. La cotización referencia una tabla, pero usa una instantánea al guardarse para mantener trazabilidad del APU y la propuesta.
+

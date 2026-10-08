@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import { LaborRateSettingsPanel } from "./labor-rate-settings-panel";
 import {
   BRANDING_BUCKET,
   brandingPath,
@@ -13,12 +14,13 @@ import {
   type ProposalDefaults,
 } from "../use-company-config";
 
-type SettingsTab = "branding" | "proposal" | "company";
+type SettingsTab = "branding" | "proposal" | "company" | "labor_rates";
 
 const tabs: Array<{ value: SettingsTab; label: string; hint: string }> = [
   { value: "branding", label: "Firma y membrete", hint: "Quién firma en nombre de RFC y en qué documentos." },
   { value: "proposal", label: "Propuesta", hint: "Valores con los que se abre una cotización nueva." },
   { value: "company", label: "Empresa y nómina", hint: "Datos de la empresa, nómina e impresión." },
+  { value: "labor_rates", label: "Costos y tablas salariales", hint: "Tablas de mano de obra por cliente, vigencia y cargo." },
 ];
 
 const signatureToggles: Array<{ key: keyof CompanyBranding; label: string }> = [
@@ -343,6 +345,8 @@ export function SettingsWorkspace() {
           </button>
         </form>
       ) : null}
+
+      {tab === "labor_rates" && config?.companyId ? <LaborRateSettingsPanel companyId={config.companyId} /> : null}
 
       {tab === "company" ? (
         <form className="dashboard-panel settings-card" onSubmit={saveCompany}>

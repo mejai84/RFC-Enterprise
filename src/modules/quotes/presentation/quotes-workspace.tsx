@@ -8,6 +8,8 @@
 
 import { CompanySignature } from "@/core/settings/presentation/company-signature";
 import { useCompanyConfig } from "@/core/settings/use-company-config";
+import { createBrowserClient } from "@supabase/ssr";
+import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 
 import {
   useState,
@@ -721,6 +723,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       const laborScale = String(fd.get("laborScale") ?? "rfc_standard") as
         | "rfc_standard"
         | "ocensa";
+      const laborRateTableId = String(fd.get("laborRateTableId") ?? "").trim() || undefined;
 
       // Valores de pre-costeo preliminares
       const matVal =
@@ -758,6 +761,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
               }
             : undefined,
         laborScale,
+        laborRateTableId,
         validityDays,
         deliveryTimeWeeks,
         paymentTerms,
@@ -2054,6 +2058,12 @@ function NewQuoteModal({
   // desde Configuracion para no escribirlos a mano en cada cotizacion nueva.
   const { config: companySettings } = useCompanyConfig();
   const proposalDefaults = companySettings?.proposalDefaults;
+  const [laborTables, setLaborTables] = useState<Array<{ id: string; name: string; version: string; client_name: string }>>([]);
+  useEffect(() => {
+    if (!companySettings?.companyId || !supabaseUrl || !supabasePublishableKey) return;
+    const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
+    void supabase.from("labor_rate_tables").select("id,name,version,client_name").eq("company_id", companySettings.companyId).eq("is_active", true).order("valid_from", { ascending: false }).then(({ data }) => setLaborTables(data ?? []));
+  }, [companySettings?.companyId]);
 
   // Vista previa en vivo del código que se generará
   const previewCode = useMemo(() => {

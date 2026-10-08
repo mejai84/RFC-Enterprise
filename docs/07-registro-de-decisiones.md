@@ -636,3 +636,10 @@ La edición inicia con un selector visual de obras y abre el formulario únicame
 <!-- ADR-123 (Aceptada, 2026-10-07): las mutaciones de obra que alteran más de un dato se ejecutan en una transacción de base de datos. Reabrir conserva motivo, fecha previa y nueva fecha; ajustar presupuesto actualiza el presupuesto y añade su historial de forma indivisible. Personal de obra se modela en `project_employees`, con empresa y empleado validados; el cliente no fabrica identificadores ni declara éxito hasta que Supabase responde. -->
 <!-- ADR-124 (Aceptada, 2026-10-07): categoría, ubicación y responsable de Kardex son datos maestros y operativos persistentes, no arreglos de pantalla. Las categorías se almacenan por empresa, las ubicaciones usan el maestro estructurado existente y el responsable queda en el movimiento de inventario. -->
 <!-- ADR-125 (Aceptada, corregida 2026-10-07): Graphite es el lenguaje visual del sitio público de inicio, no de los módulos operativos. El lienzo público es casi negro, las superficies se separan con bordes grafito de 1 px, la jerarquía se apoya en blanco suave y gris niebla, y el naranja queda reservado a atención o enlaces. Las acciones principales son monocromas; el movimiento se reduce prácticamente por completo con `prefers-reduced-motion` y no condiciona ninguna operación. -->
+
+## 2026-10-08 — Ubicación y trazabilidad de tablas salariales
+Se acuerda que la administración se hace en **Configuración → Costos y tablas salariales**, no dentro del APU. Al crear una cotización se elige una tabla vigente y el sistema guarda una instantánea de sus componentes; actualizar la tabla después no altera costos históricos.
+
+
+## 2026-10-08 — Introducción de la portada
+La ruta pública `/` presenta el símbolo RFC de carga durante un mínimo de dos segundos antes de revelar la portada. Las rutas internas conservan sus loaders propios y no reciben esta demora.

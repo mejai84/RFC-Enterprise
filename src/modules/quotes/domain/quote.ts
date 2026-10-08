@@ -165,6 +165,8 @@ export type Quote = {
   projectCode?: string;     // Código del proyecto vinculado
   notes?: string;           // Observaciones generales
   laborScale?: "rfc_standard" | "ocensa"; // Escala salarial aplicada a los APUs de esta cotización
+  laborRateTableId?: string; // Tabla salarial persistida para esta cotización.
+  laborRateSnapshot?: Record<string, unknown>; // Copia inmutable de los valores aplicados.
   history: QuoteHistoryEntry[];
   createdAt: string;
   updatedAt: string;

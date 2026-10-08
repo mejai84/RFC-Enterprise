@@ -68,3 +68,6 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 - **2026-10-07**: documentación técnica de cotizaciones: procedimiento de trabajo y matriz de riesgos en bucket privado, control de versiones y observaciones del cliente; la conversión a obra queda bloqueada en la base de datos hasta la reaprobación de las dos versiones vigentes.
 - **2026-10-07**: proyecto tipo Alquiler (ALQ-001) con periodo de entrega y devolución, cargos por extensión y mora, y total a facturar; persistencia real del alquiler rápido (ALQ-003) con tablas, bucket de adjuntos y firma del cliente; inlet del teléfono corregido. Sin reservas de `localStorage` como fuente de negocio.
 - **2026-10-06**: conversión Cotización→Obra transaccional y atómica, historial con responsable tomado de la sesión, múltiples visitas técnicas con evidencia y requisición real, búsqueda de inventario en el APU conectada a Supabase, modales con cabecera y acciones fijas, y adaptación móvil de Obras y Proyectos.
+
+- **Pendiente de evolución — importación de tablas salariales:** los formatos de clientes no son homogéneos. La primera entrega permite crear tabla y cargos manualmente; la próxima debe añadir asistente de importación con vista previa y mapeo de columnas, sin interpretar automáticamente hojas informativas.
+

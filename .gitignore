@@ -59,3 +59,10 @@ encoding-check.cjs
 # Verificaciones y artefactos locales
 /encoding-check.cjs
 /tsconfig.tsbuildinfo
+
+# Servidor de desarrollo y artefactos locales de esta sesion
+/dev*.log
+/local-home-preview*.log
+/tmp-*.png
+/vlc-help.txt
+/.tmp-salary-tables/

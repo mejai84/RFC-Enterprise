@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 
 type ParallaxVideoProps = {
   className: string;
-  poster: string;
+  poster?: string;
   source: string;
   speed?: number;
+  /** El hero carga su video desde el HTML inicial, sin intercambiar una imagen estática. */
+  eager?: boolean;
 };
 
-export function ParallaxVideo({ className, poster, source, speed = 0.11 }: ParallaxVideoProps) {
+export function ParallaxVideo({ className, poster, source, speed = 0.11, eager = false }: ParallaxVideoProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [canAnimate, setCanAnimate] = useState(false);
@@ -30,7 +32,7 @@ export function ParallaxVideo({ className, poster, source, speed = 0.11 }: Paral
   useEffect(() => {
     const root = rootRef.current;
     const video = videoRef.current;
-    if (!root || !video || !canAnimate) {
+    if (!root || !video || (!canAnimate && !eager)) {
       video?.pause();
       return;
     }
@@ -68,7 +70,8 @@ export function ParallaxVideo({ className, poster, source, speed = 0.11 }: Paral
       window.removeEventListener("resize", requestUpdate);
       reducedMotion.removeEventListener("change", onMotionPreferenceChange);
     };
-  }, [canAnimate, speed]);
+  }, [canAnimate, eager, speed]);
 
-  return <div ref={rootRef} className={className} aria-hidden="true"><video ref={videoRef} autoPlay={canAnimate} loop muted playsInline preload={canAnimate ? "metadata" : "none"} poster={poster}>{canAnimate ? <source src={source} type="video/mp4" /> : null}</video></div>;
+  const loadVideo = eager || canAnimate;
+  return <div ref={rootRef} className={className} aria-hidden="true"><video ref={videoRef} autoPlay={loadVideo} loop muted playsInline preload={eager ? "auto" : loadVideo ? "metadata" : "none"} poster={poster}>{loadVideo ? <source src={source} type="video/mp4" /> : null}</video></div>;
 }

@@ -61,6 +61,9 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 
 | BUSQ-001 | Media | Buscador de módulos y accesos en la barra lateral | En la barra lateral aparece una caja de búsqueda (o atajos directos a secciones internas como «Tablas salariales») que filtra por nombre y lleva directo al módulo, sin tener que abrir Configuración y recorrer hasta el destino. |
 
+| VIA-001 | Media | Viáticos de desplazamiento en mano de obra | Decidido y documentado (ADR en 07 y ficha en 09), **aún no construido**. Hotel y transporte operativo se cobra como viático, separado del auxilio legal de transporte, solo en obras por fuera de la sede y solo para Conductor y Capataz; los demás cargos se contratan en la región de la obra. El monto entra al costo del APU. Cada línea puede registrar una excepción justificada. |
+
+
 ## Última entrega verificada
 
 - **2026-10-07**: firma institucional y representante legal passam a la base de datos, con interruptor por documento (ADR-115); valores por defecto de la propuesta aplicados al abrir cotización (ADR-116); Resumen armado según permisos, con tarjetas de alquileres y de mi jornada (ADR-117); menú lateral agrupado por dominio y plegable (ADR-118); semáforo de antigüedad con texto en cotizaciones (ADR-119); cambio de contraseña en modal y documento en es-CO (ADR-120); devolución de alquiler en modal que verifica la escritura (ADR-121); firma de entrega visible al reabrir, quitable y reemplazable, y presente en la factura (ADR-122).

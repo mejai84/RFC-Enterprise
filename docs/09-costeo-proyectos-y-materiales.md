@@ -250,3 +250,6 @@ La presentación de costos, Kardex, requisiciones y fichas de obra conserva el s
 ## Tablas salariales por cliente
 Las tarifas de mano de obra se administran por empresa, cliente/contrato, versión y vigencia. Cada cargo conserva salario básico, transporte, alimentación, componente no salarial y total diario. La cotización referencia una tabla, pero usa una instantánea al guardarse para mantener trazabilidad del APU y la propuesta.
 
+
+## Viáticos de mano de obra
+El auxilio legal de transporte forma parte de la tarifa salarial. Hotel y transporte operativo son viáticos por desplazamiento: se aplican por defecto a Conductor y Capataz y se pueden habilitar excepcionalmente por línea de APU, con motivo y trazabilidad.

@@ -643,3 +643,6 @@ Se acuerda que la administración se hace en **Configuración → Costos y tabla
 
 ## 2026-10-08 — Introducción de la portada
 La ruta pública `/` presenta el símbolo RFC de carga durante un mínimo de dos segundos antes de revelar la portada. Las rutas internas conservan sus loaders propios y no reciben esta demora.
+
+## 2026-10-08 — Viáticos por desplazamiento en mano de obra
+Hotel y transporte operativo se modelan como viáticos de desplazamiento, separados del auxilio legal de transporte. Por defecto aplican a Conductor y Capataz, porque se desplazan a los frentes de obra; los demás cargos locales no los reciben. Cada línea del APU podrá registrar una excepción justificada cuando el proyecto lo requiera.

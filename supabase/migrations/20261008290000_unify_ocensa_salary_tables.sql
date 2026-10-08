@@ -30,8 +30,15 @@ comment on column public.labor_rate_entries.scale is
 
 /* 2. Same for the roles. */
 alter table public.labor_rate_roles
+  drop constraint if exists labor_rate_roles_labor_rate_table_id_code_key;
+alter table public.labor_rate_roles
+  drop constraint if exists labor_rate_roles_table_code_key;
+alter table public.labor_rate_roles
   add column if not exists scale text not null default 'general'
   check (scale in ('general', 'propias', 'no_propias'));
+alter table public.labor_rate_roles
+  add constraint labor_rate_roles_table_scale_code_key
+  unique (labor_rate_table_id, scale, code);
 
 comment on column public.labor_rate_roles.scale is
   'Escala del cargo. Determina de que nivel toma el salario oficial.';

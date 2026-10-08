@@ -27,6 +27,8 @@ type Entry = {
   food_allowance: number;
   non_salary_allowance: number;
   total_daily_rate: number;
+  /** Dotacion total del perfil para 240 dias, tomada del cliente. */
+  dotacion_total: number | null;
 };
 
 export type ProjectLaborDraft = {
@@ -52,11 +54,13 @@ const money = (value: number) =>
 export function LaborProjectModal({
   tableId,
   tableName,
+  scale,
   onClose,
   onSave,
 }: {
   tableId: string;
   tableName: string;
+  scale: "general" | "propias" | "no_propias";
   onClose: () => void;
   onSave: (draft: ProjectLaborDraft) => void;
 }) {
@@ -82,10 +86,11 @@ export function LaborProjectModal({
     void supabase
       .from("labor_rate_entries")
       .select(
-        "id,code,name,level,daily_basic_salary,transport_allowance,food_allowance,non_salary_allowance,total_daily_rate",
+        "id,code,name,level,daily_basic_salary,transport_allowance,food_allowance,non_salary_allowance,total_daily_rate,dotacion_total",
       )
       .eq("labor_rate_table_id", tableId)
       .order("sort_order")
+      .eq("scale", scale)
       .order("name")
       .then(async ({ data, error: loadError }) => {
         if (loadError) {
@@ -97,6 +102,7 @@ export function LaborProjectModal({
             .select("id,code,name,labor_rate_entry_id")
             .eq("labor_rate_table_id", tableId)
             .eq("is_active", true)
+            .eq("scale", scale)
             .order("name");
           if (rolesError) setError(rolesError.message);
           const byEntry = new Map(baseEntries.map((entry) => [entry.id, entry]));
@@ -104,11 +110,19 @@ export function LaborProjectModal({
             const rate = byEntry.get(role.labor_rate_entry_id);
             return rate ? [{ ...rate, id: role.id, code: role.code, name: role.name }] : [];
           });
-          setEntries(roleEntries.length ? roleEntries : baseEntries);
+          const filas = (data ?? []) as Entry[];
+          setEntries(filas);
+          // La dotacion del perfil ya viene calculada desde la tabla del
+          // cliente. Se propone como punto de partida y queda editable.
+          const inicial: Record<string, number> = {};
+          filas.forEach((fila) => {
+            if (fila.dotacion_total) inicial[fila.code] = Number(fila.dotacion_total);
+          });
+          setDotacion(inicial);
         }
         setCargando(false);
       });
-  }, [tableId]);
+  }, [tableId, scale]);
 
   /* Los días salen del plazo, pero quedan editables a mano. */
   const diasDelPlazo = useMemo(
@@ -184,6 +198,7 @@ export function LaborProjectModal({
       viaticReasons,
       snapshot: {
         dias,
+        escala: scale,
         diasAlojamiento,
         calculadoEn: new Date().toISOString(),
         tablaId: tableId,
@@ -381,7 +396,7 @@ export function LaborProjectModal({
                       />
                       <span>
                         <strong>{entry.code} · {entry.name}</strong>
-                        <small>Valor oficial del nivel: {money(entry.total_daily_rate)} / d\u00eda</small>
+                        <small>Valor oficial del nivel: {money(entry.total_daily_rate)} / día</small>
                       </span>
                     </label>
                     {activo ? (

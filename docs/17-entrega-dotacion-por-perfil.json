@@ -1,0 +1,91 @@
+{
+  "documento": "Dotación por perfil, tomada de la hoja del libro del cliente",
+  "para": "Codex",
+  "fecha": "2026-10-08",
+  "estado": "aplicada, verificada contra el libro y desplegada",
+  "que_pidio_el_usuario": "En el libro de Excel hay hojas de dotacion, y esa suma es lo que se usa para calcular el valor dia que va en la cotizacion y en el APU. La celda es =dotacion!D30.",
+  "que_hay_en_el_libro": {
+    "hoja": "dotacion",
+    "columnas": "D a I, con encabezado 6, 5, 4, 3, 2 y 1. Son perfiles, y en OCENSA cada perfil coincide con un nivel.",
+    "fila_30": "SUM de los conceptos del perfil. Esa es la celda a la que apunta cada nivel de la tabla salarial.",
+    "fila_31": "El total dividido entre 240 dias, que es el diario.",
+    "conceptos": 26,
+    "lineas_generadas": 114,
+    "mapeo_nivel_columna": {
+      "1": "I, total 8.082.100, diario 33.675,42",
+      "2": "H, total 8.042.100, diario 33.508,75",
+      "3": "G, total 8.014.100, diario 33.392,08",
+      "4": "F, total 3.407.500, diario 14.197,92",
+      "5": "E, total 3.292.000, diario 13.716,67",
+      "6": "D, total 3.447.000, diario 14.362,50"
+    }
+  },
+  "hallazgo_que_requiere_confirmacion_del_usuario": {
+    "tema": "Niveles 1, 2 y 3 valen mas que 4, 5 y 6 en dotacion",
+    "detalle": "La diferencia entre el perfil 6 (3.447.000) y el perfil 1 (8.082.100) son 4.635.000, y 3.600.000 de eso es un solo concepto: el Traje tiber a 30.000 por unidad, 120 unidades. Solo los perfiles 1, 2 y 3 lo llevan; el 4, 5 y 6 no.",
+    "otros_Conceptos": "Ademas el perfil 3 lleva delantal y mangas de carnaza, y el 2 y el 1 tambien.",
+    "estado": "Cargado tal cual, sin cambiar nada. Requiere que el usuario confirme si es correcto para esa obra o si el valor quedo de otra cotizacion."
+  },
+  "caso_del_chaleco": "El Chaleco del perfil 1 tiene 40.000 fijos en la celda del perfil pero NO tiene valor unitario en la columna C. Se guardo con valor unitario cero y cantidad uno, para no inventar un precio que el cliente no puso. Si se corrige la columna C en el libro, hay que volver a sembrar.",
+  "base_de_datos": {
+    "migracion": "20261008310000_labor_dotacion_by_profile.sql",
+    "tabla_nueva": "labor_dotacion_items, con perfil, concepto, unidad, valor unitario, cantidad y total de la linea. RLS igual que el resto de tablas salariales.",
+    "columnas_en_labor_rate_entries": [
+      "dotacion_total: total del perfil para 240 dias",
+      "dotacion_daily: el total dividido entre 240"
+    ],
+    "detalle_auditable": "Se guardan los 114 renglones, no solo el total, para que cualquier valor del APU se pueda reconstruir hasta la cantidad y el valor unitario que lo producen."
+  },
+  "costo_real_con_dotacion": {
+    "nota": "El costo real de un dia ahora incluye la dotacion del perfil prorrateada. Estos son los valores que quedaron, y coinciden con lo que el modal calcula en vivo.",
+    "N6": {
+      "oficial": 327843,
+      "dotacion": 3447000,
+      "dotacion_diaria": 14362.5,
+      "costo_real": 476227.07
+    },
+    "N5": {
+      "oficial": 294260,
+      "dotacion": 3292000,
+      "dotacion_diaria": 13716.67,
+      "costo_real": 430415.28
+    },
+    "N4": {
+      "oficial": 269739,
+      "dotacion": 3407500,
+      "dotacion_diaria": 14197.92,
+      "costo_real": 393656.14
+    },
+    "N3": {
+      "oficial": 230989,
+      "dotacion": 8014100,
+      "dotacion_diaria": 33392.08,
+      "costo_real": 358029.66
+    },
+    "N2": {
+      "oficial": 219528,
+      "dotacion": 8042100,
+      "dotacion_diaria": 33508.75,
+      "costo_real": 342280.21
+    },
+    "N1": {
+      "oficial": 191387,
+      "dotacion": 8082100,
+      "dotacion_diaria": 33675.42,
+      "costo_real": 302942.4
+    }
+  },
+  "interfaz": "El modal Mano de obra de esta obra propone la dotacion del perfil como punto de partida en el campo Dotacion total, y queda editable. Antes salia en cero y habia que buscarla a mano en otro lado.",
+  "verificacion": [
+    "Los seis perfiles suman exactamente lo que dice la fila 30 de la hoja del cliente.",
+    "El modal con datos reales de la base da 114.294.498 de total y 476.227 por dia para el Nivel 6, que es el mismo computed_daily_cost que quedo guardado.",
+    "Sin desbordes a 375 ni 768 pixeles, sin errores de consola.",
+    "npx tsc --noEmit limpio, npm run build correcto."
+  ],
+  "trampas": [
+    "La hoja tiene formulas con referencias absolutas como $C$3*3, y una celda (F27) que apunta a otra celda en vez de a la columna C. Recalcular la cantidad desde la formula da numeros absurdos. La unica fuente segura es el resultado que ya calculo Excel en la celda: se toma ese valor y la cantidad se deduce dividiendo entre el valor unitario.",
+    "Un concepto puede tener total pero no valor unitario, y entonces el filtro por valor unitario lo descarta en silencio y la suma no cuadra. Hay que validar la suma por perfil contra la fila 30 antes de escribir cualquier cosa.",
+    "En JSX los escapes unicode no se interpretan. El escape de la i con tilde escrito a mano en el texto queda literal en pantalla y TypeScript no avisa. Solo es correcto dentro de cadenas de TypeScript."
+  ],
+  "coordinacion": "Codex agrego a la migracion 20261008290000 la clave unica de labor_rate_roles por tabla, escala y codigo. Se incluyo en el commit porque es complemento directo de la unificacion y sin ella las dos escalas no pueden convivir. Codex sigue trabajando en apu-repository.ts, apu-workspace.tsx, quotes-workspace.tsx y los documentos de docs; esos archivos no se tocaron aqui."
+}

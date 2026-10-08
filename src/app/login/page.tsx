@@ -1,10 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { LoginForm } from "./login-form";
+import { LoginSplash } from "./loading-splash";
 
 export default function LoginPage() {
   return (
     <main className="auth-page">
+      {/* Splash con el logo 3D antes de mostrar el formulario de acceso. */}
+      <LoginSplash />
       <section className="auth-card" aria-labelledby="login-title">
         <Link className="brand" href="/">
           <Image

@@ -148,6 +148,31 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const menuSections =
     permissions && permissions.length > 0 ? navigationSections(permissions).sections : [];
   // Módulos que no pertenecen a ningún bloque, como el resumen: van sueltos arriba.
+
+  // Buscador de modulos y accesos. Ademas de los modulos, incluye secciones que
+  // viven dentro de Configuracion (tablas salariales, propuesta, firma y empresa)
+  // para llegar directo sin digitar "configuracion" y desplazarse.
+  const [navSearchQuery, setNavSearchQuery] = useState("");
+  const settingsAccess: Array<{ label: string; href: string; hint: string }> = [
+    { label: "Tablas salariales", href: "/settings?tab=labor_rates", hint: "Configuración" },
+    { label: "Propuesta", href: "/settings?tab=proposal", hint: "Configuración" },
+    { label: "Firma y membrete", href: "/settings?tab=branding", hint: "Configuración" },
+    { label: "Empresa y nómina", href: "/settings?tab=company", hint: "Configuración" },
+  ];
+  const normalizeSearch = (value: string) =>
+    value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const searchResults = useMemo(() => {
+    const term = normalizeSearch(navSearchQuery.trim());
+    if (!term) return [];
+    const modules = visibleNavigation
+      .filter((item) => normalizeSearch(item.label).includes(term))
+      .map((item) => ({ label: item.label, href: item.href, hint: "Módulo" }));
+    const sections = settingsAccess
+      .filter((item) => normalizeSearch(item.label).includes(term))
+      .map((item) => ({ label: item.label, href: item.href, hint: item.hint }));
+    return [...modules, ...sections];
+  }, [navSearchQuery, visibleNavigation]);
+
   const menuLoose =
     permissions && permissions.length > 0 ? navigationSections(permissions).loose : ["/dashboard"];
   const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
@@ -336,36 +361,68 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <Icon name="close" />
           </button>
         </div>
+        <div className="dashboard-nav-search">
+          <label className="dashboard-nav-search-label" htmlFor="nav-search-input">Buscar módulos</label>
+          <input
+            id="nav-search-input"
+            type="search"
+            placeholder="Buscar módulos…"
+            value={navSearchQuery}
+            onChange={(event) => setNavSearchQuery(event.target.value)}
+            autoComplete="off"
+          />
+        </div>
         <p className="dashboard-nav-label">Operación</p>
         <nav className="dashboard-nav" aria-label="Navegación del portal">
-          {/* Los módulos se agrupan por dominio, pero ninguno se une: cada uno
-              sigue siendo su propia pantalla. El resumen y «Mi perfil» quedan
-              sueltos arriba, y un bloque con un solo módulo también se muestra
-              suelto, porque rotularlo solo añadiría ruido. */}
-          {menuLoose.map((href) => renderNavItem(navigationByHref[href], pathname === href))}
-
-          {menuSections.map((section) => {
-            if (!section.label) {
-              return section.hrefs.map((href) => renderNavItem(navigationByHref[href], pathname === href));
-            }
-            const open = isGroupOpen(section.id!, pathname);
-            return (
-              <div className="dashboard-nav-group" key={section.id}>
-                <button
-                  aria-expanded={open}
-                  className="dashboard-nav-group-label"
-                  onClick={() => toggleGroup(section.id!)}
-                  type="button"
-                >
-                  <span>{section.label}</span>
-                  <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    {open ? <path d="M6 9l6 6 6-6" /> : <path d="M6 15l6-6 6 6" />}
-                  </svg>
-                </button>
-                {open ? section.hrefs.map((href) => renderNavItem(navigationByHref[href], pathname === href)) : null}
+          {navSearchQuery.trim() ? (
+            searchResults.length > 0 ? (
+              <div className="dashboard-nav-results">
+                {searchResults.map((result) => (
+                  <Link
+                    className="dashboard-nav-item"
+                    href={result.href}
+                    key={result.href}
+                    onClick={() => { setIsMenuOpen(false); setNavSearchQuery(""); }}
+                  >
+                    <Icon name="grid" />
+                    <span>
+                      {result.label}
+                      <small>{result.hint}</small>
+                    </span>
+                  </Link>
+                ))}
               </div>
-            );
-          })}
+            ) : (
+              <p className="dashboard-nav-empty">Sin resultados</p>
+            )
+          ) : (
+            <>
+              {menuLoose.map((href) => renderNavItem(navigationByHref[href], pathname === href))}
+
+              {menuSections.map((section) => {
+                if (!section.label) {
+                  return section.hrefs.map((href) => renderNavItem(navigationByHref[href], pathname === href));
+                }
+                const open = isGroupOpen(section.id!, pathname);
+                return (
+                  <div className="dashboard-nav-group" key={section.id}>
+                    <button
+                      aria-expanded={open}
+                      className="dashboard-nav-group-label"
+                      onClick={() => toggleGroup(section.id!)}
+                      type="button"
+                    >
+                      <span>{section.label}</span>
+                      <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        {open ? <path d="M6 9l6 6 6-6" /> : <path d="M6 15l6-6 6 6" />}
+                      </svg>
+                    </button>
+                    {open ? section.hrefs.map((href) => renderNavItem(navigationByHref[href], pathname === href)) : null}
+                  </div>
+                );
+              })}
+            </>
+          )}
         </nav>
         {/*
           Antes el pie de la barra lateral repetia avatar, nombre, rol, cambio de

@@ -43,6 +43,16 @@ export function SettingsWorkspace() {
   const [saveError, setSaveError] = useState("");
   const signatureInput = useRef<HTMLInputElement>(null);
 
+  // Permite llegar directo a una seccion con /settings?tab=labor_rates, que es
+  // lo que usa el buscador de la barra lateral para abrir Tablas salariales
+  // sin que la persona tenga que recorrer Configuracion.
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    if (requested === "proposal" || requested === "company" || requested === "labor_rates" || requested === "branding") {
+      setTab(requested);
+    }
+  }, []);
+
   useEffect(() => {
     if (!config) return;
     setBranding(config.branding);

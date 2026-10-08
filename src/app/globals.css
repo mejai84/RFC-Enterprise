@@ -171,3 +171,12 @@ img, svg { display: block; max-width: 100%; }
 .labor-rate-entry-list { border-top:1px solid var(--line); display:grid; margin-top:8px; }
 .labor-rate-entry-list > div { align-items:center; border-bottom:1px solid var(--line); display:flex; gap:14px; justify-content:space-between; padding:10px 0; }
 @media (max-width:780px) { .labor-rate-entry-form { grid-template-columns:repeat(2,minmax(0,1fr)); } .labor-rate-entry-form button { grid-column:span 2; } }
+/* Buscador de modulos en la barra lateral. */
+.dashboard-nav-search { display: grid; gap: 4px; margin: 0 6px 12px; }
+.dashboard-nav-search-label { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.dashboard-nav-search input { background: var(--surface, #fff); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: inherit; font-size: 13px; min-height: 34px; padding: 6px 10px; width: 100%; }
+.dashboard-nav-search input:focus-visible { border-color: var(--brand); outline: 2px solid var(--brand); outline-offset: -1px; }
+.dashboard-nav-results { display: grid; gap: 2px; }
+.dashboard-nav-results .dashboard-nav-item span { display: grid; gap: 1px; text-align: left; }
+.dashboard-nav-results .dashboard-nav-item small { color: var(--muted); font-size: 10px; font-weight: 650; }
+.dashboard-nav-empty { color: var(--muted); font-size: 12px; margin: 10px 8px; }

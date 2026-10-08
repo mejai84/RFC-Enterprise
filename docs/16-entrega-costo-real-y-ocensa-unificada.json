@@ -1,0 +1,126 @@
+{
+  "documento": "Separación del valor oficial y el costo real, y unificación de las tablas de OCENSA",
+  "para": "Codex",
+  "fecha": "2026-10-08",
+  "estado": "migraciones aplicadas, codigo compilando, verificado y desplegado",
+  "motivo": "El usuario aprobo el diseno de costeo por cotizacion propuesto por Codex y corrigio dos puntos: (1) la tabla oficial de cada empresa es la base informativa y contractual y nunca se altera; (2) OCENSA debe verse como una sola tabla, no dos.",
+  "cambio_de_modelo": {
+    "principio": "Tabla oficial de la empresa -> cargo y nivel -> tus calculos de costo -> valor de mano de obra en APU.",
+    "antes": "Un solo campo total_daily_rate mezclaba dos significados: el total oficial publicado y el costo calculado. Uno pisaba al otro.",
+    "ahora": [
+      {
+        "columna": "total_daily_rate",
+        "significado": "Valor dia oficial de la empresa, tomado de su documento. Es la base informativa y contractual.",
+        "regla": "No se recalcula nunca. Codex tiene razon en restaurarlo y aqui ya se respeta."
+      },
+      {
+        "columna": "computed_daily_cost",
+        "significado": "Costo real de un dia de ese cargo: valor oficial mas provisiones, horas extra diurnas y dominicales, allowances y el 8% de salud y pension.",
+        "regla": "Lo calcula RFC. Es lo que consume el APU."
+      },
+      {
+        "columna": "provision_daily",
+        "significado": "Provisiones diarias calculadas por RFC sobre la base oficial.",
+        "regla": "Informativa, se muestra en el desglose."
+      },
+      {
+        "columna": "extra_hours_daily",
+        "significado": "Horas extra diurnas, nocturnas y dominicales prorrateadas al dia.",
+        "regla": "Informativa, se muestra en el desglose."
+      }
+    ],
+    "numeros_OCENSA_actividades_propias": {
+      "nota": "oficial = documento del cliente. costo = lo que usa el APU. Diferencia cercana al 41%, que son las cargas sociales que la empresa asume pero no le cargan al contratista.",
+      "N1": {
+        "oficial": 191387,
+        "costo": 269266.98
+      },
+      "N2": {
+        "oficial": 219528,
+        "costo": 308771.46
+      },
+      "N3": {
+        "oficial": 230989,
+        "costo": 324637.58
+      },
+      "N4": {
+        "oficial": 269739,
+        "costo": 379458.22
+      },
+      "N5": {
+        "oficial": 294260,
+        "costo": 416698.61
+      },
+      "N6": {
+        "oficial": 327843,
+        "costo": 461864.57
+      }
+    }
+  },
+  "unificacion_de_ocensa": {
+    "problema": "El cliente publica un solo documento con dos escalas internas: actividades propias y actividades no propias. La base de datos las tenia como dos tablas separadas, y el formulario de cotizacion ofrecia dos entradas de OCENSA que parecian contratos distintos. El usuario no podia saber cual aplicar antes de costear.",
+    "solucion": "La escala paso a ser un atributo del cargo y del nivel, no del documento.",
+    "como_se_ve_ahora": [
+      "OCENSA - tabla salarial 2026-2027 (11 niveles, 68 cargos, una sola entrada en el formulario)"
+    ],
+    "columnas_nuevas": [
+      "labor_rate_entries.scale text check in ('general','propias','no_propias')",
+      "labor_rate_roles.scale text check in ('general','propias','no_propias')"
+    ],
+    "valores_admitidos_en_tabla": "labor_rate_tables.activity_type ahora admite 'mixta', que significa que el documento trae varias escalas internas.",
+    "clave_unica": "labor_rate_entries paso de unico por (tabla, codigo) a unico por (tabla, escala, codigo). Las dos escalas comparten los codigos N1..N6, por eso la clave anterior impedia mover las filas.",
+    "tablas_retiradas": [
+      "OCENSA - actividades propias (is_active = false, conservada por historico)",
+      "OCENSA - actividades no propias (is_active = false, conservada por historico)"
+    ],
+    "reparto": "52 cargos en escala propias, 16 en escala no propias, todos dentro de la tabla unica."
+  },
+  "migraciones": [
+    {
+      "orden": "20261008270000",
+      "nombre": "separate_official_rate_from_computed_cost.sql",
+      "que_hace": "Agrega computed_daily_cost y separa el valor oficial del costo real. Retira la funcion recompute_labor_daily_rate que sobrescribia el oficial."
+    },
+    {
+      "orden": "20261008280000",
+      "nombre": "fix_computed_cost_daily_basis.sql",
+      "que_hace": "Corrige un error propio: las horas se estaban sumando completas al costo diario y daban 3.401.318 por dia. Se prorratean sobre 240 dias."
+    },
+    {
+      "orden": "20261008290000",
+      "nombre": "unify_ocensa_salary_tables.sql",
+      "que_hace": "Crea la tabla unica de OCENSA, mueve las 11 entradas de ambas escalas y cambia la clave unica. Las tablas viejas quedan inactivas."
+    },
+    {
+      "orden": "20261008300000",
+      "nombre": "move_ocensa_roles_into_unified_table.sql",
+      "que_hace": "Completa la unificacion moviendo los 68 cargos. Era necesario aparte porque en la migracion anterior los roles se reapuntaron antes de mover las entradas."
+    }
+  ],
+  "codigo_tocado": [
+    "src/modules/apu/domain/labor-position.ts: nuevos campos officialDailyRate, provisionDaily, extraHoursDaily y scale opcional.",
+    "src/modules/apu/data/labor-position-repository.ts: el catalogo lee computed_daily_cost y cae al oficial si aun no se ha calculado; el catalogo local deriva el costo con la misma regla; getLaborPositionCatalog recibe la escala como segundo parametro con default 'propias'; los selects piden scale."
+  ],
+  "verificacion": [
+    "npx tsc --noEmit limpio",
+    "npm run build correcto",
+    "git diff --check limpio",
+    "Comparacion numerica del motor contra la base de datos: los 6 niveles de OCENSA propias coinciden al peso.",
+    "El valor oficial de los 6 niveles coincide con el documento del cliente."
+  ],
+  "lo_que_queda_pendiente": [
+    "El formulario de cotizacion debe ofrecer la modalidad (propias o no propias) despues de elegir la tabla OCENSA. La escala ya se guarda en cargo y nivel, pero el selector de escala todavia no se muestra al usuario.",
+    "Perfiles de costo versionados (labor_cost_profiles) con IBS por concepto, incluyendo si el auxilio de alimentacion integra la base de salud y pension. El usuario señalo que el Excel no suma ese auxilio y que hay que configurarlo por perfil, no fijo.",
+    "Separar el auxilio de alimentacion oficial (viene de la tabla) de la alimentacion operativa en obra (costo de la obra).",
+    "Bases de cobro explicitas por concepto: por persona, por dia, por cargo o fijo por obra.",
+    "Tablas quote_labor_costing, quote_labor_costing_roles y quote_labor_costing_components.",
+    "Snapshot de costo por linea de APU con cargo, origen, perfil, valor dia y jornales por unidad.",
+    "Cambiar el APU de 'rendimiento' a 'jornales por unidad', con 'unidades por jornada' como forma alternativa que se divide. La formula actual cantidad x tarifa x rendimiento puede dar resultados invertidos.",
+    "Excepcion de viaticos con motivo obligatorio para cargos que no sean conductor ni capataz."
+  ],
+  "trampas": [
+    "La clave unica (labor_rate_table_id, code) impedia unificar las escalas porque N1..N6 existen en propias y en no propias. Hay que quitar esa restricción ANTES de mover filas, no después.",
+    "Al mover roles y entradas en la misma migración, el orden importa: si los roles se reapuntan antes de mover las entradas, la búsqueda del nivel equivalente no encuentra nada y los roles se quedan atrás.",
+    "El Supabase CLI ejecuta el archivo completo pero solo devuelve la última sentencia. Las migraciones con un bloque DO $$ y luego un SELECT devuelven filas vacías aunque sí se hayan aplicado."
+  ]
+}

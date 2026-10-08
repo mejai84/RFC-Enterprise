@@ -257,3 +257,5 @@ El auxilio legal de transporte forma parte de la tarifa salarial. Hotel y transp
 ## Costeo por cargo y viáticos (2026-10-08)
 
 La cotización selecciona la tabla salarial vigente y el APU obtiene los cargos de esa tabla, aplicando el valor del nivel correspondiente. La instantánea de cotización conserva el cálculo para auditoría. El auxilio legal de transporte pertenece al salario; hotel y transporte operativo son viáticos por desplazamiento, predeterminados para Capataz y Conductor y excepcionales para otros cargos con motivo documentado.
+
+La consulta de una tabla salarial vigente muestra los mismos componentes que su exportación: nivel, puesto, salario día, auxilios, provisiones, extras de referencia y valor día. Esto permite validar el costo antes de incorporarlo a una cotización o un APU.

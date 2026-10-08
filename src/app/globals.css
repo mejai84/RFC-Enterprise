@@ -187,3 +187,18 @@ img, svg { display: block; max-width: 100%; }
 .labor-rate-card.is-current { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset; }
 .labor-rate-badge { background: var(--brand); border-radius: 999px; color: #fff; font-size: 10px; font-style: normal; font-weight: 800; letter-spacing: .04em; margin-top: 6px; padding: 3px 9px; text-transform: uppercase; width: fit-content; }
 .labor-rate-entries-heading { align-items: center; display: flex; gap: 12px; justify-content: space-between; margin-top: 18px; }
+
+.labor-rate-detail { border: 1px solid var(--line); border-radius: 12px; margin-top: 18px; padding: 16px; }
+.labor-rate-detail-kicker { color: var(--brand); font-size: 11px; font-weight: 800; letter-spacing: .08em; margin: 0 0 4px; text-transform: uppercase; }
+.labor-rate-detail-summary { color: var(--muted); font-size: 13px; margin: 12px 0; }
+.labor-rate-detail-table-wrap { border: 1px solid var(--line); border-radius: 9px; max-width: 100%; overflow-x: auto; }
+.labor-rate-detail-table { border-collapse: collapse; font-size: 12px; min-width: 1120px; width: 100%; }
+.labor-rate-detail-table th, .labor-rate-detail-table td { border-bottom: 1px solid var(--line); padding: 10px; text-align: right; vertical-align: top; white-space: nowrap; }
+.labor-rate-detail-table th { background: #f1f5f9; color: #475569; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
+.labor-rate-detail-table th:nth-child(2), .labor-rate-detail-table td:nth-child(2), .labor-rate-detail-table th:first-child, .labor-rate-detail-table td:first-child { text-align: left; }
+.labor-rate-detail-table td small { color: var(--muted); display: block; font-size: 11px; margin-top: 3px; white-space: normal; }
+.labor-rate-detail-table ul { display: grid; gap: 4px; list-style: none; margin: 7px 0 0; padding: 0; white-space: normal; }
+.labor-rate-detail-table li span { color: var(--brand); display: block; font-size: 10px; font-weight: 700; margin-top: 2px; }
+.labor-rate-add-entry { margin-top: 12px; }
+.labor-rate-add-entry summary { cursor: pointer; font-weight: 700; min-height: 44px; padding: 12px 0; }
+.labor-rate-add-entry .labor-rate-entry-form { padding-top: 8px; }

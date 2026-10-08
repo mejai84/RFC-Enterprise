@@ -7,13 +7,16 @@ import { exportLaborRateTableToXlsx } from "./labor-rates-xlsx-export";
 import { LaborRatesImport } from "./labor-rates-import";
 
 type RateTable = { id: string; client_name: string; name: string; version: string; activity_type: string; valid_from: string; valid_to: string | null; source_document: string; is_active: boolean };
-type RateEntry = { id: string; code: string; name: string; level: number | null; daily_basic_salary: number; transport_allowance: number; food_allowance: number; non_salary_allowance: number; total_daily_rate: number };
+const cop = (value: number) => Number(value || 0).toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+type RateEntry = { id: string; code: string; name: string; level: number | null; daily_basic_salary: number; transport_allowance: number; food_allowance: number; non_salary_allowance: number; provision_daily: number; extra_hours_daily: number; total_daily_rate: number };
+type LaborRole = { id: string; code: string; name: string; labor_rate_entry_id: string; receives_hotel: boolean; receives_operational_transport: boolean };
 const number = (value: FormDataEntryValue | null) => Number(String(value ?? 0).replace(',', '.')) || 0;
 
 export function LaborRateSettingsPanel({ companyId }: { companyId: string }) {
   const [tables, setTables] = useState<RateTable[]>([]);
   const [selected, setSelected] = useState<RateTable | null>(null);
   const [entries, setEntries] = useState<RateEntry[]>([]);
+  const [roles, setRoles] = useState<LaborRole[]>([]);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -44,9 +47,13 @@ export function LaborRateSettingsPanel({ companyId }: { companyId: string }) {
     setTables((data ?? []) as RateTable[]);
   }, [companyId]);
   const loadEntries = useCallback(async (table: RateTable | null) => {
-    setSelected(table); setEntries([]); if (!table) return;
-    const { data, error: loadError } = await supabase().from("labor_rate_entries").select("id,code,name,level,daily_basic_salary,transport_allowance,food_allowance,non_salary_allowance,total_daily_rate").eq("labor_rate_table_id", table.id).order("sort_order").order("name");
-    if (loadError) setError(loadError.message); else setEntries((data ?? []) as RateEntry[]);
+    setSelected(table); setEntries([]); setRoles([]); if (!table) return;
+    const [{ data, error: loadError }, { data: roleRows, error: rolesError }] = await Promise.all([
+      supabase().from("labor_rate_entries").select("id,code,name,level,daily_basic_salary,transport_allowance,food_allowance,non_salary_allowance,provision_daily,extra_hours_daily,total_daily_rate").eq("labor_rate_table_id", table.id).order("sort_order").order("name"),
+      supabase().from("labor_rate_roles").select("id,code,name,labor_rate_entry_id,receives_hotel,receives_operational_transport").eq("labor_rate_table_id", table.id).eq("is_active", true).order("name"),
+    ]);
+    if (loadError || rolesError) setError(loadError?.message ?? rolesError?.message ?? "No fue posible abrir la tabla salarial.");
+    else { setEntries((data ?? []) as RateEntry[]); setRoles((roleRows ?? []) as LaborRole[]); }
   }, []);
   useEffect(() => { void load(); }, [load]);
   async function createTable(event: FormEvent<HTMLFormElement>) {
@@ -99,7 +106,25 @@ export function LaborRateSettingsPanel({ companyId }: { companyId: string }) {
         </button>
       ))}
     </div>
-    {selected ? <><div className="labor-rate-entries-heading"><h3 className="settings-subheading">Cargos de {selected.name}</h3><button className="inventory-action" disabled={isExporting || entries.length === 0} onClick={() => void handleExport()} type="button">{isExporting ? "Generando…" : "Exportar a Excel"}</button></div><form className="labor-rate-entry-form" onSubmit={createEntry}><input name="code" placeholder="Código" required /><input name="name" placeholder="Cargo o nivel" required /><input min="1" name="level" placeholder="Nivel" type="number" /><input min="0" name="basic" placeholder="Salario básico diario" type="number" step="0.01" /><input min="0" name="transport" placeholder="Transporte" type="number" step="0.01" /><input min="0" name="food" placeholder="Alimentación" type="number" step="0.01" /><input min="0" name="nonSalary" placeholder="No salarial" type="number" step="0.01" /><input min="0" name="total" placeholder="Total diario (opcional)" type="number" step="0.01" /><button className="inventory-action" disabled={busy} type="submit">Agregar cargo</button></form><div className="labor-rate-entry-list">{entries.map((entry) => <div key={entry.id}><strong>{entry.code} · {entry.name}</strong><span>${Number(entry.total_daily_rate).toLocaleString("es-CO")} / día</span></div>)}</div></> : <p className="panel-intro">Seleccione una tabla para revisar y completar sus cargos.</p>}
+    {selected ? <>
+      <section className="labor-rate-detail" aria-labelledby="labor-rate-detail-title">
+        <div className="labor-rate-entries-heading">
+          <div><p className="labor-rate-detail-kicker">Detalle de la tabla vigente</p><h3 className="settings-subheading" id="labor-rate-detail-title">{selected.name} · {selected.version}</h3><p className="panel-intro">{selected.client_name || "Uso general"} · Vigencia {selected.valid_from}{selected.valid_to ? ` a ${selected.valid_to}` : ""}{selected.source_document ? ` · Fuente: ${selected.source_document}` : ""}</p></div>
+          <button className="inventory-action" disabled={isExporting || entries.length === 0} onClick={() => void handleExport()} type="button">{isExporting ? "Generando…" : "Exportar a Excel"}</button>
+        </div>
+        <p className="labor-rate-detail-summary">{entries.length} nivel{entries.length === 1 ? "" : "es"} · {roles.length} puesto{roles.length === 1 ? "" : "s"} registrado{roles.length === 1 ? "" : "s"}. Los valores mostrados son los mismos que se exportan.</p>
+        <div className="labor-rate-detail-table-wrap" tabIndex={0} aria-label="Detalle de niveles, cargos y valores de la tabla salarial">
+          <table className="labor-rate-detail-table">
+            <thead><tr><th>Nivel</th><th>Puesto / cargo</th><th>Salario día</th><th>Aux. transporte</th><th>Alimentación</th><th>No salarial</th><th>Provisiones</th><th>Extras referencia</th><th>Valor día</th></tr></thead>
+            <tbody>{entries.map((entry) => {
+              const rolesForEntry = roles.filter((role) => role.labor_rate_entry_id === entry.id);
+              return <tr key={entry.id}><td><strong>{entry.level ? `Nivel ${entry.level}` : "—"}</strong><small>{entry.code}</small></td><td><strong>{entry.name}</strong>{rolesForEntry.length ? <ul>{rolesForEntry.map((role) => <li key={role.id}>{role.name}{role.receives_hotel || role.receives_operational_transport ? <span>Viáticos por desplazamiento</span> : null}</li>)}</ul> : <small>Sin puestos adicionales registrados</small>}</td><td>{cop(entry.daily_basic_salary)}</td><td>{cop(entry.transport_allowance)}</td><td>{cop(entry.food_allowance)}</td><td>{cop(entry.non_salary_allowance)}</td><td>{cop(entry.provision_daily)}</td><td>{cop(entry.extra_hours_daily)}</td><td><strong>{cop(entry.total_daily_rate)}</strong></td></tr>;
+            })}</tbody>
+          </table>
+        </div>
+      </section>
+      <details className="labor-rate-add-entry"><summary>Agregar nivel o cargo a esta tabla</summary><form className="labor-rate-entry-form" onSubmit={createEntry}><input name="code" placeholder="Código" required /><input name="name" placeholder="Cargo o nivel" required /><input min="1" name="level" placeholder="Nivel" type="number" /><input min="0" name="basic" placeholder="Salario básico diario" type="number" step="0.01" /><input min="0" name="transport" placeholder="Transporte" type="number" step="0.01" /><input min="0" name="food" placeholder="Alimentación" type="number" step="0.01" /><input min="0" name="nonSalary" placeholder="No salarial" type="number" step="0.01" /><input min="0" name="total" placeholder="Total diario (opcional)" type="number" step="0.01" /><button className="inventory-action" disabled={busy} type="submit">Agregar cargo</button></form></details>
+    </> : <p className="panel-intro">Seleccione una tabla para revisar y completar sus cargos.</p>}
     <details className="labor-rate-import-details">
       <summary>Importar una tabla desde Excel</summary>
       <LaborRatesImport companyId={companyId} onDone={(tableId) => void loadEntries(tables.find((t) => t.id === tableId) ?? null)} />

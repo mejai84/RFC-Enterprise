@@ -669,3 +669,7 @@ Hotel y transporte operativo se modelan como viÃ¡ticos de desplazamiento, separa
 ## 2026-10-08 — Costeo salarial por cargo y viáticos
 
 Los cargos del APU se resuelven desde la tabla salarial elegida en la cotización. Cada cargo toma el valor de su nivel dentro de esa tabla y queda congelado al guardar la oferta. Hotel y transporte operativo son viáticos de desplazamiento: Capataz y Conductor los reciben por defecto; cualquier otro cargo exige una justificación que queda dentro de la instantánea de la cotización. Los demás conceptos de la obra se calculan por separado del auxilio legal de transporte.
+
+## 2026-10-08 — Consulta de tablas salariales
+
+Abrir una tabla salarial vigente muestra un detalle de solo consulta con nivel, puestos asociados y cada componente del valor diario. La vista interna y la exportación utilizan el mismo conjunto de datos para que el usuario pueda comprobar valores antes de usarlos en una cotización.

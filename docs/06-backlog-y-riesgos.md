@@ -85,3 +85,5 @@ Lo ya resuelto se retirÃ³ de aquÃ­ y quedÃ³ registrado como decisiones en
 
 
 - **SAL-002 — Importación documental de salarios:** Excel se importa con selección de hoja, mapeo y vista previa. PDF y Word quedan como fuente documental hasta implementar extracción asistida con confirmación obligatoria; no se debe publicar una tabla inferida automáticamente.
+
+- **SAL-003 — Consulta verificable:** la tabla salarial vigente debe poder revisarse dentro de la aplicación con los mismos componentes que se exportan; la exportación no es la única forma de auditar los valores.

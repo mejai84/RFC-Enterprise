@@ -1,0 +1,195 @@
+{
+  "documento": "Entrega de mano de obra y viáticos por obra",
+  "para": "Codex",
+  "fecha": "2026-10-08",
+  "commit": "abc59999",
+  "rama": "main",
+  "estado": "pusheado y desplegado en producción",
+  "produccion": "https://rfc-enterprise.vercel.app",
+
+  "que_se_hizo": {
+    "resumen": "Se construyó el cálculo de mano de obra por obra, verificado contra el libro Excel real del cliente (COT-113-2026, obra Trampa Granjita), y se corrigió una subestimación de costos que afectaba a todos los APU.",
+    "alcance_real": "Módulo de dominio puro + modal en cotización nueva + migración de base de datos + documentación. No se tocó el módulo APU."
+  },
+
+  "archivos_nuevos": [
+    "src/modules/quotes/domain/project-labor.ts",
+    "src/modules/quotes/presentation/labor-project-modal.tsx",
+    "src/modules/quotes/presentation/labor-project-modal.module.css",
+    "src/core/settings/presentation/labor-rates-import.tsx",
+    "supabase/migrations/20261008200000_labor_project_concepts.sql"
+  ],
+
+  "archivos_modificados": [
+    "src/modules/quotes/domain/quote.ts",
+    "src/modules/quotes/presentation/quotes-workspace.tsx",
+    "src/core/settings/presentation/labor-rate-settings-panel.tsx",
+    "src/app/quotes-pipeline.css",
+    "src/app/dashboard-refresh.css",
+    ".gitignore",
+    "docs/06-backlog-y-riesgos.md",
+    "docs/07-registro-de-decisiones.md"
+  ],
+
+  "reglas_del_calculo_confirmadas": {
+    "fuente": "Leídas directamente de las fórmulas del Excel del cliente, no inferidas.",
+    "verificacion": "Comparación numérica contra el libro real. Coinciden al peso.",
+    "detalle": {
+      "provision_sobre": "subtotal base = salario día + auxilio de transporte",
+      "interes_cesantias": "cesantías × 12/360 (Ley 52 de 1975). Equivale a 3,33% diario. El rótulo '1%/cesanti' del encabezado oficial de OCENSA es una etiqueta equivocada, no el cálculo.",
+      "hora_ordinaria": "salario día ÷ 7 (NO entre 8). Decisión propia de la hoja del cliente, conservada a propósito.",
+      "recargos": {
+        "extra_diurna": "25%",
+        "extra_nocturna": "75%",
+        "dominical": "190%"
+      },
+      "salud_y_pension": "8% de (subtotal base × días + horas extra)",
+      "dias_tabla": 240,
+      "dias_alojamiento": 90,
+      "hotel": "tarifa por día × días de alojamiento",
+      "alimentacion": "tarifa por día × días de alojamiento"
+    },
+    "numeros_de_control": {
+      "nivel_6_ocensa_subtotal_provisionado": 350000.04,
+      "nivel_6_ocensa_total_periodo": 133294497.76,
+      "nivel_6_ocensa_valor_dia": 555393.74,
+      "nivel_1_ocensa_subtotal_provisionado": 203933.21
+    }
+  },
+
+  "correccion_critica": {
+    "que_estaba_mal": "labor_rate_entries.total_daily_rate solo sumaba las cuatro columnas base (salario + transporte + alimentación + no salarial), sin provisiones ni horas extra. Ese valor era el que alimentaba dailyRate en el APU.",
+    "impacto": "Mano de obra subestimada entre 32% y 49% en todos los APU.",
+    "que_se_hizo": "La migración 20261008200000 recalcula total_daily_rate con el modelo completo y guarda el desglose en dos columnas nuevas.",
+    "ejemplo": "OCENSA Nivel 6 pasa de 327.843 a 461.865 por día.",
+    "columnas_nuevas": [
+      "labor_rate_entries.provision_daily",
+      "labor_rate_entries.extra_hours_daily"
+    ],
+    "aviso": "Esto invalida los valores de cotizaciones y APUs ya calculados. El usuario debe revisarlos antes de emitir la próxima oferta."
+  },
+
+  "reglas_de_negocio": {
+    "conceptos_por_obra": "No se escriben en la tabla salarial. Son estimaciones del dueño y valen SOLO para la cotización que los guarda.",
+    "tabla_oficial": "Intacta. Ninguna cotización la modifica.",
+    "entre_cotizaciones": "Cada cotización es independiente de las demás.",
+    "congelacion": "Al calcular, la cotización guarda el resultado. Actualizar la tabla después no mueve esa cotización.",
+    "dias": "Se calculan del plazo (fecha inicio y fin) y se pueden cambiar a mano. Si se cambian a mano, la interfaz avisa y muestra cuántos días dio el plazo.",
+    "conceptos_libres": [
+      "transporte",
+      "hidratacion",
+      "medico",
+      "trabajoEnAltura",
+      "espacioConfinado",
+      "otros"
+    ],
+    "conceptos_con_regla": {
+      "hotel": "tarifa por día × días de alojamiento",
+      "alimentacion": "tarifa por día × días de alojamiento",
+      "alcance": "Aplica a capataz y conductor, y a las excepciones."
+    }
+  },
+
+  "base_de_datos": {
+    "migracion": "20261008200000_labor_project_concepts.sql",
+    "estado": "aplicada",
+    "tablas_nuevas": ["labor_project_concepts"],
+    "columnas_nuevas_en_quotes": [
+      "labor_project_snapshot jsonb",
+      "labor_project_days integer",
+      "labor_project_start date",
+      "labor_project_end date"
+    ],
+    "funciones": [
+      "private.recompute_labor_daily_rate()",
+      "public.save_quote_with_history() (redefinida para aceptar el snapshot de obra)"
+    ],
+    "rls": "labor_project_concepts tiene lectura para miembros y escritura para administrator, resident_engineer y general_management.",
+    "datos_sembrados": "labor_project_concepts se siembra por empresa con los 8 conceptos."
+  },
+
+  "interfaz": {
+    "donde": "Cotizaciones → Nueva Solicitud. Selector 'Tabla salarial de esta obra' y botón 'Armar mano de obra de esta obra'.",
+    "modal": "src/modules/quotes/presentation/labor-project-modal.tsx",
+    "secciones": [
+      "Plazo de la obra (fechas y días)",
+      "Horas del mes (extra diurnas, nocturnas, dominicales)",
+      "Conceptos de esta obra (los 8)",
+      "Cargos de esta obra (marcar, personal, dotación)",
+      "Desglose en vivo y total"
+    ],
+    "verificado_en_navegador": {
+      "dias_calculados_del_plazo": "2026-01-01 a 2026-12-31 da 365 correctamente",
+      "dias_editables_a_mano": true,
+      "aviso_al_editar_a_mano": true,
+      "sin_scroll_horizontal_en": [375, 768, 1024],
+      "botones_min_px": 48,
+      "errores_de_consola": "ninguno",
+      "desglose_con_datos_reales_ocensa": "Nivel 6 = 127.696.498 total, 532.069 por día"
+    }
+  },
+
+  "incidente_resuelto": {
+    "que_paso": "El Excel del cliente COT-113-2026 estaba dentro de public/. Todo lo que está en public/ se sirve por web, así que el archivo con costos reales de OCENSA quedó descargable públicamente durante un despliegue (HTTP 200).",
+    "deteccion": "Verificación posterior al despliegue, antes de cerrar la entrega.",
+    "resolucion": "Archivo eliminado de public/ y redespliegue. Verificado 404. El original del usuario sigue intacto en C:\\Users\\Usuario\\Downloads.",
+    "prevencion": ".gitignore ahora bloquea /public/*.xlsx, *.xls, *.pdf, *.docx y *.zip.",
+    "leccion": "Nunca dejar documentos de cliente en public/, ni siquiera sin git add: Vercel sube la carpeta completa, no solo lo versionado.",
+    "estado_actual": "resuelto y verificado"
+  },
+
+  "trampas_tecnicas_encontradas": {
+    "css_modules": "Este proyecto NO convierte los nombres de clase a camelCase. Hay que usar notación de corchetes: styles['labor-project-backdrop'], no styles.laborProjectBackdrop. Usar la forma camelCase deja className vacío y el estilo no se aplica en silencio.",
+    "terminaciones_de_linea": "quotes-workspace.tsx y varios .tsx usan LF, no CRLF. Los parches por replace() con \\r\\n fallan silenciosamente.",
+    "powershell": "Set-Content -Encoding UTF8 escribe BOM y rompe la primera regla de los CSS. Usar node fs.writeFileSync.",
+    "heredoc": "PowerShell no soporta heredoc <<'EOF'. Escribir el mensaje a archivo y usar git commit -F.",
+    "supabase_cli": "npx supabase db query --linked -f archivo ejecuta el archivo y solo devuelve la última sentencia. Los CTE encadenados deben resolverse antes de referenciar una columna que ellos mismos definen.",
+    "nombres_duplicados": "Al insertar JSX mediante scripts, revisar siempre si quedó un cierre duplicado: tsc lo reporta como 'JSX expressions must have one parent element', que no señala la línea real."
+  },
+
+  "pendientes_para_el_usuario": [
+    {
+      "id": "MOB-002",
+      "tema": "DOTACIÓN",
+      "estado": "El concepto ya se acepta por puesto en el motor. Falta confirmar la regla de cálculo.",
+      "dato": "La hoja del cliente tiene una hoja 'dotacion' con 6 perfiles de cargo (columnas D a I) y un total de 3.447.000 para 240 días en el perfil 6."
+    },
+    {
+      "id": "MOB-003",
+      "tema": "Valor del equipo y costo de alquiler",
+      "estado": "El usuario lo necesita dentro del APU de la obra. Falta definir si es línea propia del APU o concepto del proyecto."
+    },
+    {
+      "tema": "Anomalía de la hoja oficial",
+      "estado": "SIN CORREGIR a propósito",
+      "detalle": "La celda AH = AF − AG de la hoja del cliente RESTA el 8% de salud y pensión en lugar de sumarlo. El motor lo reproduce tal cual para no desalinearse del Excel. Si es un error de signo del cliente, cada nivel baja ese 8%.",
+      "accion": "Confirmar con OCENSA antes de tocarlo."
+    },
+    {
+      "tema": "Días frente a la tabla oficial",
+      "estado": "Decisión de costeo sin resolver",
+      "detalle": "La tabla oficial cobra 240 días fijos, pero las obras duran menos. Con eso, una obra de 90 días paga el provisionado anual completo. Se conservó el comportamiento de la hoja del cliente."
+    }
+  ],
+
+  "reglas_del_repositorio_respetadas": {
+    "idioma": "Toda la interfaz en español.",
+    "mayusculas": "Botones de 48 px mínimo.",
+    "movil": "Funciona a 375 px sin scroll horizontal.",
+    "caracteres": "Sin CJK ni texto corrupto (verificado).",
+    "documentacion": "Toda funcionalidad queda registrada en docs/ según AGENTS.md.",
+    "verificacion": [
+      "npx tsc --noEmit limpio",
+      "git diff --check limpio",
+      "npm run build correcto",
+      "verificado en navegador con Playwright"
+    ]
+  },
+
+  "recomendacion_para_codex": [
+    "El motor de cálculo es una función pura en domain/. Si se toca, volver a comparar contra el libro del cliente antes de commitear; los números están en reglas_del_calculo_confirmadas.numeros_de_control.",
+    "No borrar ni relajar el bloqueo de documentos de cliente en .gitignore.",
+    "El siguiente ordinal de migración disponible es 20261008210000.",
+    "Las cotizaciones existentes quedaron con el valor diario viejo. Si se regenera alguna, hacerlo con la tabla ya recalculada."
+  ]
+}

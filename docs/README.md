@@ -26,3 +26,7 @@ Estos documentos son la fuente de verdad operativa del proyecto. Deben actualiza
 ## Regla de vigencia
 
 Cada documento incluye estado, propietario, fecha y audiencia. Si no refleja el código o la operación real, debe marcarse como `borrador` o actualizarse antes de que una entrega se dé por cerrada.
+
+## Entregas en JSON
+
+Los archivos `NN-*.json` de esta carpeta son entregas registradas para los demas agentes del repositorio. Cada uno resume que se hizo, que archivos se tocaron, que reglas de negocio quedaron fijadas y que trampas tecnicas se encontraron, para no tener que redescubrirlas. La ultima entrega registrada es `15-entrega-mano-de-obra.json`.

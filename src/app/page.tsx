@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ContactForm } from "./contact-form";
+import { HomeIntroLoader } from "./home-intro-loader";
 import { ParallaxVideo } from "./parallax-video";
 import { ScrollFrameSequence } from "./scroll-frame-sequence";
 import styles from "./home-premium.module.css";
@@ -41,7 +42,9 @@ const structureFrames = Array.from(
 );
 export default function Home() {
   return (
-    <main className={styles.page} id="main-content" tabIndex={-1}>
+    <>
+      <HomeIntroLoader />
+      <main className={styles.page} id="main-content" tabIndex={-1}>
       {/* Héroe en blanco con el logo explosivo como pieza de parallax */}
       <section className={styles.hero} id="inicio">
         <ScrollFrameSequence
@@ -193,6 +196,7 @@ export default function Home() {
         <p>© {new Date().getFullYear()} Representaciones Figueroa Castro S.A.S.</p>
         <Link href="/login">Acceso al portal</Link>
       </footer>
-    </main>
+      </main>
+    </>
   );
 }

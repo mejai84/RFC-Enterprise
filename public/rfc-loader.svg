@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Cargando RFC Enterprise">
+  <defs>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="ring" x1="16" y1="16" x2="144" y2="144" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0b7a47"/><stop offset=".56" stop-color="#29b876"/><stop offset="1" stop-color="#cc3a2a"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="67" fill="#fff" fill-opacity=".95"/>
+  <circle cx="80" cy="80" r="66" fill="none" stroke="#e4ede8" stroke-width="2"/>
+  <g fill="none" stroke="url(#ring)" stroke-linecap="round" stroke-width="4" filter="url(#glow)">
+    <circle cx="80" cy="80" r="59" stroke-dasharray="96 275">
+      <animateTransform attributeName="transform" type="rotate" from="0 80 80" to="360 80 80" dur="1.35s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="80" cy="80" r="52" stroke-dasharray="18 309" stroke="#cc3a2a">
+      <animateTransform attributeName="transform" type="rotate" from="360 80 80" to="0 80 80" dur="1.9s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  <g transform="translate(35 27)" stroke="#0b7a47" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 47 L45 12 L80 47"><animate attributeName="opacity" values=".55;1;.55" dur="1.35s" repeatCount="indefinite"/></path>
+    <path d="M10 47 L36 73 L24 99"/><path d="M80 47 L54 73 L66 99"/>
+  </g>
+  <circle cx="80" cy="68" r="9" fill="#cc3a2a" filter="url(#glow)">
+    <animate attributeName="r" values="8;10;8" dur="1.35s" repeatCount="indefinite"/>
+  </circle>
+</svg>

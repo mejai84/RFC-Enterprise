@@ -59,6 +59,8 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 | DOC-001 | Media | Manual de usuario al día | Regenerar el manual desde [15 · Manual de usuario](15-manual-de-usuario.md) para que incluya visitas múltiples, requisición desde visita técnica, auditoría del historial y búsqueda de inventario en el APU |
 | QTE-013 | Baja | Expediente técnico con archivos | Cargue binario de planos y documentos a Supabase Storage; hoy solo se guarda el enlace |
 
+| BUSQ-001 | Media | Buscador de módulos y accesos en la barra lateral | En la barra lateral aparece una caja de búsqueda (o atajos directos a secciones internas como «Tablas salariales») que filtra por nombre y lleva directo al módulo, sin tener que abrir Configuración y recorrer hasta el destino. |
+
 ## Última entrega verificada
 
 - **2026-10-07**: firma institucional y representante legal passam a la base de datos, con interruptor por documento (ADR-115); valores por defecto de la propuesta aplicados al abrir cotización (ADR-116); Resumen armado según permisos, con tarjetas de alquileres y de mi jornada (ADR-117); menú lateral agrupado por dominio y plegable (ADR-118); semáforo de antigüedad con texto en cotizaciones (ADR-119); cambio de contraseña en modal y documento en es-CO (ADR-120); devolución de alquiler en modal que verifica la escritura (ADR-121); firma de entrega visible al reabrir, quitable y reemplazable, y presente en la factura (ADR-122).

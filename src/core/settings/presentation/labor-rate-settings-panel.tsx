@@ -8,7 +8,7 @@ import { LaborRatesImport } from "./labor-rates-import";
 
 type RateTable = { id: string; client_name: string; name: string; version: string; activity_type: string; valid_from: string; valid_to: string | null; source_document: string; is_active: boolean };
 const cop = (value: number) => Number(value || 0).toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
-type RateEntry = { id: string; code: string; name: string; level: number | null; daily_basic_salary: number; transport_allowance: number; food_allowance: number; non_salary_allowance: number; provision_daily: number; extra_hours_daily: number; total_daily_rate: number };
+type RateEntry = { id: string; code: string; name: string; level: number | null; daily_basic_salary: number; transport_allowance: number; food_allowance: number; non_salary_allowance: number; total_daily_rate: number };
 type LaborRole = { id: string; code: string; name: string; labor_rate_entry_id: string; receives_hotel: boolean; receives_operational_transport: boolean };
 const number = (value: FormDataEntryValue | null) => Number(String(value ?? 0).replace(',', '.')) || 0;
 
@@ -49,7 +49,7 @@ export function LaborRateSettingsPanel({ companyId }: { companyId: string }) {
   const loadEntries = useCallback(async (table: RateTable | null) => {
     setSelected(table); setEntries([]); setRoles([]); if (!table) return;
     const [{ data, error: loadError }, { data: roleRows, error: rolesError }] = await Promise.all([
-      supabase().from("labor_rate_entries").select("id,code,name,level,daily_basic_salary,transport_allowance,food_allowance,non_salary_allowance,provision_daily,extra_hours_daily,total_daily_rate").eq("labor_rate_table_id", table.id).order("sort_order").order("name"),
+      supabase().from("labor_rate_entries").select("id,code,name,level,daily_basic_salary,transport_allowance,food_allowance,non_salary_allowance,total_daily_rate").eq("labor_rate_table_id", table.id).order("sort_order").order("name"),
       supabase().from("labor_rate_roles").select("id,code,name,labor_rate_entry_id,receives_hotel,receives_operational_transport").eq("labor_rate_table_id", table.id).eq("is_active", true).order("name"),
     ]);
     if (loadError || rolesError) setError(loadError?.message ?? rolesError?.message ?? "No fue posible abrir la tabla salarial.");
@@ -74,7 +74,7 @@ export function LaborRateSettingsPanel({ companyId }: { companyId: string }) {
     if (!selected || isExporting) return;
     setIsExporting(true); setError(""); setNotice("");
     try {
-      await exportLaborRateTableToXlsx(selected, entries);
+      await exportLaborRateTableToXlsx(selected, entries, roles);
       setNotice(`Archivo Excel de ${selected.name} descargado.`);
     } catch (exportError) {
       setError(exportError instanceof Error ? exportError.message : "No fue posible generar el archivo.");

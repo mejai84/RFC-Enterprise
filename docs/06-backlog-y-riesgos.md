@@ -89,3 +89,13 @@ Lo ya resuelto se retirÃ³ de aquÃ­ y quedÃ³ registrado como decisiones en
 - **SAL-003 — Consulta verificable:** la tabla salarial vigente debe poder revisarse dentro de la aplicación con los mismos componentes que se exportan; la exportación no es la única forma de auditar los valores.
 
 - **SAL-004 — Fuente oficial:** el Total día de cada nivel se preserva tal como aparece en el documento fuente. Cualquier cálculo específico de una cotización debe conservarse como instantánea separada, sin sobrescribir la tabla salarial.
+
+
+### SAL-005 - Trazabilidad completa de cargos por nivel
+
+Mitigado el 2026-10-08: el riesgo de cotizar un cargo con un nivel incompleto se reduce mediante el cat?logo oficial asociado a cada tabla. Cualquier fuente futura con cargos no estructurados debe pasar por revisi?n de mapeo antes de quedar disponible para APU; nunca se inferir? el nivel solo por similitud de nombre.
+
+
+<!-- 2026-10-08: Correction: the 68 OCENSA positions are the pre-existing mapped catalogue, not a verified complete transcription of all own-activity positions. Complete the OCENSA own-position map only from its official role-to-level annex; do not infer it from CENIT or ODC. Official source views exclude provisions and extra-hour references. -->
+
+<!-- 2026-10-08: A job title is reusable across companies, but its salary mapping is never global. labor_rate_roles is scoped by company_id, labor_rate_table_id and labor_rate_entry_id, so the same title may map to a different level and official value for each company, contract/version and validity period. -->

@@ -677,3 +677,15 @@ Abrir una tabla salarial vigente muestra un detalle de solo consulta con nivel, 
 ## 2026-10-08 — Total diario oficial de tablas salariales
 
 El campo `Total día` de una tabla salarial es un dato documental de su fuente (por ejemplo, el PDF de OCENSA), no un valor que RFC recalcula ni reemplaza con provisiones o recargos. La consulta, exportación y APU consumen exactamente ese valor por nivel; los cálculos particulares de una obra se registran por separado y nunca alteran la tabla oficial.
+
+
+### 2026-10-08 - Niveles oficiales y cargos son entidades distintas
+
+Un nivel salarial conserva ?nicamente los importes publicados por la empresa fuente. Los cargos se registran como relaciones independientes hacia ese nivel, por empresa, tabla y vigencia. Esto permite que un Nivel 1 tenga todos sus puestos sin repetir ni modificar salario, auxilios o total documental.
+
+La exportaci?n de una tabla contiene la hoja de valores por nivel y una hoja `Cargos por nivel`. Para APU, el cargo seleccionado determina el nivel de referencia; los c?lculos particulares del contratista se aplican en una capa de costeo/snapshot separada y jam?s sobrescriben la fuente oficial. Esta decisi?n aclara y reemplaza cualquier redacci?n anterior que indicara que el APU consume de forma definitiva el total documental sin dicha capa de c?lculo.
+
+
+<!-- 2026-10-08: Correction: the 68 OCENSA positions are the pre-existing mapped catalogue, not a verified complete transcription of all own-activity positions. Complete the OCENSA own-position map only from its official role-to-level annex; do not infer it from CENIT or ODC. Official source views exclude provisions and extra-hour references. -->
+
+<!-- 2026-10-08: A job title is reusable across companies, but its salary mapping is never global. labor_rate_roles is scoped by company_id, labor_rate_table_id and labor_rate_entry_id, so the same title may map to a different level and official value for each company, contract/version and validity period. -->

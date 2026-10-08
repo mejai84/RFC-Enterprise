@@ -258,6 +258,18 @@ El auxilio legal de transporte forma parte de la tarifa salarial. Hotel y transp
 
 La cotización selecciona la tabla salarial vigente y el APU obtiene los cargos de esa tabla, aplicando el valor del nivel correspondiente. La instantánea de cotización conserva el cálculo para auditoría. El auxilio legal de transporte pertenece al salario; hotel y transporte operativo son viáticos por desplazamiento, predeterminados para Capataz y Conductor y excepcionales para otros cargos con motivo documentado.
 
-La consulta de una tabla salarial vigente muestra los mismos componentes que su exportación: nivel, puesto, salario día, auxilios, provisiones, extras de referencia y valor día. Esto permite validar el costo antes de incorporarlo a una cotización o un APU.
+La consulta de una tabla salarial vigente muestra los mismos componentes que su exportación: nivel, puesto, salario día, auxilios publicados y total día. Esto permite validar el costo antes de incorporarlo a una cotización o un APU.
 
 La tabla salarial muestra y exporta el Total día oficial de su documento fuente. En OCENSA propias 2026–2027, Nivel 1 es $191.387; RFC no suma provisiones ni extras para cambiar ese valor. Los componentes particulares de una obra son una capa separada y no modifican los niveles oficiales.
+
+
+## Cat?logos de cargos y costo de APU (2026-10-08)
+
+La tabla fuente aporta la base oficial por nivel. Un cat?logo de cargos vincula cada puesto al nivel publicado por la empresa (OCENSA, CENIT, ODC u otra futura). Al escoger un cargo en el APU, el sistema conoce nivel y valores base sin copiar una tarifa inventada.
+
+El costo de mano de obra para una cotizaci?n/APU se calcula desde esa base mediante el modelo particular del contratista (provisiones, jornadas, recargos y vi?ticos autorizados) y se congela en la cotizaci?n. La tabla fuente y su exportaci?n siempre conservan el valor original publicado.
+
+
+<!-- 2026-10-08: Correction: the 68 OCENSA positions are the pre-existing mapped catalogue, not a verified complete transcription of all own-activity positions. Complete the OCENSA own-position map only from its official role-to-level annex; do not infer it from CENIT or ODC. Official source views exclude provisions and extra-hour references. -->
+
+<!-- 2026-10-08: A job title is reusable across companies, but its salary mapping is never global. labor_rate_roles is scoped by company_id, labor_rate_table_id and labor_rate_entry_id, so the same title may map to a different level and official value for each company, contract/version and validity period. -->

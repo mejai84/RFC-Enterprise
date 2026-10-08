@@ -224,6 +224,16 @@ Circuito de abastecimiento (pendiente el eslabÃ³n de compra): APU â†’ conversiÃ³
 
 - **Costos / tablas salariales (2026-10-08):** la tabla elegida por cada cotización alimenta el selector de cargos del APU. Se persiste el vínculo cargo–nivel–tabla y se distingue auxilio legal de transporte de viáticos operativos. Pendiente: ampliar el importador para Word/PDF con una etapa de revisión humana; Excel ya usa mapeo y vista previa.
 
-- **Consulta de tabla salarial (2026-10-08):** al abrir una tabla vigente en Configuración se muestran sus niveles, puestos asociados, componentes diarios, provisiones, extras de referencia y valor día en una vista de consulta equivalente al Excel exportado. En móvil la tabla conserva sus columnas dentro de un contenedor desplazable, sin romper el ancho de la pantalla.
+- **Consulta de tabla salarial (2026-10-08):** al abrir una tabla vigente en Configuración se muestran sus niveles, puestos asociados, componentes oficiales y total día en una vista de consulta equivalente al Excel exportado. En móvil la tabla conserva sus columnas dentro de un contenedor desplazable, sin romper el ancho de la pantalla.
 
 - **Costos / corrección de fuente oficial (2026-10-08):** el detalle y el APU consumen el `Total día` publicado por cada tabla salarial. Se retiró el recálculo que lo sobrescribía y la consulta solo presenta los componentes presentes en la fuente.
+
+
+## Cat?logo oficial de cargos por tabla salarial (2026-10-08)
+
+Cada tabla salarial conserva dos capas: los valores documentales del nivel y el cat?logo completo de cargos asociado a ese nivel. Se cargaron 68 puestos de OCENSA, 158 de CENIT 2026 y 119 de ODC 2025 seg?n las fuentes entregadas. La consulta y la exportaci?n muestran ambas capas, sin duplicar ni alterar los valores oficiales.
+
+
+<!-- 2026-10-08: Correction: the 68 OCENSA positions are the pre-existing mapped catalogue, not a verified complete transcription of all own-activity positions. Complete the OCENSA own-position map only from its official role-to-level annex; do not infer it from CENIT or ODC. Official source views exclude provisions and extra-hour references. -->
+
+<!-- 2026-10-08: A job title is reusable across companies, but its salary mapping is never global. labor_rate_roles is scoped by company_id, labor_rate_table_id and labor_rate_entry_id, so the same title may map to a different level and official value for each company, contract/version and validity period. -->

@@ -27,8 +27,6 @@ type Entry = {
   food_allowance: number;
   non_salary_allowance: number;
   total_daily_rate: number;
-  provision_daily: number;
-  extra_hours_daily: number;
 };
 
 export type ProjectLaborDraft = {
@@ -84,7 +82,7 @@ export function LaborProjectModal({
     void supabase
       .from("labor_rate_entries")
       .select(
-        "id,code,name,level,daily_basic_salary,transport_allowance,food_allowance,non_salary_allowance,total_daily_rate,provision_daily,extra_hours_daily",
+        "id,code,name,level,daily_basic_salary,transport_allowance,food_allowance,non_salary_allowance,total_daily_rate",
       )
       .eq("labor_rate_table_id", tableId)
       .order("sort_order")
@@ -383,11 +381,7 @@ export function LaborProjectModal({
                       />
                       <span>
                         <strong>{entry.code} · {entry.name}</strong>
-                        <small>
-                          Salario {money(entry.daily_basic_salary)} + provisiones{" "}
-                          {money(entry.provision_daily)} ={" "}
-                          {money(entry.total_daily_rate)} / día
-                        </small>
+                        <small>Valor oficial del nivel: {money(entry.total_daily_rate)} / d\u00eda</small>
                       </span>
                     </label>
                     {activo ? (

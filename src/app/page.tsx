@@ -180,7 +180,7 @@ export default function Home() {
           <p className={styles.label}>Hablemos de su proyecto</p>
           <h2>Empecemos con la información que realmente importa.</h2>
           <p>Comparta el tipo de intervención, su ubicación y el momento en que necesita ejecutarla. Así podremos preparar una conversación técnica útil desde el inicio.</p>
-          <a className={styles.address} href="https://maps.google.com/?q=Calle+29+K+27+62+Caucasia+Antioquia" target="_blank" rel="noreferrer">Calle 29 K #27-62<br />Caucasia, Antioquia</a>
+          <p className={styles.addressText}>Caucasia, Antioquia</p>
         </div>
         <ContactForm />
       </section>

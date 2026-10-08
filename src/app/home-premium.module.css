@@ -314,8 +314,18 @@
 }
 
 @media (max-width: 860px) {
-  .nav { grid-template-columns: auto 1fr auto; }
+  .nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    grid-template-columns: none;
+  }
+  .logo { margin-right: auto; min-width: 0; }
+  .logo b { font-size: 11px; }
   .navLinks { display: none; }
+  .portal { font-size: 12px; white-space: nowrap; padding: 8px 10px; }
+  .cta { font-size: 12px; white-space: nowrap; padding: 8px 12px; }
   .intro, .videoPanel, .videoPanelAlt, .contact { grid-template-columns: 1fr; }
   .heroContent h1 { letter-spacing: -0.02em; }
 }
@@ -333,11 +343,11 @@
 }
 
 @media (max-width: 520px) {
-  .nav { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+  .nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
   .logo b { font-size: 9px; }
   .logoImage { height: 38px; width: 38px; }
-  .portal { display: none; }
-  .cta { font-size: 12px; padding: 10px 12px; }
+  .portal { display: inline-flex; font-size: 11px; padding: 8px 10px; }
+  .cta { font-size: 11px; padding: 8px 10px; }
   .hero { min-height: max(700px, 122svh); }
   .heroContent { padding: 42vh 20px 48px; top: 0; }
   .heroContent h1 { font-size: clamp(34px, 10vw, 46px); }

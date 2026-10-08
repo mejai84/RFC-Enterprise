@@ -64,6 +64,10 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 | VIA-001 | Media | Viáticos de desplazamiento en mano de obra | Decidido y documentado (ADR en 07 y ficha en 09), **aún no construido**. Hotel y transporte operativo se cobra como viático, separado del auxilio legal de transporte, solo en obras por fuera de la sede y solo para Conductor y Capataz; los demás cargos se contratan en la región de la obra. El monto entra al costo del APU. Cada línea puede registrar una excepción justificada. |
 
 
+| MOB-001 | Alta | Modal de mano de obra por obra (Cotización nueva) | Al crear una cotización, un modal carga la tabla salarial vigente del cliente y permite digitar los valores que se estiman solo para esa obra. Las columnas de la tabla se muestran recalculadas en vivo, igual que la hoja de cálculo del usuario, y el resultado (costo diario por puesto y nivel) queda congelado en esa cotización. Nada se escribe en la tabla oficial ni en otras cotizaciones. |
+| MOB-002 | Media | Columna DOTACIÓN en la tabla salarial | El usuario tiene el concepto en su hoja pero todavía no lo ha definido. Queda pendiente de regla de cálculo. |
+| MOB-003 | Media | Valor del equipo y costo de alquiler dentro del APU de la obra | El usuario necesita incluir el valor del equipo y el costo de alquiler de las obras en el análisis. Falta definir si es una línea propia del APU o concepto del proyecto. |
+
 ## Última entrega verificada
 
 - **2026-10-07**: firma institucional y representante legal passam a la base de datos, con interruptor por documento (ADR-115); valores por defecto de la propuesta aplicados al abrir cotización (ADR-116); Resumen armado según permisos, con tarjetas de alquileres y de mi jornada (ADR-117); menú lateral agrupado por dominio y plegable (ADR-118); semáforo de antigüedad con texto en cotizaciones (ADR-119); cambio de contraseña en modal y documento en es-CO (ADR-120); devolución de alquiler en modal que verifica la escritura (ADR-121); firma de entrega visible al reabrir, quitable y reemplazable, y presente en la factura (ADR-122).

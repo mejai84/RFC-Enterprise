@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import { exportLaborRateTableToXlsx } from "./labor-rates-xlsx-export";
+import { LaborRatesImport } from "./labor-rates-import";
 
 type RateTable = { id: string; client_name: string; name: string; version: string; activity_type: string; valid_from: string; valid_to: string | null; source_document: string; is_active: boolean };
 type RateEntry = { id: string; code: string; name: string; level: number | null; daily_basic_salary: number; transport_allowance: number; food_allowance: number; non_salary_allowance: number; total_daily_rate: number };
@@ -99,5 +100,9 @@ export function LaborRateSettingsPanel({ companyId }: { companyId: string }) {
       ))}
     </div>
     {selected ? <><div className="labor-rate-entries-heading"><h3 className="settings-subheading">Cargos de {selected.name}</h3><button className="inventory-action" disabled={isExporting || entries.length === 0} onClick={() => void handleExport()} type="button">{isExporting ? "Generando…" : "Exportar a Excel"}</button></div><form className="labor-rate-entry-form" onSubmit={createEntry}><input name="code" placeholder="Código" required /><input name="name" placeholder="Cargo o nivel" required /><input min="1" name="level" placeholder="Nivel" type="number" /><input min="0" name="basic" placeholder="Salario básico diario" type="number" step="0.01" /><input min="0" name="transport" placeholder="Transporte" type="number" step="0.01" /><input min="0" name="food" placeholder="Alimentación" type="number" step="0.01" /><input min="0" name="nonSalary" placeholder="No salarial" type="number" step="0.01" /><input min="0" name="total" placeholder="Total diario (opcional)" type="number" step="0.01" /><button className="inventory-action" disabled={busy} type="submit">Agregar cargo</button></form><div className="labor-rate-entry-list">{entries.map((entry) => <div key={entry.id}><strong>{entry.code} · {entry.name}</strong><span>${Number(entry.total_daily_rate).toLocaleString("es-CO")} / día</span></div>)}</div></> : <p className="panel-intro">Seleccione una tabla para revisar y completar sus cargos.</p>}
+    <details className="labor-rate-import-details">
+      <summary>Importar una tabla desde Excel</summary>
+      <LaborRatesImport companyId={companyId} onDone={(tableId) => void loadEntries(tables.find((t) => t.id === tableId) ?? null)} />
+    </details>
   </section>;
 }

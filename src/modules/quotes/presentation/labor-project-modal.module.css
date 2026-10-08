@@ -1,0 +1,307 @@
+.labor-project-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 16px;
+  background: rgb(15 23 42 / 62%);
+}
+
+.labor-project-modal {
+  width: 100%;
+  max-width: 1080px;
+  margin: auto;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgb(15 23 42 / 35%);
+}
+
+.labor-project-head {
+  position: relative;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.labor-project-head h3 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+  color: #0f172a;
+}
+
+.labor-project-head p {
+  margin: 0 88px 0 0;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.labor-project-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #334155;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.labor-project-block {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.labor-project-block h4 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.labor-project-note {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.labor-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.labor-project-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: #334155;
+}
+
+.labor-project-grid input {
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.labor-project-grid small {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+/* ── Cargos ───────────────────────────────────────────────── */
+
+.labor-project-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.labor-project-entry {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.labor-project-entry.is-on {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.labor-project-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.labor-project-check input {
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+.labor-project-check span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.labor-project-check small {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.labor-project-entry-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  padding: 0 12px 12px 44px;
+  border-top: 1px dashed #bfdbfe;
+}
+
+.labor-project-entry-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #334155;
+}
+
+.labor-project-entry-fields input {
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.labor-project-entry-total {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.labor-project-entry-total strong {
+  font-size: 1rem;
+  color: #1d4ed8;
+}
+
+/* ── Tabla del desglose ────────────────────────────────────── */
+
+.labor-project-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.labor-project-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.labor-project-table th,
+.labor-project-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.labor-project-table th:first-child,
+.labor-project-table td:first-child {
+  text-align: left;
+}
+
+.labor-project-table thead th {
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+}
+
+.labor-project-table tfoot td {
+  border-top: 2px solid #cbd5e1;
+  border-bottom: none;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* ── Pie ───────────────────────────────────────────────────── */
+
+.labor-project-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+.labor-project-foot p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.labor-project-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.labor-project-secondary {
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #334155;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.labor-project-primary {
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid #1d4ed8;
+  border-radius: 10px;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.labor-project-primary:disabled {
+  border-color: #cbd5e1;
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+@media (width <= 640px) {
+  .labor-project-backdrop {
+    padding: 0;
+  }
+
+  .labor-project-modal {
+    border-radius: 0;
+    min-height: 100%;
+  }
+
+  .labor-project-entry-fields {
+    padding-left: 12px;
+  }
+
+  .labor-project-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .labor-project-actions {
+    flex-direction: column;
+  }
+
+  .labor-project-secondary,
+  .labor-project-primary {
+    width: 100%;
+  }
+}

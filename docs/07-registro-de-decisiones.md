@@ -1,4 +1,23 @@
----
+
+
+## 2026-10-08 — ADR-126: modelo de mano de obra y viáticos por obra
+El cálculo de la mano de obra reproduce la hoja de cálculo del cliente, celda por celda, y se verificó contra el libro real de la obra Trampa Granjita (COT-113-2026). Coinciden el subtotal provisionado (Nivel 6: $350.000,04), las horas extra diurnas (2 h × 56), los dominicales (190% × 14) y el total del periodo ($133.294.498, $555.394 por día). Tres reglas quedan fijadas por ese lectura:
+
+1. **El interés de cesantías es `cesantías × 12/360`** (Ley 52 de 1975). El rótulo «1%/cesanti» que aparece en el encabezado de la hoja oficial es una etiqueta equivocada: el 3,33% diario de las cifras es el valor correcto.
+2. **La hora ordinaria es el salario día entre 7**, no entre 8. Es una decisión de la hoja y se conserva para que el número coincida.
+3. **Hotel y alimentación son tarifa por día** y se multiplican por los días de alojamiento (90 en la hoja, no los 240 de la tabla). El resto de conceptos se digitan como total del periodo.
+
+Los conceptos por obra **no se escriben en la tabla salarial**: son estimaciones del dueño y valen únicamente para la cotización que los guarda. La tabla oficial queda intacta y cada cotización es independiente de las demás. Al calcular, la cotización congela el resultado, de modo que actualizar la tabla después no mueve esa cotización.
+
+Los días de la obra se calculan del plazo (fecha de inicio y finalización) y se pueden cambiar a mano. Cuando se escriben a mano, la interfaz avisa que está usando el valor escrito y deja ver cuántos días dio el plazo.
+
+**Corrección de fondo:** `labor_rate_entries.total_daily_rate` solo sumaba las cuatro columnas base, sin provisiones ni horas extra, y ese número era el que alimentaba el APU. La mano de obra quedaba subestimada entre 32% y 49%. La migración recalcula el valor diario con el modelo completo; el Nivel 6 de OCENSA pasa de $327.843 a $461.865 por día.
+
+**Anomalía señalada, no corregida:** la celda `AH = AF − AG` de la hoja oficial **resta** el 8% de salud y pensión en lugar de sumarlo. El motor lo reproduce tal cual para no desalinearse del Excel del cliente, pero conviene confirmarlo con él: si fuera un error de signo en su hoja, el total de cada nivel bajaría en ese 8%.
+
+**Pendiente:** la columna DOTACIÓN existe en la hoja del cliente (hoja `dotacion`, $3.447.000 para 240 días, con 6 perfiles de cargo) y el modelo ya la acepta por puesto, pero falta confirmar su regla antes de offeredla como concepto editable. Queda registrado como MOB-002.
+
+**Documentos de cliente:** el libro `COT-113-2026 ... TRAMPA GRANJITA.xlsx` se usó solo como referencia de lectura. No entra al repositorio, y `.gitignore` bloquea ahora cualquier hoja de cálculo, PDF o ZIP en `public/`, porque todo lo que está en esa carpeta se sirve por web y el documento contiene costos reales del cliente.---
 estado: vigente
 propietario: Equipo RFC Enterprise
 ultima_actualizacion: 2026-09-16

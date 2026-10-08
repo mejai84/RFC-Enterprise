@@ -47,6 +47,7 @@ import {
 
 import { apuCostBreakdown, apuSellingBreakdown, type Apu } from "@/modules/apu";
 import { prepareRealDataStorage } from "@/shared/browser/real-data-storage";
+import { LaborProjectModal, type ProjectLaborDraft } from "./labor-project-modal";
 import { TechnicalVisitEditor } from "@/modules/quotes/presentation/technical-visit-editor";
 import { TechnicalDocumentsEditor } from "@/modules/quotes/presentation/technical-documents-editor";
 
@@ -724,6 +725,16 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         | "rfc_standard"
         | "ocensa";
       const laborRateTableId = String(fd.get("laborRateTableId") ?? "").trim() || undefined;
+      // Mano de obra de esta obra: los conceptos digitados quedan congelados en la cotizacion.
+      const laborProjectRaw = String(fd.get("laborProjectPayload") ?? "").trim();
+      let laborProjectSnapshot: Record<string, unknown> | undefined;
+      if (laborProjectRaw) {
+        try {
+          laborProjectSnapshot = JSON.parse(laborProjectRaw) as Record<string, unknown>;
+        } catch {
+          laborProjectSnapshot = undefined;
+        }
+      }
 
       // Valores de pre-costeo preliminares
       const matVal =
@@ -762,6 +773,16 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
             : undefined,
         laborScale,
         laborRateTableId,
+        laborProjectSnapshot,
+        laborProjectDays: laborProjectSnapshot
+          ? Number((laborProjectSnapshot as { dias?: number }).dias) || undefined
+          : undefined,
+        laborProjectStart: laborProjectSnapshot
+          ? String((laborProjectSnapshot as { fechaInicio?: string }).fechaInicio ?? "") || undefined
+          : undefined,
+        laborProjectEnd: laborProjectSnapshot
+          ? String((laborProjectSnapshot as { fechaFin?: string }).fechaFin ?? "") || undefined
+          : undefined,
         validityDays,
         deliveryTimeWeeks,
         paymentTerms,
@@ -2059,6 +2080,14 @@ function NewQuoteModal({
   const { config: companySettings } = useCompanyConfig();
   const proposalDefaults = companySettings?.proposalDefaults;
   const [laborTables, setLaborTables] = useState<Array<{ id: string; name: string; version: string; client_name: string }>>([]);
+  // Mano de obra por obra: tabla elegida, conceptos digitados y resultado congelado.
+  const [selectedLaborTableId, setSelectedLaborTableId] = useState("");
+  const [laborModalOpen, setLaborModalOpen] = useState(false);
+  const [laborDraft, setLaborDraft] = useState<ProjectLaborDraft | null>(null);
+  const laborPayload = useMemo(
+    () => (laborDraft ? JSON.stringify(laborDraft.snapshot) : ""),
+    [laborDraft],
+  );
   useEffect(() => {
     if (!companySettings?.companyId || !supabaseUrl || !supabasePublishableKey) return;
     const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
@@ -2251,6 +2280,63 @@ function NewQuoteModal({
               </select>
             </label>
           </div>
+
+          <div className="new-quote-row">
+            <label className="form-field">
+              Tabla salarial de esta obra
+              <select
+                name="laborRateTableId"
+                value={selectedLaborTableId}
+                onChange={(e) => setSelectedLaborTableId(e.target.value)}
+              >
+                <option value="">Sin tabla específica (estándar RFC)</option>
+                {laborTables.map((table) => (
+                  <option key={table.id} value={table.id}>
+                    {table.name} · {table.version}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="new-quote-labor-project">
+            <button
+              type="button"
+              className="quotes-cancel-btn"
+              onClick={() => setLaborModalOpen(true)}
+              disabled={!selectedLaborTableId}
+            >
+              {laborDraft
+                ? "Editar mano de obra de esta obra"
+                : "Armar mano de obra de esta obra"}
+            </button>
+            <p className="labor-project-summary">
+              {laborDraft
+                ? `${laborDraft.incluidos.length} cargo${laborDraft.incluidos.length === 1 ? "" : "s"} · ${laborDraft.dias} días · $ ${laborDraft.snapshot.totalObra.toLocaleString("es-CO")}`
+                : "Opcional. Permite digitar hotel, alimentación, hidratación y los demás conceptos solo para esta cotización."}
+            </p>
+            <input
+              type="hidden"
+              name="laborProjectPayload"
+              value={laborPayload}
+              readOnly
+            />
+          </div>
+
+          {laborModalOpen && selectedLaborTableId ? (
+            <LaborProjectModal
+              tableId={selectedLaborTableId}
+              tableName={
+                laborTables.find((t) => t.id === selectedLaborTableId)?.name ??
+                "Tabla salarial"
+              }
+              onClose={() => setLaborModalOpen(false)}
+              onSave={(draft) => {
+                setLaborDraft(draft);
+                setLaborModalOpen(false);
+              }}
+            />
+          ) : null}
 
           <label className="form-field">
             Enlace a carpeta de planos / especificaciones (Drive, OneDrive)

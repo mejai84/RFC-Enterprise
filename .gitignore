@@ -56,6 +56,15 @@ encoding-check.cjs
 # NUNCA deben subirse al repositorio.
 /Archivos referencia/
 
+# Documentos de cliente (tablas salariales, APU, propuestas). Todo lo que este
+# en public/ se sirve por web: si un Excel de cliente llegara al repositorio,
+# cualquiera podria descargarlo desde el sitio.
+/public/*.xlsx
+/public/*.xls
+/public/*.pdf
+/public/*.docx
+/public/*.zip
+
 # Verificaciones y artefactos locales
 /encoding-check.cjs
 /tsconfig.tsbuildinfo
@@ -66,3 +75,4 @@ encoding-check.cjs
 /tmp-*.png
 /vlc-help.txt
 /.tmp-salary-tables/
+tmp-dev.log

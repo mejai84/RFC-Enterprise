@@ -68,6 +68,9 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 | MOB-002 | Media | Columna DOTACIÓN en la tabla salarial | El usuario tiene el concepto en su hoja pero todavía no lo ha definido. Queda pendiente de regla de cálculo. |
 | MOB-003 | Media | Valor del equipo y costo de alquiler dentro del APU de la obra | El usuario necesita incluir el valor del equipo y el costo de alquiler de las obras en el análisis. Falta definir si es una línea propia del APU o concepto del proyecto. |
 
+- **2026-10-08**: mano de obra y viáticos por obra (ADR-126). Motor de cálculo verificado contra el libro real de la obra Trampa Granjita: provisioned, horas y dominicales coinciden al peso. Modal «Mano de obra de esta obra» en cotización nueva, con plazo que calcula los días, conceptos digitables de la obra, desglose en vivo y total congelado en esa cotización. Se corrige la subestimación del 32% al 49% en el valor diario de los cargos. Se bloquean en `.gitignore` los documentos de cliente dentro de `public/`.
+- **2026-10-08**: asistente de importación de tablas salariales con vista previa y mapeo de columnas, montado en Configuración › Costos y tablas salariales.
+
 ## Última entrega verificada
 
 - **2026-10-07**: firma institucional y representante legal passam a la base de datos, con interruptor por documento (ADR-115); valores por defecto de la propuesta aplicados al abrir cotización (ADR-116); Resumen armado según permisos, con tarjetas de alquileres y de mi jornada (ADR-117); menú lateral agrupado por dominio y plegable (ADR-118); semáforo de antigüedad con texto en cotizaciones (ADR-119); cambio de contraseña en modal y documento en es-CO (ADR-120); devolución de alquiler en modal que verifica la escritura (ADR-121); firma de entrega visible al reabrir, quitable y reemplazable, y presente en la factura (ADR-122).

@@ -2612,3 +2612,88 @@ html, body { overflow-x: clip; max-width: 100vw; }
     transform: translateY(0);
   }
 }
+
+/* ── Asistente de importacion de tablas salariales ──────────
+   Vista previa y mapeo de columnas. No interpreta hojas
+   informativas a ciegas: el usuario ve todo antes de guardar. */
+.labor-rate-import-details {
+  margin-top: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  background: var(--surface);
+}
+.labor-rate-import-details > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.labor-rate-import-file {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 14px 0;
+}
+.labor-rate-import-file input[type="file"] {
+  font-size: 13px;
+}
+.labor-rate-import-controls {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.labor-rate-import-target {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.labor-rate-import-map {
+  margin: 14px 0;
+}
+.labor-rate-import-map-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+.labor-rate-import-preview {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 12px;
+}
+.labor-rate-import-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.labor-rate-import-table th,
+.labor-rate-import-table td {
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+.labor-rate-import-table th:first-child,
+.labor-rate-import-table td:first-child {
+  text-align: left;
+}
+.labor-rate-import-table thead th {
+  background: var(--canvas);
+  color: var(--muted);
+  font-weight: 600;
+}
+.labor-rate-import-existing {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.labor-rate-import .inventory-action {
+  min-height: 44px;
+}

@@ -1367,3 +1367,51 @@
 .kanban-stale-badge[data-level='warning'] { background: #fef3c7; border: 1px solid #ecd9a8; color: #8a6116; }
 .kanban-stale-badge[data-level='critical'] { background: #fdecea; border: 1px solid #eec3bd; color: #922b21; }
 .kanban-code-rev { align-items: center; display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+
+/* ── Mano de obra de esta obra ──────────────────────────────
+   Los conceptos digitados son solo de esta cotizacion: no tocan la
+   tabla salarial oficial ni ninguna otra cotizacion. */
+.new-quote-labor-project {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px dashed #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
+}
+.new-quote-labor-project .quotes-cancel-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #1d4ed8;
+  border-radius: 10px;
+  background: #fff;
+  color: #1d4ed8;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.new-quote-labor-project .quotes-cancel-btn:disabled {
+  border-color: #cbd5e1;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+.labor-project-summary {
+  flex: 1 1 240px;
+  margin: 0;
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+@media (width <= 640px) {
+  .new-quote-labor-project {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .new-quote-labor-project .quotes-cancel-btn {
+    width: 100%;
+  }
+}

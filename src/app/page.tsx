@@ -43,6 +43,7 @@ const structureFrames = Array.from(
 export default function Home() {
   return (
     <>
+      <link rel="preload" as="image" href={logoFrames[0]} fetchPriority="high" />
       <HomeIntroLoader />
       <main className={styles.page} id="main-content" tabIndex={-1}>
       {/* Héroe en blanco con el logo explosivo como pieza de parallax */}
@@ -63,7 +64,7 @@ export default function Home() {
             <a href="#servicios">Servicios</a>
             <a href="#proceso">Cómo trabajamos</a>
           </div>
-          <Link className={styles.portal} href="/login">Portal de empleados <span aria-hidden="true">↗</span></Link>
+          <Link className={styles.portal} href="/login">Acceso de colaboradores <span aria-hidden="true">↗</span></Link>
           <a className={styles.cta} href="#contacto">Iniciar una conversación <span aria-hidden="true">→</span></a>
         </nav>
 

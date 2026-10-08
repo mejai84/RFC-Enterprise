@@ -22,6 +22,7 @@ export function ScrollFrameSequence({ className, frames, mode, label }: ScrollFr
     if (!canvas || !root || frames.length === 0) return;
 
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mobile = window.matchMedia("(max-width: 860px)");
     const images = new Map<number, HTMLImageElement>();
     let targetFrame = 0;
     let renderedFrame = -1;
@@ -61,7 +62,9 @@ export function ScrollFrameSequence({ className, frames, mode, label }: ScrollFr
     };
 
     const preloadAround = (index: number) => {
-      for (let offset = -5; offset <= 8; offset += 1) load(index + offset);
+      const before = mobile.matches ? 1 : 5;
+      const after = mobile.matches ? 2 : 8;
+      for (let offset = -before; offset <= after; offset += 1) load(index + offset);
     };
 
     const update = () => {
@@ -94,6 +97,7 @@ export function ScrollFrameSequence({ className, frames, mode, label }: ScrollFr
     window.addEventListener("scroll", requestUpdate, { passive: true });
     window.addEventListener("resize", requestUpdate);
     media.addEventListener("change", requestUpdate);
+    mobile.addEventListener("change", requestUpdate);
     requestUpdate();
 
     return () => {
@@ -103,6 +107,7 @@ export function ScrollFrameSequence({ className, frames, mode, label }: ScrollFr
       window.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", requestUpdate);
       media.removeEventListener("change", requestUpdate);
+      mobile.removeEventListener("change", requestUpdate);
     };
   }, [frames, mode]);
 

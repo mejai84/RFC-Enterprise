@@ -10,3 +10,7 @@
 .progressFill { animation:loaderProgress 3s linear infinite; background:linear-gradient(90deg,#0b7a47,#42cf8a 58%,#cc3a2a); border-radius:inherit; display:block; height:100%; transform-origin:left; width:100%; }
 @keyframes loaderProgress { from { transform:scaleX(0); } 88% { transform:scaleX(.92); } to { transform:scaleX(1); } }
 @media (prefers-reduced-motion: reduce) { .progressFill { animation:none; transform:scaleX(.72); } .screen { transition-duration:160ms; } }
+@media (max-width: 520px) {
+  .overlay .text { display:none; }
+  .overlay { gap:14px; }
+}

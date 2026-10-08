@@ -202,3 +202,8 @@ img, svg { display: block; max-width: 100%; }
 .labor-rate-add-entry { margin-top: 12px; }
 .labor-rate-add-entry summary { cursor: pointer; font-weight: 700; min-height: 44px; padding: 12px 0; }
 .labor-rate-add-entry .labor-rate-entry-form { padding-top: 8px; }
+
+.labor-rate-card { cursor: default; }
+.labor-rate-view-button { align-items: center; background: var(--ink); border: 1px solid var(--ink); border-radius: 7px; color: #fff; cursor: pointer; display: inline-flex; font: inherit; font-size: 12px; font-weight: 700; justify-content: center; margin-top: 6px; min-height: 44px; padding: 8px 12px; width: fit-content; }
+.labor-rate-view-button:hover { background: var(--brand); border-color: var(--brand); }
+.labor-rate-view-button:focus-visible { outline: 3px solid var(--brand-glow); outline-offset: 2px; }

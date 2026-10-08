@@ -99,11 +99,12 @@ export function LaborRateSettingsPanel({ companyId }: { companyId: string }) {
     </div>
     <div className="labor-rate-list" aria-label="Tablas salariales registradas">
       {visibleTables.length === 0 ? <p className="panel-intro">No hay tablas para ese año.</p> : visibleTables.map((table) => (
-        <button className={`labor-rate-card ${selected?.id === table.id ? "is-selected" : ""} ${isCurrent(table) ? "is-current" : ""}`} key={table.id} onClick={() => void loadEntries(table)} type="button">
+        <article className={`labor-rate-card ${selected?.id === table.id ? "is-selected" : ""} ${isCurrent(table) ? "is-current" : ""}`} key={table.id}>
           <strong>{table.name} · {table.version}</strong>
           <span>{table.client_name || "Uso general"} · {table.valid_from}{table.valid_to ? ` a ${table.valid_to}` : ""}</span>
           {isCurrent(table) ? <em className="labor-rate-badge">Vigente hoy</em> : null}
-        </button>
+          <button className="labor-rate-view-button" onClick={() => void loadEntries(table)} type="button">{selected?.id === table.id ? "Detalle abierto" : "Ver detalle"}</button>
+        </article>
       ))}
     </div>
     {selected ? <>

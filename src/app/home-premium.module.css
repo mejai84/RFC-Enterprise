@@ -11,7 +11,7 @@
 /* ---- Hero ---- */
 .hero {
   position: relative;
-  min-height: 94vh;
+  min-height: 148svh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -24,8 +24,8 @@
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(120deg, rgba(253, 252, 249, 0.92) 0%, rgba(253, 252, 249, 0.78) 42%, rgba(253, 252, 249, 0.35) 100%),
-    linear-gradient(to top, rgba(252, 250, 246, 0.9), rgba(252, 250, 246, 0) 40%);
+    linear-gradient(120deg, rgba(253, 252, 249, 0.78) 0%, rgba(253, 252, 249, 0.56) 42%, rgba(253, 252, 249, 0.14) 100%),
+    linear-gradient(to top, rgba(252, 250, 246, 0.76), rgba(252, 250, 246, 0) 42%);
   pointer-events: none;
 }
 
@@ -44,6 +44,21 @@
   border-radius: inherit;
 }
 
+.heroVideo,
+.panelVideo,
+.panelVideoAlt {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.heroVideo canvas,
+.panelVideo canvas,
+.panelVideoAlt canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
 .nav {
   position: relative;
   z-index: 3;
@@ -80,7 +95,10 @@
 .heroContent {
   position: relative;
   z-index: 2;
+  align-self: flex-start;
   max-width: 700px;
+  position: sticky;
+  top: clamp(104px, 16svh, 180px);
   padding: clamp(24px, 6vw, 72px) clamp(20px, 5vw, 64px) clamp(60px, 8vw, 96px);
   display: grid;
   gap: 18px;
@@ -288,6 +306,8 @@
 
 /* ---- Reducido ---- */
 @media (prefers-reduced-motion: reduce) {
+  .hero { min-height: 94svh; }
+  .heroContent { position: relative; top: auto; }
   .heroVideo video, .panelVideo video, .panelVideoAlt video { transform: none; }
   .page { scroll-behavior: auto; }
 }
@@ -297,4 +317,32 @@
   .navLinks { display: none; }
   .intro, .videoPanel, .videoPanelAlt, .contact { grid-template-columns: 1fr; }
   .heroContent h1 { letter-spacing: -0.02em; }
+}
+
+/* Hero: el primer píxel útil pertenece al MP4 del logo, sin imagen previa. */
+.heroVideo video { object-position: center; transform: translateY(var(--parallax-offset, 0)) scale(1.02); }
+
+@media (max-width: 860px) {
+  .hero { min-height: max(720px, 128svh); }
+  .heroVideo { inset: 0; }
+  .heroVideo video { object-position: 64% center; transform: none; }
+  .nav { min-height: 56px; padding: 14px 20px; }
+  .portal { font-size: 13px; }
+  .cta, .btn, .btnGhost { min-height: 44px; justify-content: center; }
+}
+
+@media (max-width: 520px) {
+  .nav { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+  .logo b { font-size: 9px; }
+  .logoImage { height: 38px; width: 38px; }
+  .portal { display: none; }
+  .cta { font-size: 12px; padding: 10px 12px; }
+  .hero { min-height: max(700px, 122svh); }
+  .heroContent { padding: 42vh 20px 48px; top: 0; }
+  .heroContent h1 { font-size: clamp(34px, 10vw, 46px); }
+  .lede { font-size: 16px; }
+  .actions { display: grid; grid-template-columns: 1fr; }
+  .btn, .btnGhost { width: 100%; }
+  .strip { padding-block: 14px; }
+  .panelVideo, .panelVideoAlt { border-radius: 12px; }
 }

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ContactForm } from "./contact-form";
 import { ParallaxVideo } from "./parallax-video";
+import { ScrollFrameSequence } from "./scroll-frame-sequence";
 import styles from "./home-premium.module.css";
 
 const services = [
@@ -29,16 +30,25 @@ const approach = [
   ["Ejecutar", "Coordinamos el trabajo con orden en campo, seguimiento y una comunicación directa durante el proceso."],
 ];
 
+const logoFrames = Array.from(
+  { length: 82 },
+  (_, index) => `/scroll-sequences/logo/Create_3D_logo_video_20261007161453_${String(index).padStart(3, "0")}.webp`,
+);
+
+const structureFrames = Array.from(
+  { length: 102 },
+  (_, index) => `/scroll-sequences/structure/steel-beam-structure-exploding-rfc_${String(index).padStart(3, "0")}.webp`,
+);
 export default function Home() {
   return (
     <main className={styles.page} id="main-content" tabIndex={-1}>
       {/* Héroe en blanco con el logo explosivo como pieza de parallax */}
       <section className={styles.hero} id="inicio">
-        <ParallaxVideo
+        <ScrollFrameSequence
           className={styles.heroVideo}
-          poster="/workshop-fabrication-rfc.png"
-          source="/Create_3D_logo_video_20261007161453.mp4"
-          speed={0.06}
+          frames={logoFrames}
+          mode="hero"
+          label="Animación de la identidad RFC"
         />
         <nav className={styles.nav} aria-label="Navegación principal">
           <Link className={styles.logo} href="#inicio" aria-label="Representaciones Figueroa Castro, inicio">
@@ -85,11 +95,11 @@ export default function Home() {
 
       {/* Estructura metálica con parallax de la vista explosiva */}
       <section className={styles.videoPanel} aria-labelledby="estructura-title">
-        <ParallaxVideo
+        <ScrollFrameSequence
           className={styles.panelVideo}
-          poster="/hero-industrial-rfc.png"
-          source="/Steel_beam_structure_exploded_view_20261007164514.mp4"
-          speed={0.08}
+          frames={structureFrames}
+          mode="panel"
+          label="Estructura metálica en vista explosiva"
         />
         <div className={styles.panelCopy}>
           <p className={styles.label}>Estructura a la medida</p>

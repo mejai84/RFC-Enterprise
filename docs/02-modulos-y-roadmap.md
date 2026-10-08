@@ -225,3 +225,5 @@ Circuito de abastecimiento (pendiente el eslabÃ³n de compra): APU â†’ conversiÃ³
 - **Costos / tablas salariales (2026-10-08):** la tabla elegida por cada cotización alimenta el selector de cargos del APU. Se persiste el vínculo cargo–nivel–tabla y se distingue auxilio legal de transporte de viáticos operativos. Pendiente: ampliar el importador para Word/PDF con una etapa de revisión humana; Excel ya usa mapeo y vista previa.
 
 - **Consulta de tabla salarial (2026-10-08):** al abrir una tabla vigente en Configuración se muestran sus niveles, puestos asociados, componentes diarios, provisiones, extras de referencia y valor día en una vista de consulta equivalente al Excel exportado. En móvil la tabla conserva sus columnas dentro de un contenedor desplazable, sin romper el ancho de la pantalla.
+
+- **Costos / corrección de fuente oficial (2026-10-08):** el detalle y el APU consumen el `Total día` publicado por cada tabla salarial. Se retiró el recálculo que lo sobrescribía y la consulta solo presenta los componentes presentes en la fuente.

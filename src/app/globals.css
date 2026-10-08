@@ -192,7 +192,7 @@ img, svg { display: block; max-width: 100%; }
 .labor-rate-detail-kicker { color: var(--brand); font-size: 11px; font-weight: 800; letter-spacing: .08em; margin: 0 0 4px; text-transform: uppercase; }
 .labor-rate-detail-summary { color: var(--muted); font-size: 13px; margin: 12px 0; }
 .labor-rate-detail-table-wrap { border: 1px solid var(--line); border-radius: 9px; max-width: 100%; overflow-x: auto; }
-.labor-rate-detail-table { border-collapse: collapse; font-size: 12px; min-width: 1120px; width: 100%; }
+.labor-rate-detail-table { border-collapse: collapse; font-size: 12px; min-width: 900px; width: 100%; }
 .labor-rate-detail-table th, .labor-rate-detail-table td { border-bottom: 1px solid var(--line); padding: 10px; text-align: right; vertical-align: top; white-space: nowrap; }
 .labor-rate-detail-table th { background: #f1f5f9; color: #475569; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
 .labor-rate-detail-table th:nth-child(2), .labor-rate-detail-table td:nth-child(2), .labor-rate-detail-table th:first-child, .labor-rate-detail-table td:first-child { text-align: left; }

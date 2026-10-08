@@ -673,3 +673,7 @@ Los cargos del APU se resuelven desde la tabla salarial elegida en la cotización
 ## 2026-10-08 — Consulta de tablas salariales
 
 Abrir una tabla salarial vigente muestra un detalle de solo consulta con nivel, puestos asociados y cada componente del valor diario. La vista interna y la exportación utilizan el mismo conjunto de datos para que el usuario pueda comprobar valores antes de usarlos en una cotización.
+
+## 2026-10-08 — Total diario oficial de tablas salariales
+
+El campo `Total día` de una tabla salarial es un dato documental de su fuente (por ejemplo, el PDF de OCENSA), no un valor que RFC recalcula ni reemplaza con provisiones o recargos. La consulta, exportación y APU consumen exactamente ese valor por nivel; los cálculos particulares de una obra se registran por separado y nunca alteran la tabla oficial.

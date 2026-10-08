@@ -1,0 +1,54 @@
+/* Loader premium: blanco con el logo 3D centrado y una barra fina. */
+
+.screen {
+  background: #fcfaf6;
+  color: #16241c;
+  display: grid;
+  place-content: center;
+  gap: 20px;
+  min-height: 100vh;
+  justify-items: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.logoWrap {
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(22, 36, 28, 0.16);
+  width: min(200px, 60vw);
+  aspect-ratio: 1 / 1;
+  background: #ffffff;
+}
+
+.logoVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.text {
+  color: #5c6b62;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.bar {
+  width: 120px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #b07816, transparent);
+  animation: loaderSweep 1.4s ease-in-out infinite;
+}
+
+@keyframes loaderSweep {
+  0%, 100% { transform: translateX(-18px); opacity: 0.4; }
+  50% { transform: translateX(18px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar { animation: none; }
+  .logoVideo { /* Se queda en el primer fotograma del logotipo. */ }
+}

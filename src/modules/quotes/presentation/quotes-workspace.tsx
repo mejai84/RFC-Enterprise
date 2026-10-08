@@ -721,9 +721,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       const reqVisit = fd.get("reqVisit") === "on";
       const deadline = String(fd.get("deadline") ?? "").trim();
       const notes = String(fd.get("notes") ?? "").trim();
-      const laborScale = String(fd.get("laborScale") ?? "rfc_standard") as
-        | "rfc_standard"
-        | "ocensa";
+
       const laborRateTableId = String(fd.get("laborRateTableId") ?? "").trim() || undefined;
       // Mano de obra de esta obra: los conceptos digitados quedan congelados en la cotizacion.
       const laborProjectRaw = String(fd.get("laborProjectPayload") ?? "").trim();
@@ -771,7 +769,6 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
                 equipment: eqVal,
               }
             : undefined,
-        laborScale,
         laborRateTableId,
         laborProjectSnapshot,
         laborProjectDays: laborProjectSnapshot
@@ -2269,27 +2266,16 @@ function NewQuoteModal({
             </label>
           </div>
 
-          <div className="new-quote-row">
-            <label className="form-field">
-              Escala salarial para mano de obra (APUs)
-              <select name="laborScale" defaultValue="rfc_standard">
-                <option value="rfc_standard">Estándar RFC (General)</option>
-                <option value="ocensa">
-                  Tabla Salarial Sectorial (Ej: OCENSA)
-                </option>
-              </select>
-            </label>
-          </div>
 
           <div className="new-quote-row">
             <label className="form-field">
-              Tabla salarial de esta obra
+              Tabla salarial de esta obra (cargos del APU)
               <select
                 name="laborRateTableId"
                 value={selectedLaborTableId}
                 onChange={(e) => setSelectedLaborTableId(e.target.value)}
               >
-                <option value="">Sin tabla específica (estándar RFC)</option>
+                <option value="">Sin tabla: se usarán los cargos generales</option>
                 {laborTables.map((table) => (
                   <option key={table.id} value={table.id}>
                     {table.name} · {table.version}

@@ -6,12 +6,10 @@
   "rama": "main",
   "estado": "pusheado y desplegado en producción",
   "produccion": "https://rfc-enterprise.vercel.app",
-
   "que_se_hizo": {
     "resumen": "Se construyó el cálculo de mano de obra por obra, verificado contra el libro Excel real del cliente (COT-113-2026, obra Trampa Granjita), y se corrigió una subestimación de costos que afectaba a todos los APU.",
     "alcance_real": "Módulo de dominio puro + modal en cotización nueva + migración de base de datos + documentación. No se tocó el módulo APU."
   },
-
   "archivos_nuevos": [
     "src/modules/quotes/domain/project-labor.ts",
     "src/modules/quotes/presentation/labor-project-modal.tsx",
@@ -19,7 +17,6 @@
     "src/core/settings/presentation/labor-rates-import.tsx",
     "supabase/migrations/20261008200000_labor_project_concepts.sql"
   ],
-
   "archivos_modificados": [
     "src/modules/quotes/domain/quote.ts",
     "src/modules/quotes/presentation/quotes-workspace.tsx",
@@ -30,7 +27,6 @@
     "docs/06-backlog-y-riesgos.md",
     "docs/07-registro-de-decisiones.md"
   ],
-
   "reglas_del_calculo_confirmadas": {
     "fuente": "Leídas directamente de las fórmulas del Excel del cliente, no inferidas.",
     "verificacion": "Comparación numérica contra el libro real. Coinciden al peso.",
@@ -56,7 +52,6 @@
       "nivel_1_ocensa_subtotal_provisionado": 203933.21
     }
   },
-
   "correccion_critica": {
     "que_estaba_mal": "labor_rate_entries.total_daily_rate solo sumaba las cuatro columnas base (salario + transporte + alimentación + no salarial), sin provisiones ni horas extra. Ese valor era el que alimentaba dailyRate en el APU.",
     "impacto": "Mano de obra subestimada entre 32% y 49% en todos los APU.",
@@ -68,7 +63,6 @@
     ],
     "aviso": "Esto invalida los valores de cotizaciones y APUs ya calculados. El usuario debe revisarlos antes de emitir la próxima oferta."
   },
-
   "reglas_de_negocio": {
     "conceptos_por_obra": "No se escriben en la tabla salarial. Son estimaciones del dueño y valen SOLO para la cotización que los guarda.",
     "tabla_oficial": "Intacta. Ninguna cotización la modifica.",
@@ -89,11 +83,12 @@
       "alcance": "Aplica a capataz y conductor, y a las excepciones."
     }
   },
-
   "base_de_datos": {
     "migracion": "20261008200000_labor_project_concepts.sql",
     "estado": "aplicada",
-    "tablas_nuevas": ["labor_project_concepts"],
+    "tablas_nuevas": [
+      "labor_project_concepts"
+    ],
     "columnas_nuevas_en_quotes": [
       "labor_project_snapshot jsonb",
       "labor_project_days integer",
@@ -107,7 +102,6 @@
     "rls": "labor_project_concepts tiene lectura para miembros y escritura para administrator, resident_engineer y general_management.",
     "datos_sembrados": "labor_project_concepts se siembra por empresa con los 8 conceptos."
   },
-
   "interfaz": {
     "donde": "Cotizaciones → Nueva Solicitud. Selector 'Tabla salarial de esta obra' y botón 'Armar mano de obra de esta obra'.",
     "modal": "src/modules/quotes/presentation/labor-project-modal.tsx",
@@ -122,13 +116,16 @@
       "dias_calculados_del_plazo": "2026-01-01 a 2026-12-31 da 365 correctamente",
       "dias_editables_a_mano": true,
       "aviso_al_editar_a_mano": true,
-      "sin_scroll_horizontal_en": [375, 768, 1024],
+      "sin_scroll_horizontal_en": [
+        375,
+        768,
+        1024
+      ],
       "botones_min_px": 48,
       "errores_de_consola": "ninguno",
       "desglose_con_datos_reales_ocensa": "Nivel 6 = 127.696.498 total, 532.069 por día"
     }
   },
-
   "incidente_resuelto": {
     "que_paso": "El Excel del cliente COT-113-2026 estaba dentro de public/. Todo lo que está en public/ se sirve por web, así que el archivo con costos reales de OCENSA quedó descargable públicamente durante un despliegue (HTTP 200).",
     "deteccion": "Verificación posterior al despliegue, antes de cerrar la entrega.",
@@ -137,7 +134,6 @@
     "leccion": "Nunca dejar documentos de cliente en public/, ni siquiera sin git add: Vercel sube la carpeta completa, no solo lo versionado.",
     "estado_actual": "resuelto y verificado"
   },
-
   "trampas_tecnicas_encontradas": {
     "css_modules": "Este proyecto NO convierte los nombres de clase a camelCase. Hay que usar notación de corchetes: styles['labor-project-backdrop'], no styles.laborProjectBackdrop. Usar la forma camelCase deja className vacío y el estilo no se aplica en silencio.",
     "terminaciones_de_linea": "quotes-workspace.tsx y varios .tsx usan LF, no CRLF. Los parches por replace() con \\r\\n fallan silenciosamente.",
@@ -146,7 +142,6 @@
     "supabase_cli": "npx supabase db query --linked -f archivo ejecuta el archivo y solo devuelve la última sentencia. Los CTE encadenados deben resolverse antes de referenciar una columna que ellos mismos definen.",
     "nombres_duplicados": "Al insertar JSX mediante scripts, revisar siempre si quedó un cierre duplicado: tsc lo reporta como 'JSX expressions must have one parent element', que no señala la línea real."
   },
-
   "pendientes_para_el_usuario": [
     {
       "id": "MOB-002",
@@ -171,7 +166,6 @@
       "detalle": "La tabla oficial cobra 240 días fijos, pero las obras duran menos. Con eso, una obra de 90 días paga el provisionado anual completo. Se conservó el comportamiento de la hoja del cliente."
     }
   ],
-
   "reglas_del_repositorio_respetadas": {
     "idioma": "Toda la interfaz en español.",
     "mayusculas": "Botones de 48 px mínimo.",
@@ -185,11 +179,44 @@
       "verificado en navegador con Playwright"
     ]
   },
-
   "recomendacion_para_codex": [
     "El motor de cálculo es una función pura en domain/. Si se toca, volver a comparar contra el libro del cliente antes de commitear; los números están en reglas_del_calculo_confirmadas.numeros_de_control.",
     "No borrar ni relajar el bloqueo de documentos de cliente en .gitignore.",
     "El siguiente ordinal de migración disponible es 20261008210000.",
     "Las cotizaciones existentes quedaron con el valor diario viejo. Si se regenera alguna, hacerlo con la tabla ya recalculada."
-  ]
+  ],
+  "cambio_posterior": {
+    "fecha": "2026-10-08",
+    "que_paso": "El formulario de Nueva Solicitud tenia dos listas de mano de obra y el usuario pregunto para que servia cada una.",
+    "hallazgo": {
+      "lista_1": "Escala salarial para mano de obra (APUs)",
+      "estado_lista_1": "INOPERANTE. La columna labor_scale no existe en la tabla quotes, nunca se guardo en la base de datos y ningun modulo leia el valor. Era una etiqueta decorativa.",
+      "lista_2": "Tabla salarial de esta obra",
+      "estado_lista_2": "FUNCIONAL. Alimenta el APU: apu-workspace y labor-position-repository cargan los cargos de esa tabla concreta via labor_rate_roles + labor_rate_entries. Sin tabla se usa el catalogo de respaldo local.",
+      "conclusion": "Las dos listas significaban lo mismo y una nunca funciono."
+    },
+    "que_se_hizo": "Se elimino la lista inoperante completa: el <select name=\"laborScale\">, la lectura del FormData, el campo laborScale del tipo Quote y el campo laborScale del objeto de creacion. Se renombro la lista restante para que diga para que sirve.",
+    "cambios_concretos": {
+      "eliminado": [
+        "src/modules/quotes/presentation/quotes-workspace.tsx: <select name=\"laborScale\">",
+        "src/modules/quotes/presentation/quotes-workspace.tsx: const laborScale = String(fd.get(\"laborScale\")...)",
+        "src/modules/quotes/presentation/quotes-workspace.tsx: laborScale, dentro del objeto de la cotizacion",
+        "src/modules/quotes/domain/quote.ts: laborScale?: \"rfc_standard\" | \"ocensa\""
+      ],
+      "renombrado": {
+        "antes": "Tabla salarial de esta obra",
+        "ahora": "Tabla salarial de esta obra (cargos del APU)",
+        "opcion_vacia": "Sin tabla: se usarán los cargos generales"
+      },
+      "referencias_restantes_a_laborScale": 0
+    },
+    "impacto_en_datos": "Ninguno. laborScale nunca llego a la base de datos, asi que no hay nada que migrar ni datos huerfanos que limpiar.",
+    "verificacion": [
+      "npx tsc --noEmit limpio",
+      "npm run build correcto",
+      "cero referencias a laborScale en src/",
+      "LIMITACION: no se pudo verificar en navegador con sesion real porque no hay credenciales de prueba y el middleware valida el token en el servidor. Se eligio no crear un usuario en la base de datos del cliente sin autorizacion del usuario."
+    ],
+    "aviso_para_codex": "Si en algun momento se necesita una distincion entre escala propia y escala sectorial, NO se debe resucitar el campo laborScale: debe implementarse como un atributo de la tabla salarial (labor_rate_tables.activity_type ya existe para eso) porque laborScale era un valor suelto que nunca llego a la base de datos."
+  }
 }

@@ -164,7 +164,6 @@ export type Quote = {
   projectId?: string;       // ID del proyecto vinculado (cuando se convierte a obra)
   projectCode?: string;     // Código del proyecto vinculado
   notes?: string;           // Observaciones generales
-  laborScale?: "rfc_standard" | "ocensa"; // Escala salarial aplicada a los APUs de esta cotización
   laborRateTableId?: string; // Tabla salarial persistida para esta cotización.
   laborRateSnapshot?: Record<string, unknown>; // Copia inmutable de los valores aplicados.
   laborProjectSnapshot?: Record<string, unknown>; // Calculo de mano de obra de esta obra, congelado.

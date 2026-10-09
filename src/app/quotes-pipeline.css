@@ -26,7 +26,31 @@
   color: var(--ink);
 }
 
-.quotes-title-with-help { align-items:center; display:flex; gap:9px; }.quote-help { display:inline-flex; position:relative; vertical-align:middle; z-index:6; }.quote-help-trigger { align-items:center; background:#eef6f0; border:1px solid #90c7a3; border-radius:50%; color:#126239; cursor:help; display:inline-flex; font-family:Georgia,serif; font-size:13px; font-weight:800; height:24px; justify-content:center; line-height:1; padding:0; width:24px; }.quote-help-trigger:hover,.quote-help:focus-within .quote-help-trigger { background:#0b7a47; color:#fff; outline:2px solid rgba(11,122,71,.24); outline-offset:2px; }.quote-help-popover { background:#173b2b; border:1px solid rgba(255,255,255,.2); border-radius:9px; box-shadow:0 12px 28px rgba(10,30,20,.28); color:#fff; display:grid; gap:7px; left:0; max-width:min(340px,calc(100vw - 32px)); opacity:0; padding:13px 14px; pointer-events:none; position:absolute; top:calc(100% + 9px); transform:translateY(-4px); transition:opacity .16s ease,transform .16s ease; visibility:hidden; width:320px; }.quote-help:hover .quote-help-popover,.quote-help:focus-within .quote-help-popover { opacity:1; pointer-events:auto; transform:translateY(0); visibility:visible; }.quote-help-popover strong { font-size:12px; }.quote-help-popover span { color:#d9ecdf; font-size:11px; line-height:1.38; }.quote-help-popover b { color:#fff; }.quote-help.is-compact { margin-left:6px; }.quote-help.is-compact .quote-help-trigger { height:20px; width:20px; font-size:11px; }.quote-help.is-compact .quote-help-popover { left:auto; right:0; top:calc(100% + 7px); }
+.quotes-title-with-help { align-items:center; display:flex; gap:9px; }.quote-help { display:inline-flex; position:relative; vertical-align:middle; z-index:6; }.quote-help-trigger { align-items:center; background:#eef6f0; border:1px solid #90c7a3; border-radius:50%; color:#126239; cursor:help; display:inline-flex; font-family:Georgia,serif; font-size:13px; font-weight:800; height:24px; justify-content:center; line-height:1; padding:0; width:24px; }.quote-help-trigger:hover,.quote-help:focus-within .quote-help-trigger { background:#0b7a47; color:#fff; outline:2px solid rgba(11,122,71,.24); outline-offset:2px; }.quote-help-popover {
+  background:#173b2b;
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:9px;
+  box-shadow:0 12px 28px rgba(10,30,20,.28);
+  color:#fff;
+  display:grid;
+  gap:7px;
+  opacity:0;
+  padding:13px 14px;
+  max-width:min(340px,calc(100vw - 20px));
+  pointer-events:none;
+  /* La posicion la mide el componente y la aplica con style, para que
+     el texto nunca quede fuera de la pantalla ni lo recorte un
+     contenedor con desplazamiento. */
+  position:fixed;
+  top:0;
+  left:0;
+  transform:translateY(-4px);
+  transition:opacity .16s ease,transform .16s ease;
+  visibility:hidden;
+  width:320px;
+  z-index:60;
+}
+.quote-help:hover .quote-help-popover,.quote-help:focus-within .quote-help-popover { opacity:1; pointer-events:auto; transform:translateY(0); visibility:visible; }.quote-help-popover strong { font-size:12px; }.quote-help-popover span { color:#d9ecdf; font-size:11px; line-height:1.38; }.quote-help-popover b { color:#fff; }.quote-help.is-compact { margin-left:6px; }.quote-help.is-compact .quote-help-trigger { height:20px; width:20px; font-size:11px; }.quote-help.is-compact .quote-help-popover { left:auto; right:0; top:calc(100% + 7px); }
 
 .quotes-subtitle {
   color: var(--muted);
@@ -1415,3 +1439,88 @@
     width: 100%;
   }
 }
+
+/* ── Ayuda contextual: ajuste de posicion ─────────────────────
+   El tablero tiene overflow-x: auto, y en CSS eso tambien recorta
+   el eje vertical: cualquier popover flotante dentro del tablero
+   queda cortado. Por eso la ayuda dentro de una columna no flota,
+   se desplieja en el flujo y empuja el contenido de la columna.
+   Flotante se usa solo donde no hay un ancestro con overflow. */
+.quote-help.is-inline { display: block; position: static; width: 100%; z-index: auto; }
+.quote-help.is-inline .quote-help-trigger { display: inline-flex; }
+.quote-help.is-inline .quote-help-popover {
+  left: auto;
+  margin-top: 9px;
+  max-width: none;
+  opacity: 0;
+  position: static;
+  top: auto;
+  transform: translateY(-4px);
+  visibility: hidden;
+  width: auto;
+}
+.quote-help.is-inline:hover .quote-help-popover,
+.quote-help.is-inline:focus-within .quote-help-popover {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+/* Donde si flota, se centra bajo el disparador y se limita al ancho
+   disponible, para que no se salga por el borde de la ventana. */
+
+
+
+/* El disparador necesita estar por encima de las tarjetas vecinas. */
+.quote-help { z-index: 20; }
+
+/* Etiqueta de campo con icono de ayuda al lado. */
+.settings-label-with-help,
+.settings-title-with-help {
+  align-items: center;
+  display: inline-flex;
+  gap: 7px;
+}
+.settings-title-with-help { font-size: 1rem; margin: 0 0 6px; }
+.quote-help:hover .quote-help-popover,
+.quote-help:focus-within .quote-help-popover,
+.quote-help.is-open .quote-help-popover { opacity:1; pointer-events:auto; transform:translateY(0); visibility:visible; }
+
+/* ── Controles tactiles en configuracion ───────────────────────
+   Los campos numericos y los select quedaban por debajo de los 44 px
+   y eran difficiles de tocar en pantalla pequena. */
+.labor-cost-parameter input,
+.labor-cost-parameter select,
+.labor-cost-parameter textarea,
+.labor-cost-parameter .settings-columns input,
+.labor-cost-parameter .settings-columns select {
+  min-height: 44px;
+}
+.labor-cost-parameter legend {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+}
+.labor-cost-parameter .quote-help-trigger {
+  height: 24px;
+  width: 24px;
+}
+
+/* ── Ayuda y formulario de alta ───────────────────────────────
+   El icono de ayuda se ve de 24 px pero su area tactil es de 44,
+   para que se pueda pulsar con el dedo igual que el resto. */
+.quote-help-trigger { position: relative; }
+.quote-help-trigger::after {
+  content: "";
+  inset: 50% auto auto 50%;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* El formulario de alta de un concepto nuevo tambien necesita
+   controles altos, no solo los conceptos ya existentes. */
+.labor-rate-add-entry input,
+.labor-rate-add-entry select,
+.labor-rate-add-entry textarea { min-height: 44px; }

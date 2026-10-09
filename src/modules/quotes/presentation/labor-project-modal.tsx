@@ -16,7 +16,10 @@ import {
   type PerDiemKey,
   type ProjectPerDiemValues,
   type QuoteLaborSnapshot,
-} from "../domain/project-labor";
+
+  diasTablaOficial,
+  horasOficialExtraDiurnas,
+  horasOficialDominicales,} from "../domain/project-labor";
 
 type Entry = {
   id: string;
@@ -52,6 +55,30 @@ export type ProjectLaborDraft = {
 const money = (value: number) =>
   `$ ${Math.round(value).toLocaleString("es-CO")}`;
 
+/** Horas del mes en cero: el modal no supone nada al abrirse. */
+const emptyHours: HoursInput = {
+  horasExtraDiurnas: 0,
+  horasExtraNocturnas: 0,
+  horasDominicales: 0,
+};
+
+/**
+ * Escala las horas de la tabla oficial al plazo de la obra.
+ *
+ * La hoja del cliente trae 56 horas extra diurnas y 14 dominicales para
+ * 240 dias. Para una obra de N dias se aplica la misma proporcion, de
+ * modo que el costo diario no cambie por tener mas o menos dias.
+ */
+function escalarHoras(dias: number): HoursInput {
+  if (dias <= 0) return emptyHours;
+  const factor = dias / diasTablaOficial;
+  return {
+    horasExtraDiurnas: Math.round(horasOficialExtraDiurnas * factor),
+    horasExtraNocturnas: 0,
+    horasDominicales: Math.round(horasOficialDominicales * factor),
+  };
+}
+
 export function LaborProjectModal({
   tableId,
   tableName,
@@ -70,11 +97,11 @@ export function LaborProjectModal({
   const [error, setError] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
-  const [dias, setDias] = useState(240);
+  const [dias, setDias] = useState(0);
   const [diasTocados, setDiasTocados] = useState(false);
-  const [diasAlojamiento, setDiasAlojamiento] = useState(90);
+  const [diasAlojamiento, setDiasAlojamiento] = useState(0);
   const [perDiem, setPerDiem] = useState<ProjectPerDiemValues>(emptyPerDiem());
-  const [hours, setHours] = useState<HoursInput>(defaultHours);
+  const [hours, setHours] = useState<HoursInput>(emptyHours);
   const [personal, setPersonal] = useState<Record<string, number>>({});
   const [dotacion, setDotacion] = useState<Record<string, number>>({});
   const [incluidos, setIncluidos] = useState<string[]>([]);
@@ -164,11 +191,26 @@ export function LaborProjectModal({
       });
   }, []);
 
+  /* Al elegir las fechas se calculan los días de la obra y, con esa misma
+     proporción, las horas del mes. La tabla oficial trae 56 horas extra
+     diurnas y 14 dominicales para 240 días; una obra de otro plazo se
+     escala en esa razón. Todo queda editable porque es una estimación. */
   useEffect(() => {
-    if (diasTocados || diasDelPlazo === null) return;
+    if (diasDelPlazo === null) return;
     setDias(diasDelPlazo);
     setDiasAlojamiento(defaultLodgingDays(diasDelPlazo));
-  }, [diasDelPlazo, diasTocados]);
+    setHours(escalarHoras(diasDelPlazo));
+    setDiasTocados(false);
+  }, [diasDelPlazo]);
+
+  /* Si el usuario escribe los días a mano, el alojamiento y las horas
+     siguen la misma proporción para no quedar con valores que no calzan. */
+  function cambiarDias(valor: number) {
+    setDias(valor);
+    setDiasTocados(true);
+    setDiasAlojamiento(defaultLodgingDays(valor));
+    setHours(escalarHoras(valor));
+  }
 
   const resultados = useMemo(
     () =>
@@ -286,6 +328,7 @@ export function LaborProjectModal({
             Cerrar
           </button>
         </header>
+        <div className={styles["labor-project-scroll"]}>
 
         {error ? (
           <p className="settings-notice" role="alert">
@@ -320,8 +363,7 @@ export function LaborProjectModal({
                 min={1}
                 value={dias}
                 onChange={(e) => {
-                  setDias(Number(e.target.value) || 0);
-                  setDiasTocados(true);
+                  cambiarDias(Number(e.target.value) || 0);
                 }}
               />
             </label>
@@ -543,6 +585,8 @@ export function LaborProjectModal({
             </div>
           </section>
         ) : null}
+
+        </div>
 
         <footer className={styles["labor-project-foot"]}>
           <p>

@@ -20,7 +20,7 @@ export type LaborCostParameter = {
 
 export const laborCostCalculationBases: Array<{ value: LaborCostCalculationBase; label: string }> = [
   { value: "salario_transporte", label: "Salario + auxilio de transporte" },
-  { value: "cesantias", label: "Valor calculado de cesantias" },
+  { value: "cesantias", label: "Valor calculado de cesantías" },
   { value: "salario_transporte_mas_extras", label: "Salario + transporte + extras" },
 ];
 

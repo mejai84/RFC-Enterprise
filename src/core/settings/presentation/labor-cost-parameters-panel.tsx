@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import { HelpHint } from "@/shared/help-hint";
 import {
   laborCostCalculationBases,
   type LaborCostCalculationBase,
@@ -103,7 +104,7 @@ export function LaborCostParametersPanel() {
     const all = [...items, ...(newItem.code || newItem.label ? [newItem] : [])];
     const invalid = all.find((item) => !isValid(item));
     if (invalid) {
-      setError("Revise el nombre, codigo, porcentaje (0 a 100) y divisor de cada concepto antes de guardar.");
+      setError("Revise el nombre, código, porcentaje (de 0 a 100) y divisor de cada concepto antes de guardar.");
       return;
     }
 
@@ -122,17 +123,25 @@ export function LaborCostParametersPanel() {
     setNewItem(emptyNew());
     await load();
     setSaving(false);
-    setNotice("Parametros nacionales guardados. Los costos vigentes se recalcularon en la base de datos.");
+    setNotice("Parámetros guardados. Los costos vigentes se recalcularon en la base de datos.");
   }
 
-  if (loading) return <section className="dashboard-panel settings-card"><p className="panel-intro">Cargando parametros laborales...</p></section>;
+  if (loading) return <section className="dashboard-panel settings-card"><p className="panel-intro">Cargando parámetros laborales…</p></section>;
 
   return (
     <form className="dashboard-panel settings-card" onSubmit={save}>
       <div>
-        <h2>Parametros nacionales de costo laboral</h2>
+        <h2 className="settings-title-with-help">
+          Parámetros de costo laboral
+          <HelpHint title="Para qué sirve esta pantalla">
+            Aquí se define cómo se calcula el costo laboral de cada cargo:
+            qué porcentajes se suman, sobre qué base se aplican y si suman o restan.
+            Los valores están en la base de datos y se aplican al calcular cada
+            cotización. Cambiarlos no altera las cotizaciones ya guardadas.
+          </HelpHint>
+        </h2>
         <p className="panel-intro">
-          Estos porcentajes son la fuente de calculo para APU y cotizaciones. No son nomina: las cotizaciones ya guardadas conservan su propia copia.
+          Estos porcentajes son la fuente de cálculo para el APU y las cotizaciones. No son nómina: las cotizaciones ya guardadas conservan su propia copia.
         </p>
       </div>
 
@@ -145,7 +154,13 @@ export function LaborCostParametersPanel() {
             <legend>{item.label || item.code}</legend>
             <div className="settings-columns">
               <label>
-                Porcentaje
+                <span className="settings-label-with-help">
+                  Porcentaje
+                  <HelpHint title="Porcentaje">
+                    Es el valor del concepto. Por ejemplo 8,34 para cesantías. No escriba el
+                    símbolo de porcentaje: el sistema lo agrega al calcular.
+                  </HelpHint>
+                </span>
                 <input
                   aria-label={`Porcentaje de ${item.label}`}
                   inputMode="decimal"
@@ -158,13 +173,29 @@ export function LaborCostParametersPanel() {
                 />
               </label>
               <label>
-                Se aplica sobre
+                <span className="settings-label-with-help">
+                  Se aplica sobre
+                  <HelpHint title="Se aplica sobre">
+                    Qué se toma como base para multiplicar el porcentaje.
+                    «Salario + auxilio de transporte» es lo habitual para las prestaciones.
+                    «Valor calculado de cesantías» se usa para el interés, que es un
+                    porcentaje de las cesantías y no del salario.
+                  </HelpHint>
+                </span>
                 <select value={item.calculationBase} onChange={(event) => update(item.code, { calculationBase: event.target.value as LaborCostCalculationBase })}>
                   {laborCostCalculationBases.map((base) => <option disabled={item.operation === "sumar" && base.value === "salario_transporte_mas_extras"} key={base.value} value={base.value}>{base.label}</option>)}
                 </select>
               </label>
               <label>
-                Efecto
+                <span className="settings-label-with-help">
+                  Efecto
+                  <HelpHint title="Efecto">
+                    «Suma al costo» agrega el valor al subtotal del día.
+                    «Resta del subtotal» lo descuenta. El resta existe porque el 8% de salud
+                    y pensión se descuenta en la hoja del cliente; dejarlo como resta
+                    reproduce ese resultado.
+                  </HelpHint>
+                </span>
                 <select value={item.operation} onChange={(event) => {
                   const operation = event.target.value as LaborCostOperation;
                   update(item.code, { operation, calculationBase: operation === "sumar" && item.calculationBase === "salario_transporte_mas_extras" ? "salario_transporte" : item.calculationBase });
@@ -174,17 +205,30 @@ export function LaborCostParametersPanel() {
                 </select>
               </label>
               <label>
-                Divisor
+                <span className="settings-label-with-help">
+                  Divisor
+                  <HelpHint title="Divisor">
+                    Divide el valor del concepto. El interés de cesantías es 12% anual sobre
+                    360 días: divisor 360 y porcentaje 12. Con divisor 1 el porcentaje se
+                    aplica tal cual.
+                  </HelpHint>
+                </span>
                 <input min="0.0001" onChange={(event) => update(item.code, { divisor: Number(event.target.value) })} step="0.01" type="number" value={item.divisor} />
               </label>
             </div>
             <label>
-              Descripcion
+              <span className="settings-label-with-help">
+                Descripción
+                <HelpHint title="Descripción">
+                  Texto libre para dejar de dónde sale el valor o con qué documento del
+                  cliente se respalda. No afecta el cálculo.
+                </HelpHint>
+              </span>
               <input onChange={(event) => update(item.code, { description: event.target.value })} value={item.description} />
             </label>
             <label className="settings-toggle">
               <input checked={item.isActive} onChange={(event) => update(item.code, { isActive: event.target.checked })} type="checkbox" />
-              <span>Aplicar este concepto en los calculos</span>
+              <span>Aplicar este concepto en los cálculos</span>
             </label>
           </fieldset>
         ))}
@@ -194,7 +238,7 @@ export function LaborCostParametersPanel() {
         <summary>Agregar otro porcentaje o aporte</summary>
         <div className="settings-columns">
           <label>Nombre<input onChange={(event) => setNewItem({ ...newItem, label: event.target.value })} value={newItem.label} /></label>
-          <label>Codigo interno<input onChange={(event) => setNewItem({ ...newItem, code: event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") })} placeholder="ej_aporte_nuevo" value={newItem.code} /></label>
+          <label>Código interno<input onChange={(event) => setNewItem({ ...newItem, code: event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") })} placeholder="ej_aporte_nuevo" value={newItem.code} /></label>
           <label>Porcentaje<input inputMode="decimal" max="100" min="0" onChange={(event) => setNewItem({ ...newItem, rate: Number(event.target.value) / 100 })} step="0.0001" type="number" value={Number((newItem.rate * 100).toFixed(6))} /></label>
           <label>Base<select value={newItem.calculationBase} onChange={(event) => setNewItem({ ...newItem, calculationBase: event.target.value as LaborCostCalculationBase })}>{laborCostCalculationBases.map((base) => <option disabled={newItem.operation === "sumar" && base.value === "salario_transporte_mas_extras"} key={base.value} value={base.value}>{base.label}</option>)}</select></label>
           <label>Efecto<select value={newItem.operation} onChange={(event) => {
@@ -203,10 +247,10 @@ export function LaborCostParametersPanel() {
           }}><option value="sumar">Suma al costo</option><option value="restar">Resta del subtotal</option></select></label>
           <label>Divisor<input min="0.0001" onChange={(event) => setNewItem({ ...newItem, divisor: Number(event.target.value) })} step="0.01" type="number" value={newItem.divisor} /></label>
         </div>
-        <label>Descripcion<input onChange={(event) => setNewItem({ ...newItem, description: event.target.value })} value={newItem.description} /></label>
+        <label>Descripción<input onChange={(event) => setNewItem({ ...newItem, description: event.target.value })} value={newItem.description} /></label>
       </details>
 
-      <button className="inventory-action" disabled={saving} type="submit">{saving ? "Guardando..." : "Guardar parametros laborales"}</button>
+      <button className="inventory-action" disabled={saving} type="submit">{saving ? "Guardando…" : "Guardar parámetros laborales"}</button>
     </form>
   );
 }

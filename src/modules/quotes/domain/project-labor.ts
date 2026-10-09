@@ -47,6 +47,10 @@ export const recargoExtraDiurna = 0.25;
 export const recargoExtraNocturna = 0.75;
 /** Recargo dominical y festivo (Art. 165 C.S.T., ajustado en 2026). */
 export const recargoDominical = 1.9;
+/** Horas extra diurnas que la hoja del cliente declara para 240 días. */
+export const horasOficialExtraDiurnas = 56;
+/** Horas dominicales que la hoja del cliente declara para 240 días. */
+export const horasOficialDominicales = 14;
 /** La hoja oficial usa salario día entre 7 horas, no entre 8. */
 export const horasPorDiaPago = 7;
 /** Días de la tabla oficial. Cambia por proyecto. */

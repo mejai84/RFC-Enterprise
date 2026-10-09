@@ -7,6 +7,7 @@
 "use client";
 
 import { CompanySignature } from "@/core/settings/presentation/company-signature";
+import { HelpHint } from "@/shared/help-hint";
 import { useCompanyConfig } from "@/core/settings/use-company-config";
 import { createBrowserClient } from "@supabase/ssr";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
@@ -234,48 +235,25 @@ function QuoteStatusHelp({
   status?: QuoteStatus;
 }) {
   return (
-    <span className={`quote-help ${compact ? "is-compact" : ""}`}>
-      <button
-        type="button"
-        className="quote-help-trigger"
-        aria-label="Ayuda sobre los estados de cotización"
-      >
-        ?
-      </button>
-      <span className="quote-help-popover" role="tooltip">
-        <strong>
-          {status
-            ? `${getStatusMeta(status).label}: qué hacer`
-            : "Flujo de cotización"}
-        </strong>
-        {status ? (
-          <span>{statusHelp[status]}</span>
-        ) : (
-          <>
-            <span>
-              <b>1. Recibido / En revisión:</b> registra solicitud, planos,
-              alcance y visita.
-            </span>
-            <span>
-              <b>2. Cotización en proceso:</b> crea o modifica el APU y la
-              propuesta.
-            </span>
-            <span>
-              <b>3. Enviada / Esperando respuesta:</b> seguimiento comercial al
-              cliente.
-            </span>
-            <span>
-              <b>4. Confirmada:</b> conviértela en Obra; luego continúa
-              Ejecución, Terminada y Pago.
-            </span>
-            <span>
-              <b>Por modificar:</b> habilita ajustar el APU tras comentarios del
-              cliente.
-            </span>
-          </>
-        )}
-      </span>
-    </span>
+    <HelpHint
+      compact={compact}
+      title={status ? `${getStatusMeta(status).label}: qué hacer` : "Flujo de cotización"}
+    >
+      {status ? (
+        <span>{statusHelp[status]}</span>
+      ) : (
+        <>
+          <span>
+            <b>1. Recibido / En revisión:</b> registra solicitud, planos,
+            alcance y visita.
+          </span>
+          <span>
+            <b>2. Cotización en proceso:</b> crea o modifica el APU y la
+            propuesta económica.
+          </span>
+        </>
+      )}
+    </HelpHint>
   );
 }
 

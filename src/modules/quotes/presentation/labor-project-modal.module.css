@@ -3,26 +3,42 @@
   inset: 0;
   z-index: 120;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 16px;
   background: rgb(15 23 42 / 62%);
 }
 
 .labor-project-modal {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 1080px;
-  margin: auto;
+  max-height: 92vh;
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 24px 60px rgb(15 23 42 / 35%);
 }
 
+/* El desplazamiento vive en el modal, no en el fondo, para que la
+   cabecera pueda quedar fija mientras el contenido baja. Es la misma
+   regla que siguen los demas modales de la aplicacion. */
+.labor-project-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .labor-project-head {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  flex: 0 0 auto;
   padding: 20px 20px 16px;
   border-bottom: 1px solid #e2e8f0;
+  background: #fff;
 }
 
 .labor-project-head h3 {
@@ -284,7 +300,7 @@
 
   .labor-project-modal {
     border-radius: 0;
-    min-height: 100%;
+    max-height: 100vh;
   }
 
   .labor-project-entry-fields {

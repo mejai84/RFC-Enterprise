@@ -736,3 +736,9 @@ Antes de gestionar APU, la cotizaci?n debe guardar un costeo laboral: plazo, d?a
 **Consecuencias:** el costo de personal usa dias remunerados; horas extras, rendimiento y disponibilidad real usan dias fisicos. Hotel, transporte operativo y equipos no reciben el factor automaticamente.
 
 **Ajuste ADR-143 (extras):** dias fisicos no generan por si solos horas extra. El precosteo inicia extras diurnas, nocturnas y dominicales en cero; solo se costean las horas que el responsable registre conforme al turno planeado.
+
+## ADR-144 - Fechas opcionales en el precosteo
+
+**Decision (2026-10-09):** las fechas no son requisito para precostear una cotizacion. La entrada principal es la estimacion de dias fisicos; las fechas se usan de forma opcional para programacion y solo entonces proponen lunes a viernes y dias remunerados.
+
+**Consecuencias:** la duracion tecnica definitiva debe nacer de cantidades, rendimientos y cuadrillas por actividad dentro del APU, no de una fecha inventada al abrir la cotizacion.

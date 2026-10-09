@@ -133,3 +133,5 @@ Abierto. El modelo futuro debe impedir que 42 horas semanales, el factor presupu
 Mitigado parcialmente el 2026-10-09: el precosteo separa dias fisicos, dias remunerados, alojamiento y horas productivas. Riesgo residual: festivos y turnos especiales aun requieren ajuste manual; no se deben inferir pagos o recargos fuera de reglas contractuales vigentes.
 
 **Control APU-014 (extras):** las horas extra y dominicales del precosteo inician en cero. El responsable debe ingresarlas con base en la programacion real; se elimina el prorrateo automatico de referencias historicas que podia crear extras inexistentes.
+
+**APU-015 - Fechas como requisito prematuro:** mitigado el 2026-10-09. El precosteo permite costear con dias fisicos estimados sin fechas; el calendario es opcional. Pendiente: calcular automaticamente la duracion por actividad a partir de cantidades, rendimientos y cuadrillas dentro del APU.

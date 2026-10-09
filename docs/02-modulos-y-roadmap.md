@@ -269,3 +269,5 @@ Para el costeo RFC se manejaran por separado: jornada ordinaria programada de 42
 El estimado opcional de cuadrilla calcula dias fisicos de lunes a viernes y propone dias remunerados con la regla presupuestal 7/5; ambos quedan editables para festivos, novedades y tarifas que ya incluyan descansos. La mano de obra usa los dias remunerados; productividad, rendimientos y horas extras usan dias fisicos. Alojamiento y viaticos conservan su propia cantidad de dias.
 
 **Extras del precosteo:** no se prorratean automaticamente desde las referencias historicas de una tabla. Inician en cero y se ingresan segun el turno o programacion real del periodo; los dias fisicos ayudan a revisar su coherencia, pero no crean recargos por si mismos.
+
+**Duracion sin fechas:** el precosteo no exige inicio ni fin. El usuario estima dias fisicos mientras construye la oferta; las fechas viven en un calendario opcional de programacion. Al desarrollar cada APU, cantidad, rendimiento y cuadrilla seran la fuente tecnica de los dias fisicos.

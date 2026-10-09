@@ -310,3 +310,5 @@ La jornada ordinaria de referencia es 42 horas por semana, distribuida de lunes 
 Para dos semanas completas de lunes a viernes, el precosteo propone 10 dias fisicos y 14 remunerados. El segundo valor es la base del costo de personal cuando la tarifa no incorpora ya descansos pagados. Rendimiento, maquinaria, herramientas, transporte y horas productivas se mantienen sobre los 10 dias fisicos o su modalidad contractual; alojamiento se define por separado.
 
 Las horas extra no se derivan automaticamente de los dias del plazo. Para una obra ordinaria de lunes a viernes bajo 42 horas semanales, el precosteo comienza en cero; se agregan manualmente las horas diurnas, nocturnas o dominicales planificadas.
+
+El precosteo admite dias fisicos estimados sin fechas. Cuando se conocen inicio y fin, el calendario opcional cuenta lunes a viernes y propone los dias remunerados. En la etapa APU, la duracion debe calcularse por actividad: cantidad / (rendimiento diario de cuadrilla), antes de convertirse en dias remunerados de mano de obra.

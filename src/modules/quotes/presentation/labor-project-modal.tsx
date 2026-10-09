@@ -332,16 +332,22 @@ export function LaborProjectModal({
 
         {/* ── Plazo de la obra ── */}
         <section className={styles["labor-project-block"]}>
-          <h4>Plazo, dias pagados y productividad</h4>
+          <h4>Duracion y costo laboral preliminar</h4>
           <div className={styles["labor-project-grid"]}>
-            <label>Fecha de inicio<input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} /></label>
-            <label>Fecha de finalizacion<input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} /></label>
-            <label>Dias fisicos de trabajo<input type="number" min={0} value={diasFisicos} onChange={(e) => cambiarDiasFisicos(Number(e.target.value) || 0)} /><small>Lunes a viernes; sirve para rendimiento y horas extras.</small></label>
+            <label>Dias fisicos estimados<input type="number" min={0} value={diasFisicos} onChange={(e) => cambiarDiasFisicos(Number(e.target.value) || 0)} /><small>Dias reales de trabajo de la cuadrilla. Es el dato principal si aun no tiene fechas.</small></label>
             <label>Dias remunerados de personal<input type="number" min={0} step="0.1" value={dias} onChange={(e) => cambiarDiasRemunerados(Number(e.target.value) || 0)} /><small>Mano de obra: por defecto, dias fisicos x 7 / 5.</small></label>
             <label>Dias de alojamiento<input type="number" min={0} value={diasAlojamiento} onChange={(e) => setDiasAlojamiento(Number(e.target.value) || 0)} /><small>Solo para viaticos aplicables.</small></label>
             <label>Horas productivas por dia<input type="number" min={0} step="0.001" value={horasProductivasDia} onChange={(e) => setHorasProductivasDia(Number(e.target.value) || 0)} /><small>Supuesto OCENSA inicial; no es jornada legal.</small></label>
           </div>
-          <p className={styles["labor-project-note"]}>Jornada ordinaria de referencia: 42 horas semanales. {diasDelPlazo === null ? "Seleccione ambas fechas para calcular los dias fisicos." : `El plazo contiene ${diasDelPlazo} dias fisicos y propone ${remuneratedDaysForWorkdays(diasDelPlazo)} dias remunerados.`} Ajuste los dias remunerados por festivos, novedades o una tarifa que ya incluya descansos.</p>
+          <p className={styles["labor-project-note"]}>No necesita conocer las fechas para costear. Los dias fisicos salen del rendimiento y cantidad de cada actividad en el APU; aqui puede usar una estimacion de la obra. La mano de obra usa dias remunerados; equipos, transporte y rendimiento usan dias fisicos.</p>
+          <details className={styles["labor-project-calendar"]}>
+            <summary>Ya conozco las fechas de programacion (opcional)</summary>
+            <div className={styles["labor-project-grid"]}>
+              <label>Fecha de inicio<input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} /></label>
+              <label>Fecha de finalizacion<input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} /></label>
+            </div>
+            <p className={styles["labor-project-note"]}>Jornada de referencia: 42 horas semanales, lunes a viernes. {diasDelPlazo === null ? "Al completar ambas fechas se proponen los dias fisicos y remunerados; puede ajustarlos por festivos o novedades." : `El rango contiene ${diasDelPlazo} dias fisicos y propone ${remuneratedDaysForWorkdays(diasDelPlazo)} dias remunerados.`}</p>
+          </details>
         </section>
 
         {/* ── Horas ── */}

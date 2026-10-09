@@ -29,9 +29,12 @@
   pointer-events: none;
 }
 
+/* El lienzo se baja un poco. Pegado al borde superior, la parte de la
+   explosion que mas se nota quedaba bajo el titulo y la navegacion, y al
+   entrar parecia una imagen quieta en vez de una animacion. */
 .heroVideo {
   position: absolute;
-  inset: -10% 0;
+  inset: 9% 0 -10%;
   z-index: 0;
 }
 .heroVideo video,

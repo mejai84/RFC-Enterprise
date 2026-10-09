@@ -12,6 +12,9 @@ type ScrollFrameSequenceProps = {
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
 
+/** Fraccion del recorrido con la que arranca la secuencia del heroe. */
+const heroStartProgress = 0.16;
+
 export function ScrollFrameSequence({ className, frames, mode, label }: ScrollFrameSequenceProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -75,7 +78,7 @@ export function ScrollFrameSequence({ className, frames, mode, label }: ScrollFr
       const progress = media.matches
         ? 0
         : mode === "hero"
-          ? clamp(-rect.top / Math.max(1, rect.height - window.innerHeight))
+          ? clamp(heroStartProgress + (-rect.top / Math.max(1, rect.height - window.innerHeight)) * (1 - heroStartProgress))
           : clamp((window.innerHeight - rect.top) / (window.innerHeight + rect.height));
       const nextFrame = Math.round(progress * (frames.length - 1));
       targetFrame = nextFrame;

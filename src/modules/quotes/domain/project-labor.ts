@@ -1,3 +1,4 @@
+import type { LaborCostParameter } from "@/shared/labor-cost-parameters";
 /* ────────────────────────────────────────────────────────────
  * Mano de obra por obra
  * src/modules/quotes/domain/project-labor.ts
@@ -397,9 +398,48 @@ export type ProjectLaborResult = {
  * como `verificarSaludYPension` para poder revisarlo sin romper la
  * equivalencia.
  */
-export function computeProjectLabor(input: ProjectLaborInput): ProjectLaborResult {
-  const provision = computeProvision(input.salarioDia, input.transporteAuxilio);
+export function computeProjectLabor(
+  input: ProjectLaborInput,
+  parameters: LaborCostParameter[],
+): ProjectLaborResult {
   const hours = computeHours(input.salarioDia, input.hours);
+  const base = input.salarioDia + input.transporteAuxilio;
+  const active = parameters.filter((parameter) => parameter.isActive);
+  const cesantias = active.find((parameter) => parameter.code === "cesantias");
+  const parameterValue = (parameter: LaborCostParameter) => {
+    const calculationBase = parameter.calculationBase === "cesantias"
+      ? base * (cesantias?.rate ?? 0) / (cesantias?.divisor ?? 1)
+      : base;
+    return calculationBase * parameter.rate / parameter.divisor;
+  };
+  const additions = active
+    .filter((parameter) => parameter.operation === "sumar")
+    .map((parameter) => ({ parameter, value: parameterValue(parameter) }));
+  const values = new Map(additions.map(({ parameter, value }) => [parameter.code, value]));
+  const totalProvisionadoDia = base + additions.reduce((sum, item) => sum + item.value, 0);
+  const provision: ProvisionBreakdown = {
+    salarioDia: input.salarioDia,
+    transporteAuxilio: input.transporteAuxilio,
+    base,
+    cesantias: values.get("cesantias") ?? 0,
+    interesCesantias: values.get("interes_cesantias") ?? 0,
+    prima: values.get("prima") ?? 0,
+    vacaciones: values.get("vacaciones") ?? 0,
+    riesgo: values.get("arl") ?? 0,
+    icbf: values.get("icbf") ?? 0,
+    sena: values.get("sena") ?? 0,
+    caja: values.get("caja_compensacion") ?? 0,
+    eps: values.get("eps") ?? 0,
+    pension: values.get("pension") ?? 0,
+    totalProvisionadoDia,
+    rows: [
+      { concept: "Salario dia", base, rate: 0, value: input.salarioDia },
+      { concept: "Auxilio de transporte", base, rate: 0, value: input.transporteAuxilio },
+      { concept: "Subtotal base", base, rate: 0, value: base },
+      ...additions.map(({ parameter, value }) => ({ concept: parameter.label, base, rate: parameter.rate / parameter.divisor, value })),
+      { concept: "Subtotal diario provisionado", base, rate: 0, value: totalProvisionadoDia },
+    ],
+  };
   const personal = Math.max(0, input.personal);
   const dias = Math.max(0, input.dias);
   const diasAlojamiento = Math.max(0, input.diasAlojamiento);
@@ -416,7 +456,16 @@ export function computeProjectLabor(input: ProjectLaborInput): ProjectLaborResul
 
   const baseSalud =
     provision.base * personal * dias + hours.subtotalHoras;
-  const saludYPension = baseSalud * 0.08;
+  const saludYPension = active
+    .filter((parameter) => parameter.operation === "restar")
+    .reduce((sum, parameter) => {
+      const calculationBase = parameter.calculationBase === "cesantias"
+        ? provision.cesantias * personal * dias
+        : parameter.calculationBase === "salario_transporte_mas_extras"
+          ? baseSalud
+          : provision.base * personal * dias;
+      return sum + calculationBase * parameter.rate / parameter.divisor;
+    }, 0);
   const subTotalHoja = subTotalAntesSalud - saludYPension;
 
   const perDiemRows: PerDiemRow[] = perDiemConcepts.map((concept) => {
@@ -512,6 +561,8 @@ export type QuoteLaborSnapshot = {
   viaticos?: Record<string, boolean>;
   viaticReasons?: Record<string, string>;
   hours: HoursInput;
+  /** Parametros nacionales vigentes al calcular esta cotizacion. */
+  parametrosCostoLaboral?: LaborCostParameter[];
   /** Resultado por cargo, ya congelado. */
   resultados: {
     codigo: string;

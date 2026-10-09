@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import { LaborCostParametersPanel } from "./labor-cost-parameters-panel";
 import { LaborRateSettingsPanel } from "./labor-rate-settings-panel";
 import {
   BRANDING_BUCKET,
@@ -14,13 +15,14 @@ import {
   type ProposalDefaults,
 } from "../use-company-config";
 
-type SettingsTab = "branding" | "proposal" | "company" | "labor_rates";
+type SettingsTab = "branding" | "proposal" | "company" | "labor_rates" | "labor_costs";
 
 const tabs: Array<{ value: SettingsTab; label: string; hint: string }> = [
   { value: "branding", label: "Firma y membrete", hint: "Quién firma en nombre de RFC y en qué documentos." },
   { value: "proposal", label: "Propuesta", hint: "Valores con los que se abre una cotización nueva." },
   { value: "company", label: "Empresa y nómina", hint: "Datos de la empresa, nómina e impresión." },
   { value: "labor_rates", label: "Costos y tablas salariales", hint: "Tablas de mano de obra por cliente, vigencia y cargo." },
+  { value: "labor_costs", label: "Par?metros laborales", hint: "Porcentajes nacionales que calculan el costo de mano de obra." },
 ];
 
 const signatureToggles: Array<{ key: keyof CompanyBranding; label: string }> = [
@@ -48,7 +50,7 @@ export function SettingsWorkspace() {
   // sin que la persona tenga que recorrer Configuracion.
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("tab");
-    if (requested === "proposal" || requested === "company" || requested === "labor_rates" || requested === "branding") {
+    if (requested === "proposal" || requested === "company" || requested === "labor_rates" || requested === "labor_costs" || requested === "branding") {
       setTab(requested);
     }
   }, []);
@@ -358,6 +360,7 @@ export function SettingsWorkspace() {
 
       {tab === "labor_rates" && config?.companyId ? <LaborRateSettingsPanel companyId={config.companyId} /> : null}
 
+      {tab === "labor_costs" ? <LaborCostParametersPanel /> : null}
       {tab === "company" ? (
         <form className="dashboard-panel settings-card" onSubmit={saveCompany}>
           <h2>Empresa, nómina y documentos</h2>

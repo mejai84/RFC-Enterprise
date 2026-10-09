@@ -282,3 +282,13 @@ Flujo: fuente salarial oficial por cliente y escala ? condiciones de la obra y c
 
 ### Alcance del c?lculo laboral
 
+
+<!-- 2026-10-09: La mejora visual de portada no interviene fuentes salariales, instantaneas de cotizacion ni calculos APU. -->
+
++<!-- 2026-10-09: La pagina 404 es solo navegacion publica; no consulta ni modifica datos de costos, cotizaciones o APU. -->
+
+## Parametros laborales persistentes
+
+El motor de costo laboral toma los aportes y provisiones activos desde `labor_cost_parameters`, no desde porcentajes fijos del frontend. Un parametro puede sumar o restar, usar como base salario mas transporte, cesantias calculadas, o salario/transporte mas extras para descuentos. El divisor permite representar reglas como interes de cesantias sin crear formulas especiales.
+
+La tabla salarial fuente por empresa conserva solo sus valores publicados. Para cada nueva cotizacion, la seleccion de cargos y las condiciones de obra se calculan con los parametros nacionales vigentes y se guardan junto con el resultado. Asi, una modificacion posterior no altera una cotizacion ya calculada.

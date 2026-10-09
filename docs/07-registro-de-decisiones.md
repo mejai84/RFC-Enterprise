@@ -700,3 +700,13 @@ Antes de gestionar APU, la cotizaci?n debe guardar un costeo laboral: plazo, d?a
 
 ## 2026-10-08 ? L?mite del m?dulo de costeo
 
+
+<!-- ADR-137 2026-10-09: El video de soldadura de la portada se reproduce en movil, silenciado y en linea. El parallax se limita a pantallas amplias; prefers-reduced-motion prevalece. -->
+
++<!-- ADR-138 2026-10-09: la 404 usa una composicion estructural animada en CSS, sin dependencia de video ni librerias pesadas. La preferencia de movimiento reducido la detiene. -->
+
+## ADR-139 - Parametros laborales nacionales configurables
+
+**Decision (2026-10-09):** los porcentajes de costo laboral no se duplican por empresa. Se administran como catalogo nacional en `labor_cost_parameters`, porque son reglas generales del modelo comercial que pueden cambiar con la normativa. Cada fila define codigo, etiqueta, tasa, base de calculo, efecto, divisor, estado y descripcion.
+
+**Consecuencias:** las tablas salariales de cada empresa continuan aportando salarios y auxilios documentales; el calculo comercial consume el catalogo nacional. Un cambio recalcula costos vigentes en BD y las cotizaciones nuevas guardan los parametros dentro de su instantanea para preservar trazabilidad historica.

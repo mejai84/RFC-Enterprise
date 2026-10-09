@@ -243,3 +243,11 @@ Cada tabla salarial conserva dos capas: los valores documentales del nivel y el 
 <!-- 2026-10-08: Cotizaciones incorpora el paso Costeo de mano de obra. La selecci?n contractual agrupa las escalas de un mismo cliente/versi?n en una sola tabla visible; el usuario define condiciones de obra y cuadrilla antes de abrir APU. -->
 
 <!-- 2026-10-08: El costeo de mano de obra en Cotizaciones solo estima costos para APU; RFC Enterprise no reemplaza el software de n?mina ni liquida aportes laborales. -->
+
+<!-- 2026-10-09: La portada conserva el video de soldadura en movil, sin parallax en pantalla compacta y con alternativa estatica al reducir movimiento. -->
+
++<!-- 2026-10-09: La ruta no encontrada tiene una experiencia RFC propia: orienta al visitante a portada o portal, con animacion CSS ligera y respuesta movil. -->
+
+## Parametros nacionales de costo laboral (2026-10-09)
+
+Configuracion incorpora la pestana **Parametros laborales**. Sus porcentajes viven en `labor_cost_parameters`, una tabla nacional y extensible: se pueden modificar, desactivar o agregar sin editar codigo. Solo administracion, ingenieria residente y gerencia general pueden cambiarlos; los demas miembros autenticados los consultan. Cada parametro declara base, efecto y divisor. Al cambiarlo, la base recalcula los costos vigentes y las cotizaciones nuevas guardan una copia de los parametros utilizados.

@@ -1,5 +1,6 @@
 "use client";
 
+import type { LaborCostParameter } from "@/shared/labor-cost-parameters";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
@@ -79,6 +80,8 @@ export function LaborProjectModal({
   const [incluidos, setIncluidos] = useState<string[]>([]);
   const [viaticos, setViaticos] = useState<Record<string, boolean>>({});
   const [viaticReasons, setViaticReasons] = useState<Record<string, string>>({});
+  const [laborParameters, setLaborParameters] = useState<LaborCostParameter[]>([]);
+  const [cargandoParametros, setCargandoParametros] = useState(true);
 
   useEffect(() => {
     if (!tableId || !supabaseUrl || !supabasePublishableKey) return;
@@ -131,6 +134,37 @@ export function LaborProjectModal({
   );
 
   useEffect(() => {
+    if (!supabaseUrl || !supabasePublishableKey) return;
+    const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
+    void supabase
+      .from("labor_cost_parameters")
+      .select("code,label,rate,calculation_base,operation,divisor,description,sort_order,is_active,updated_at")
+      .eq("is_active", true)
+      .order("sort_order")
+      .then(({ data, error: parameterError }) => {
+        if (parameterError) {
+          setError(parameterError.message);
+        } else if (!data?.length) {
+          setError("No hay parametros laborales vigentes configurados.");
+        } else {
+          setLaborParameters(data.map((item) => ({
+          code: item.code,
+          label: item.label,
+          rate: Number(item.rate),
+          calculationBase: item.calculation_base,
+          operation: item.operation,
+          divisor: Number(item.divisor),
+          description: item.description,
+          sortOrder: item.sort_order,
+          isActive: item.is_active,
+          updatedAt: item.updated_at,
+        })) as LaborCostParameter[]);
+        }
+        setCargandoParametros(false);
+      });
+  }, []);
+
+  useEffect(() => {
     if (diasTocados || diasDelPlazo === null) return;
     setDias(diasDelPlazo);
     setDiasAlojamiento(defaultLodgingDays(diasDelPlazo));
@@ -138,7 +172,9 @@ export function LaborProjectModal({
 
   const resultados = useMemo(
     () =>
-      incluidos
+      cargandoParametros
+        ? []
+        : incluidos
         .map((code) => {
           const entry = entries.find((e) => e.code === code);
           if (!entry) return null;
@@ -157,10 +193,10 @@ export function LaborProjectModal({
             hours,
             perDiem,
             aplicaViaticos: viaticos[code] ?? /capataz|conductor/i.test(entry.name),
-          });
+          }, laborParameters);
         })
         .filter((r): r is NonNullable<typeof r> => r !== null),
-    [entries, incluidos, personal, dias, diasAlojamiento, dotacion, hours, perDiem, viaticos],
+    [entries, incluidos, personal, dias, diasAlojamiento, dotacion, hours, perDiem, viaticos, laborParameters],
   );
 
   const totalObra = resultados.reduce((sum, r) => sum + r.totalPeriodo, 0);
@@ -220,6 +256,7 @@ export function LaborProjectModal({
         viaticos,
         viaticReasons,
         hours,
+        parametrosCostoLaboral: laborParameters,
         resultados: resultados.map((r) => ({
           codigo: r.input.codigo ?? "",
           nombre: r.input.nombre,

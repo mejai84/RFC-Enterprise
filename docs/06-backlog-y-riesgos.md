@@ -107,3 +107,11 @@ Mitigado el 2026-10-08: el riesgo de cotizar un cargo con un nivel incompleto se
 En implementaci?n. Riesgo a evitar: usar como f?rmula legal universal el Excel hist?rico de OCENSA, que no incluye todos los conceptos en su base de salud/pensi?n. Cada concepto de remuneraci?n debe conservar su tratamiento de IBC, prestaciones y parafiscales con vigencia y soporte; los costos operativos (hotel, agua, EPP y m?dico) se separan de la n?mina.
 
 <!-- Alcance SAL-006: el c?lculo es comercial para cotizaci?n y APU, no liquidaci?n de n?mina ni declaraci?n PILA. -->
+
+<!-- WEB-012 mitigado 2026-10-09: el video esencial de taller tambien carga en movil; conserva area reservada y movimiento reducido cuando el usuario lo solicita. -->
+
++<!-- WEB-013 mitigado 2026-10-09: las URL inexistentes ya no muestran una pagina generica; ofrecen recuperacion clara, controles visibles y movimiento reducible. -->
+
+### SAL-007 - Revision de parametros laborales nacionales
+
+Mitigado tecnicamente el 2026-10-09: los porcentajes dejaron de depender de constantes del codigo y ya se persisten en la base de datos con control de acceso. Riesgo operativo residual: antes de modificar o agregar un parametro, un responsable debe validar su vigencia, base y efecto para el modelo comercial. El modulo estima APU/cotizaciones; no liquida nomina ni sustituye PILA.

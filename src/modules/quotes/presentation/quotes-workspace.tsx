@@ -2294,7 +2294,7 @@ function NewQuoteModal({
             </button>
             <p className="labor-project-summary">
               {laborDraft
-                ? `${laborDraft.incluidos.length} cargo${laborDraft.incluidos.length === 1 ? "" : "s"} · ${laborDraft.dias} días · $ ${laborDraft.snapshot.totalObra.toLocaleString("es-CO")}`
+                ? `${laborDraft.incluidos.length} cargo${laborDraft.incluidos.length === 1 ? "" : "s"} | ${laborDraft.diasFisicos} dias fisicos | ${laborDraft.dias} dias remunerados | $ ${laborDraft.snapshot.totalObra.toLocaleString("es-CO")}`
                 : "Opcional. Permite digitar hotel, alimentación, hidratación y los demás conceptos solo para esta cotización."}
             </p>
             <input

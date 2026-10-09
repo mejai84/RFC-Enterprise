@@ -263,3 +263,9 @@ La creacion de cotizaciones mantiene plegados el estimado comercial y la planeac
 ## Criterios de jornada y productividad para APU (contexto, 2026-10-09)
 
 Para el costeo RFC se manejaran por separado: jornada ordinaria programada de 42 horas semanales (lunes a viernes, con almuerzo no laborado), dias fisicos de produccion, dias calendario remunerados y horas efectivas de produccion. Como supuesto inicial para estaciones OCENSA se reconoce 5,333 horas productivas por dia; es configurable por frente, actividad y restriccion operativa, no una jornada legal ni un rendimiento obligatorio.
+
+## Precosteo laboral con dias fisicos y remunerados (2026-10-09)
+
+El estimado opcional de cuadrilla calcula dias fisicos de lunes a viernes y propone dias remunerados con la regla presupuestal 7/5; ambos quedan editables para festivos, novedades y tarifas que ya incluyan descansos. La mano de obra usa los dias remunerados; productividad, rendimientos y horas extras usan dias fisicos. Alojamiento y viaticos conservan su propia cantidad de dias.
+
+**Extras del precosteo:** no se prorratean automaticamente desde las referencias historicas de una tabla. Inician en cero y se ingresan segun el turno o programacion real del periodo; los dias fisicos ayudan a revisar su coherencia, pero no crean recargos por si mismos.

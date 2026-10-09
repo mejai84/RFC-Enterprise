@@ -347,6 +347,8 @@ export type ProjectLaborInput = {
   personal: number;
   /** Días de la obra. Se calculan del plazo y se pueden cambiar. */
   dias: number;
+  /** Dias fisicos de trabajo; sirve para productividad y extras sin duplicar salario. */
+  diasFisicos?: number;
   /** Días de alojamiento. En la hoja oficial son 90, no los 240 de la tabla. */
   diasAlojamiento: number;
   /** Dotación total del puesto (uniforme, casco, botas). */
@@ -530,6 +532,24 @@ export function daysBetween(start: string, end: string): number | null {
  * aunque la tabla sea de 240. Si el plazo de la obra es menor, se
  * toma el plazo completo.
  */
+/** Cuenta solo lunes a viernes; sabados y domingos no son dias fisicos ordinarios. */
+export function workdaysBetween(start: string, end: string): number | null {
+  const from = new Date(`${start}T00:00:00Z`);
+  const to = new Date(`${end}T00:00:00Z`);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) return null;
+  let count = 0;
+  for (let day = new Date(from); day <= to; day.setUTCDate(day.getUTCDate() + 1)) {
+    const weekday = day.getUTCDay();
+    if (weekday >= 1 && weekday <= 5) count += 1;
+  }
+  return count;
+}
+
+/** Regla presupuestal RFC: cinco dias fisicos completos equivalen a siete remunerados. */
+export function remuneratedDaysForWorkdays(workdays: number): number {
+  return Math.round(Math.max(0, workdays) * 7 / 5 * 100) / 100;
+}
+
 export function defaultLodgingDays(diasObra: number): number {
   return Math.min(diasObra, 90);
 }
@@ -541,6 +561,10 @@ export function defaultLodgingDays(diasObra: number): number {
 export type QuoteLaborSnapshot = {
   /** Días que se usaron en el cálculo. */
   dias: number;
+  /** Dias fisicos usados para productividad y horas extras. */
+  diasFisicos?: number;
+  /** Horas efectivas disponibles para producir por dia fisico. */
+  horasProductivasDia?: number;
   diasAlojamiento: number;
   /** Fecha en que se calculó. */
   calculadoEn: string;

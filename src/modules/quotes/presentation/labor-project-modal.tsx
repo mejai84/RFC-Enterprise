@@ -7,8 +7,8 @@ import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import styles from "./labor-project-modal.module.css";
 import {
   computeProjectLabor,
-  daysBetween,
-  defaultHours,
+  workdaysBetween,
+  remuneratedDaysForWorkdays,
   defaultLodgingDays,
   emptyPerDiem,
   perDiemConcepts,
@@ -16,10 +16,7 @@ import {
   type PerDiemKey,
   type ProjectPerDiemValues,
   type QuoteLaborSnapshot,
-
-  diasTablaOficial,
-  horasOficialExtraDiurnas,
-  horasOficialDominicales,} from "../domain/project-labor";
+} from "../domain/project-labor";
 
 type Entry = {
   id: string;
@@ -36,7 +33,11 @@ type Entry = {
 };
 
 export type ProjectLaborDraft = {
+  /** Dias remunerados usados para el costo laboral. */
   dias: number;
+  /** Dias fisicos de trabajo usados para productividad. */
+  diasFisicos: number;
+  horasProductivasDia: number;
   diasAlojamiento: number;
   fechaInicio?: string;
   fechaFin?: string;
@@ -62,23 +63,6 @@ const emptyHours: HoursInput = {
   horasDominicales: 0,
 };
 
-/**
- * Escala las horas de la tabla oficial al plazo de la obra.
- *
- * La hoja del cliente trae 56 horas extra diurnas y 14 dominicales para
- * 240 dias. Para una obra de N dias se aplica la misma proporcion, de
- * modo que el costo diario no cambie por tener mas o menos dias.
- */
-function escalarHoras(dias: number): HoursInput {
-  if (dias <= 0) return emptyHours;
-  const factor = dias / diasTablaOficial;
-  return {
-    horasExtraDiurnas: Math.round(horasOficialExtraDiurnas * factor),
-    horasExtraNocturnas: 0,
-    horasDominicales: Math.round(horasOficialDominicales * factor),
-  };
-}
-
 export function LaborProjectModal({
   tableId,
   tableName,
@@ -98,8 +82,10 @@ export function LaborProjectModal({
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
   const [dias, setDias] = useState(0);
+  const [diasFisicos, setDiasFisicos] = useState(0);
   const [diasTocados, setDiasTocados] = useState(false);
   const [diasAlojamiento, setDiasAlojamiento] = useState(0);
+  const [horasProductivasDia, setHorasProductivasDia] = useState(5.333);
   const [perDiem, setPerDiem] = useState<ProjectPerDiemValues>(emptyPerDiem());
   const [hours, setHours] = useState<HoursInput>(emptyHours);
   const [personal, setPersonal] = useState<Record<string, number>>({});
@@ -156,7 +142,7 @@ export function LaborProjectModal({
 
   /* Los días salen del plazo, pero quedan editables a mano. */
   const diasDelPlazo = useMemo(
-    () => daysBetween(fechaInicio, fechaFin),
+    () => workdaysBetween(fechaInicio, fechaFin),
     [fechaInicio, fechaFin],
   );
 
@@ -197,19 +183,22 @@ export function LaborProjectModal({
      escala en esa razón. Todo queda editable porque es una estimación. */
   useEffect(() => {
     if (diasDelPlazo === null) return;
-    setDias(diasDelPlazo);
+    setDiasFisicos(diasDelPlazo);
+    setDias(remuneratedDaysForWorkdays(diasDelPlazo));
     setDiasAlojamiento(defaultLodgingDays(diasDelPlazo));
-    setHours(escalarHoras(diasDelPlazo));
+    setHours({ ...emptyHours });
     setDiasTocados(false);
   }, [diasDelPlazo]);
 
-  /* Si el usuario escribe los días a mano, el alojamiento y las horas
-     siguen la misma proporción para no quedar con valores que no calzan. */
-  function cambiarDias(valor: number) {
+  function cambiarDiasFisicos(valor: number) {
+    setDiasFisicos(valor);
+    setDiasAlojamiento(defaultLodgingDays(valor));
+    if (!diasTocados) setDias(remuneratedDaysForWorkdays(valor));
+  }
+
+  function cambiarDiasRemunerados(valor: number) {
     setDias(valor);
     setDiasTocados(true);
-    setDiasAlojamiento(defaultLodgingDays(valor));
-    setHours(escalarHoras(valor));
   }
 
   const resultados = useMemo(
@@ -230,6 +219,7 @@ export function LaborProjectModal({
             noSalarialDia: Number(entry.non_salary_allowance),
             personal: personal[code] ?? 1,
             dias,
+            diasFisicos,
             diasAlojamiento,
             dotacion: dotacion[code] ?? 0,
             hours,
@@ -238,7 +228,7 @@ export function LaborProjectModal({
           }, laborParameters);
         })
         .filter((r): r is NonNullable<typeof r> => r !== null),
-    [entries, incluidos, personal, dias, diasAlojamiento, dotacion, hours, perDiem, viaticos, laborParameters],
+    [entries, incluidos, personal, dias, diasFisicos, diasAlojamiento, dotacion, hours, perDiem, viaticos, laborParameters],
   );
 
   const totalObra = resultados.reduce((sum, r) => sum + r.totalPeriodo, 0);
@@ -264,6 +254,8 @@ export function LaborProjectModal({
     }
     onSave({
       dias,
+      diasFisicos,
+      horasProductivasDia,
       diasAlojamiento,
       fechaInicio: fechaInicio || undefined,
       fechaFin: fechaFin || undefined,
@@ -276,6 +268,8 @@ export function LaborProjectModal({
       viaticReasons,
       snapshot: {
         dias,
+        diasFisicos,
+        horasProductivasDia,
         escala: scale,
         diasAlojamiento,
         calculadoEn: new Date().toISOString(),
@@ -338,55 +332,21 @@ export function LaborProjectModal({
 
         {/* ── Plazo de la obra ── */}
         <section className={styles["labor-project-block"]}>
-          <h4>Plazo de la obra</h4>
+          <h4>Plazo, dias pagados y productividad</h4>
           <div className={styles["labor-project-grid"]}>
-            <label>
-              Fecha de inicio
-              <input
-                type="date"
-                value={fechaInicio}
-                onChange={(e) => setFechaInicio(e.target.value)}
-              />
-            </label>
-            <label>
-              Fecha de finalización
-              <input
-                type="date"
-                value={fechaFin}
-                onChange={(e) => setFechaFin(e.target.value)}
-              />
-            </label>
-            <label>
-              Días de la obra
-              <input
-                type="number"
-                min={1}
-                value={dias}
-                onChange={(e) => {
-                  cambiarDias(Number(e.target.value) || 0);
-                }}
-              />
-            </label>
-            <label>
-              Días de alojamiento
-              <input
-                type="number"
-                min={0}
-                value={diasAlojamiento}
-                onChange={(e) => setDiasAlojamiento(Number(e.target.value) || 0)}
-              />
-            </label>
+            <label>Fecha de inicio<input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} /></label>
+            <label>Fecha de finalizacion<input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} /></label>
+            <label>Dias fisicos de trabajo<input type="number" min={0} value={diasFisicos} onChange={(e) => cambiarDiasFisicos(Number(e.target.value) || 0)} /><small>Lunes a viernes; sirve para rendimiento y horas extras.</small></label>
+            <label>Dias remunerados de personal<input type="number" min={0} step="0.1" value={dias} onChange={(e) => cambiarDiasRemunerados(Number(e.target.value) || 0)} /><small>Mano de obra: por defecto, dias fisicos x 7 / 5.</small></label>
+            <label>Dias de alojamiento<input type="number" min={0} value={diasAlojamiento} onChange={(e) => setDiasAlojamiento(Number(e.target.value) || 0)} /><small>Solo para viaticos aplicables.</small></label>
+            <label>Horas productivas por dia<input type="number" min={0} step="0.001" value={horasProductivasDia} onChange={(e) => setHorasProductivasDia(Number(e.target.value) || 0)} /><small>Supuesto OCENSA inicial; no es jornada legal.</small></label>
           </div>
-          <p className={styles["labor-project-note"]}>
-            {diasDelPlazo === null
-              ? "Con las dos fechas los días se calculan solos. Si escribe un número a mano, se respeta el suyo."
-              : `El plazo da ${diasDelPlazo} días. ${diasTocados ? "Está usando el valor que escribió a mano." : "Puede cambiarlo si el plazo no aplica."}`}
-          </p>
+          <p className={styles["labor-project-note"]}>Jornada ordinaria de referencia: 42 horas semanales. {diasDelPlazo === null ? "Seleccione ambas fechas para calcular los dias fisicos." : `El plazo contiene ${diasDelPlazo} dias fisicos y propone ${remuneratedDaysForWorkdays(diasDelPlazo)} dias remunerados.`} Ajuste los dias remunerados por festivos, novedades o una tarifa que ya incluya descansos.</p>
         </section>
 
         {/* ── Horas ── */}
         <section className={styles["labor-project-block"]}>
-          <h4>Horas del mes</h4>
+          <h4>Horas adicionales planeadas</h4>
           <div className={styles["labor-project-grid"]}>
             <label>
               Horas extra diurnas
@@ -423,8 +383,7 @@ export function LaborProjectModal({
             </label>
           </div>
           <p className={styles["labor-project-note"]}>
-            Recargos: 25% diurna, 75% nocturna y 190% dominical. La hora ordinaria
-            sale del salario día entre 7, como en la hoja oficial.
+            Inician en cero. Registre solamente horas extra o dominicales previstas por turno. Los dias fisicos no crean extras automaticamente; la jornada ordinaria de 42 horas tampoco equivale a horas productivas.
           </p>
         </section>
 

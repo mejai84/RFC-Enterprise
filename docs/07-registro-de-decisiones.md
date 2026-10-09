@@ -728,3 +728,11 @@ Antes de gestionar APU, la cotizaci?n debe guardar un costeo laboral: plazo, d?a
 **Decision (2026-10-09):** el costeo laboral diferenciara jornada ordinaria programada, dias fisicos de trabajo, dias calendario remunerados y horas efectivas de produccion. La referencia actual de RFC es 42 horas semanales de lunes a viernes; la productividad inicial de estaciones OCENSA es 5,333 horas/dia y queda configurable por actividad/frente.
 
 **Consecuencias:** el factor presupuestal 7/5 solo puede aplicarse cuando la tarifa diaria no haya incorporado ya el descanso remunerado. Equipos y transporte usan sus propias unidades de cobro y no reciben dicho factor automaticamente.
+
+## ADR-143 - Dias remunerados separados de dias fisicos en el precosteo
+
+**Decision (2026-10-09):** el precosteo propone dias fisicos de lunes a viernes y dias remunerados como dias fisicos x 7/5. El usuario puede editar el resultado por festivos, novedades o porque la tarifa contractual ya incluye descansos.
+
+**Consecuencias:** el costo de personal usa dias remunerados; horas extras, rendimiento y disponibilidad real usan dias fisicos. Hotel, transporte operativo y equipos no reciben el factor automaticamente.
+
+**Ajuste ADR-143 (extras):** dias fisicos no generan por si solos horas extra. El precosteo inicia extras diurnas, nocturnas y dominicales en cero; solo se costean las horas que el responsable registre conforme al turno planeado.

@@ -304,3 +304,9 @@ La cotizacion puede conservar un estimado plegable y opcional cuando aun no exis
 ## Jornada, dias remunerados y horas productivas
 
 La jornada ordinaria de referencia es 42 horas por semana, distribuida de lunes a viernes con el almuerzo fuera del tiempo laborado. Para APU no equivale a tiempo productivo: dias fisicos, dias calendario remunerados y horas efectivas se calculan en variables distintas. El supuesto inicial para una estacion OCENSA es 5,333 horas efectivas/dia, editable por actividad y frente. Para semanas completas el factor 7/5 se usa solo si la tarifa salarial no incluye ya el descanso remunerado; maquinaria, transporte y equipos se calculan segun su propia modalidad (dia efectivo, calendario, mes, hora o viaje).
+
+## Regla 10 dias fisicos / 14 dias remunerados
+
+Para dos semanas completas de lunes a viernes, el precosteo propone 10 dias fisicos y 14 remunerados. El segundo valor es la base del costo de personal cuando la tarifa no incorpora ya descansos pagados. Rendimiento, maquinaria, herramientas, transporte y horas productivas se mantienen sobre los 10 dias fisicos o su modalidad contractual; alojamiento se define por separado.
+
+Las horas extra no se derivan automaticamente de los dias del plazo. Para una obra ordinaria de lunes a viernes bajo 42 horas semanales, el precosteo comienza en cero; se agregan manualmente las horas diurnas, nocturnas o dominicales planificadas.

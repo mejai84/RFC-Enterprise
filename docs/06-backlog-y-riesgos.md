@@ -127,3 +127,9 @@ Mitigado el 2026-10-09: el estimado comercial y la planeacion de cuadrilla son o
 ### APU-014 - Confundir jornada legal, remuneracion y produccion
 
 Abierto. El modelo futuro debe impedir que 42 horas semanales, el factor presupuestal de dias remunerados y las horas efectivas productivas se mezclen o se apliquen dos veces. Para OCENSA, 5,333 horas productivas/dia es un supuesto editable; no se debe tratar como jornada legal ni como regla universal.
+
+### APU-014 - Confundir jornada legal, remuneracion y produccion
+
+Mitigado parcialmente el 2026-10-09: el precosteo separa dias fisicos, dias remunerados, alojamiento y horas productivas. Riesgo residual: festivos y turnos especiales aun requieren ajuste manual; no se deben inferir pagos o recargos fuera de reglas contractuales vigentes.
+
+**Control APU-014 (extras):** las horas extra y dominicales del precosteo inician en cero. El responsable debe ingresarlas con base en la programacion real; se elimina el prorrateo automatico de referencias historicas que podia crear extras inexistentes.

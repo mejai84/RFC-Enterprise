@@ -1,0 +1,84 @@
+{
+  "documento": "Dotación por cargo en matriz, en vez de por nivel",
+  "para": "Codex",
+  "fecha": "2026-10-09",
+  "estado": "estructura de datos creada, sembrada y probada. Falta la interfaz de edicion.",
+
+  "que_observo_el_usuario": "Hay articulos de dotacion categorizados en el inventario. El valor total que se le da a un oficial de paileria no es el mismo que a un ayudante de paileria, ni a un marinero, aunque esten en el mismo nivel. Pregunto si la forma correcta es una matriz.",
+
+  "respuesta_al_diseño": "Si, matriz. Y la observacion es correcta: el nivel no sirve como fila. En OCENSA hay 345 cargos y solo 6 niveles, asi que por nivel cincuenta cargos reciben literalmente lo mismo. Un oficial y un ayudante de paileria comparten nivel y necesitan casco de obra y guantes distintos, o caretas unos y otros no.",
+
+  "modelo": {
+    "principio": "La fila de la matriz es el CARGO. El nivel queda como plantilla de partida, no como dueño del valor.",
+    "por_que": "El nivel sigue siendo correcto para el SALARIO, porque el salario si depende del nivel segun el documento del cliente. Lo que depende del cargo es la dotacion y los viaticos. Por eso el costo real paso a vivir en el cargo y el del nivel quedo como respaldo.",
+    "tablas": {
+      "labor_dotacion_concepts": {
+        "que_es": "Catalogo de conceptos. Uno solo por concepto en toda la empresa.",
+        "campos_clave": [
+          "name: el nombre que ve el usuario",
+          "source_name: el nombre tal como aparece en el documento del cliente, y con este se empareja la matriz",
+          "default_unit_value: el precio de referencia",
+          "inventory_item_id: vinculo opcional con el inventario, para saber que hay en bodega y a que precio se compro"
+        ],
+        "por_que_un_solo_precio": "Si sube el overol se cambia en el catalogo y las 1271 filas que lo usan quedan al dia. Si el precio viviera en cada fila habria que cambiarlo 1271 veces.",
+        "tiene_inventario": "Si. El inventario ya tiene 154 articulos en el grupo dotacion, con categorias como Equipos de proteccion personal, Uniformes de trabajo y Equipos de proteccion respiratoria. El vinculo todavia no se hizo porque el nombre del inventario no coincide con el del documento del cliente y emparejar a mano los 25 conceptos es una decision del usuario, no una deduccion."
+      },
+      "labor_role_dotacion": {
+        "que_es": "La matriz. Una fila por cargo y concepto.",
+        "campos_clave": [
+          "labor_rate_role_id + concept_id: unico, es la celda de la matriz",
+          "quantity: lo que lleva ese cargo de ese concepto",
+          "unit_value_override: vacio = usa el precio del catalogo. Con valor = este cargo paga otra cosa",
+          "inherited_from_level: true = la fila todavia es la plantilla del nivel. En cuanto se edita a mano queda false y se ve que es una correccion"
+        ]
+      }
+    },
+    "funcion_y_vistas": {
+      "recompute_labor_role_cost(uuid)": "RPC publico para recalcular la dotacion y el costo de un cargo al guardar una fila de la matriz. Verifica que el cargo pertenezca a la empresa del usuario.",
+      "v_labor_role_dotacion": "Dotacion y costo real por cargo, con el salario oficial del nivel al lado.",
+      "v_labor_dotacion_desviacion": "Cargos cuya dotacion ya no es la de su nivel. Estan vacios mientras la matriz sea solo plantilla y van apareciendo a medida que se corrija cargo por cargo. Es la lista de trabajo del usuario."
+    }
+  },
+
+  "sembrado": {
+    "conceptos": 25,
+    "filas_de_matriz": 1271,
+    "cargos_con_dotacion": "Los 68 de OCENSA, los 52 de propias y los 16 de no propias. Los 277 de CENIT y ODC quedan sin dotacion porque el documento del cliente no trae una.",
+    "validacion": "Al sembrar, la dotacion de cada cargo tiene que sumar exactamente lo que suma su nivel. Los seis niveles cuadran con diferencia cero."
+  },
+
+  "prueba_real": {
+    "caso": "Andamiero 1 y Almacenista Principal comparten el Nivel 4 y los dos reciben la misma dotacion.",
+    "cambio": "Se le quito al Andamiero el casco con barbuquejo, porque trabaja en estructuras y usa capuchon.",
+    "resultado": "Andamiero bajo de 3.407.500 a 3.277.500 y su costo diario de 393.656 a 393.114. El Almacenista se quedo igual.",
+    "conclusion": "La matriz permite que dos cargos del mismo nivel tengan distinto costo, y corregir uno no toca el otro. Serestauro la plantilla al terminar la prueba.",
+    "como_verlo_otra_vez": "Editar la fila del casco en labor_role_dotacion para el Andamiero, ejecutar recompute_labor_role_cost con su id, y consultar v_labor_dotacion_desviacion."
+  },
+
+  "migraciones": [
+    { "orden": "20261008320000", "que_hace": "Crea el catalogo de conceptos y la matriz, y mueve el costo real al cargo." },
+    { "orden": "20261008330000", "que_hace": "Agrega source_name porque los nombres del documento estan abreviados y no emparejaban." },
+    { "orden": "20261008340000", "que_hace": "Quita los 25 conceptos duplicados que quedaron al coexistir los nombres viejos y los nuevos." },
+    { "orden": "20261008350000", "que_hace": "RPC publico para recalcular un cargo, con las reglas de escritura del resto." },
+    { "orden": "20261008360000", "que_hace": "Script de verificacion del caso Andamiero contra Almacenista, deja el estado alterado para poder consultarlo y lo restaura." }
+  ],
+
+  "errores_que_costaron_tiempo": [
+    "Los nombres del documento del cliente estan abreviados y no coinciden con los del catalogo. 'overol inifugo' contra 'overol infiugo', 'tapaoido desch' contra 'tapa oidos desechable', 'tapa oido tipo copa' contra 'tapa oidos tipo copa'. Tres conceptos no entraban a la matriz y cada cargo quedaba 1.485.000 por debajo de la dotacion de su nivel. Por eso el concepto guarda las dos formas y el emparejamiento es por la del documento.",
+    "La unicidad estaba en (company_id, name) y Postgres compara distinguiendo mayusculas, asi que al sembrar los nombres legibles quedaron dos filas por concepto y la dotacion salio duplicada. Se cambio a un indice unico sobre lower(source_name), que es la clave con la que se empareja.",
+    "Postgres no admite funciones dentro de una restriccion UNIQUE. Para (company_id, lower(source_name)) hay que usar create unique index.",
+    "Un LATERAL dentro de un UPDATE no puede referenciar la tabla que se esta actualizando. El total de la dotacion va en subconsultas escalares dentro del SET, que si se evaluan antes.",
+    "El Supabase CLI ejecuta el archivo completo pero devuelve solo la ultima sentencia. Para ver un estado intermedio hay que dejar el estado alterado y consultarlo en un comando aparte."
+  ],
+
+  "pendiente": [
+    "LA INTERFAZ DE EDICION DE LA MATRIZ. Es lo que falta: una pantalla para abrir un cargo, ver que conceptos lleva, cambiar cantidades y editar precios. Sin ella la matriz existe pero solo se cambia por base de datos.",
+    "Emparejar los 25 conceptos con los 154 articulos del grupo dotacion del inventario, para que cada concepto sepa que hay en bodega y a que precio se compro. Es una decision del usuario porque los nombres no coinciden.",
+    "Enlazar labor_dotacion_concepts con inventory_items, que ya tiene la columna pero esta vacia.",
+    "Que el APU lea computed_daily_cost del cargo y no el del nivel. El nivel se conserva como respaldo para los cargos que aun no tengan el suyo.",
+    "Usar el campo inherited_from_level para mostrar un aviso en la interfaz: 'este valor viene del Nivel 4, todavia no se ha revisado para este cargo'.",
+    "Decidir que pasa con los 277 cargos de CENIT y ODC que no tienen dotacion: si se deja en cero, si se usa la del nivel, o si se pide un documento al cliente."
+  ],
+
+  "coordinacion": "Codex sigue trabajando en src/app/page.tsx, parallax-video.tsx, home-premium.module.css, not-found.tsx, tests/e2e/home-mobile.spec.ts y los documentos de docs. Esos archivos no se tocaron aqui."
+}

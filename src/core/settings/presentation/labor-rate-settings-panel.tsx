@@ -5,6 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import { exportLaborRateTableToXlsx } from "./labor-rates-xlsx-export";
 import { LaborRatesImport } from "./labor-rates-import";
+import { LaborDotacionMatrixPanel } from "./labor-dotacion-matrix-panel";
 
 type RateTable = { id: string; client_name: string; name: string; version: string; activity_type: string; valid_from: string; valid_to: string | null; source_document: string; is_active: boolean };
 const cop = (value: number) => Number(value || 0).toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
@@ -126,6 +127,7 @@ export function LaborRateSettingsPanel({ companyId }: { companyId: string }) {
       </section>
       <details className="labor-rate-add-entry"><summary>Agregar nivel o cargo a esta tabla</summary><form className="labor-rate-entry-form" onSubmit={createEntry}><input name="code" placeholder="Código" required /><input name="name" placeholder="Cargo o nivel" required /><input min="1" name="level" placeholder="Nivel" type="number" /><input min="0" name="basic" placeholder="Salario básico diario" type="number" step="0.01" /><input min="0" name="transport" placeholder="Transporte" type="number" step="0.01" /><input min="0" name="food" placeholder="Alimentación" type="number" step="0.01" /><input min="0" name="nonSalary" placeholder="No salarial" type="number" step="0.01" /><input min="0" name="total" placeholder="Total diario (opcional)" type="number" step="0.01" /><button className="inventory-action" disabled={busy} type="submit">Agregar cargo</button></form></details>
     </> : <p className="panel-intro">Seleccione una tabla para revisar y completar sus cargos.</p>}
+    <LaborDotacionMatrixPanel companyId={companyId} />
     <details className="labor-rate-import-details">
       <summary>Importar una tabla desde Excel</summary>
       <LaborRatesImport companyId={companyId} onDone={(tableId) => void loadEntries(tables.find((t) => t.id === tableId) ?? null)} />

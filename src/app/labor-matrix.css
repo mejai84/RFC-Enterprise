@@ -1,0 +1,365 @@
+.labor-matrix {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 2px solid var(--line);
+}
+
+.labor-matrix-head h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.labor-matrix-head p {
+  margin: 0 0 14px;
+  max-width: 70ch;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.labor-matrix-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.labor-matrix-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.labor-matrix-filters select,
+.labor-matrix-filters input {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  background: var(--surface);
+}
+
+/* ── Cuerpo: lista de cargos y matriz ───────────────────────── */
+
+.labor-matrix-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.labor-matrix-list {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.labor-matrix-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.labor-matrix-nuevo {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-sm);
+  background: var(--brand);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.labor-matrix-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--canvas);
+}
+
+.labor-matrix-form input,
+.labor-matrix-form select {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  background: var(--surface);
+}
+
+.labor-matrix-form button {
+  min-height: 44px;
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-sm);
+  background: var(--brand);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.labor-matrix-form button:disabled {
+  border-color: var(--line);
+  background: var(--canvas);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.labor-matrix-form small {
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.labor-matrix-nivel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.labor-matrix-scroll {
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.labor-matrix-rol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 48px;
+  padding: 9px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.labor-matrix-rol:hover {
+  background: var(--canvas);
+}
+
+.labor-matrix-rol.is-on {
+  background: var(--brand);
+  color: #fff;
+}
+
+.labor-matrix-rol strong {
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.labor-matrix-rol span {
+  font-size: 0.72rem;
+  opacity: 0.78;
+}
+
+/* ── Detalle del cargo ──────────────────────────────────────── */
+
+.labor-matrix-detail {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 14px;
+}
+
+.labor-matrix-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.labor-matrix-detail-head h4 {
+  margin: 0 0 2px;
+  font-size: 0.98rem;
+  color: var(--ink);
+}
+
+.labor-matrix-detail-head p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.labor-matrix-totals {
+  display: flex;
+  gap: 16px;
+}
+
+.labor-matrix-totals span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: right;
+}
+
+.labor-matrix-totals small {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.labor-matrix-totals strong {
+  font-size: 0.95rem;
+  color: var(--brand-dark);
+}
+
+.labor-matrix-note {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.labor-matrix-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.labor-matrix-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.labor-matrix-table th,
+.labor-matrix-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  vertical-align: middle;
+}
+
+.labor-matrix-table th:first-child,
+.labor-matrix-table td:first-child,
+.labor-matrix-table th:last-child,
+.labor-matrix-table td:last-child {
+  text-align: left;
+}
+
+.labor-matrix-table thead th {
+  background: var(--canvas);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.labor-matrix-table td:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.labor-matrix-table td:first-child strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.labor-matrix-table td:first-child small {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.labor-matrix-table input {
+  width: 90px;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  text-align: right;
+  background: var(--surface);
+}
+
+.labor-matrix-table tr.is-editada {
+  background: color-mix(in srgb, var(--brand) 6%, transparent);
+}
+
+.labor-matrix-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--canvas);
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.labor-matrix-badge.is-editada {
+  background: var(--brand);
+  color: #fff;
+}
+
+.labor-matrix-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-start;
+}
+
+.labor-matrix-actions button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.labor-matrix-actions button:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand-dark);
+}
+
+.labor-matrix-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.labor-matrix-reverter {
+  border-style: dashed !important;
+}
+
+@media (width <= 900px) {
+  .labor-matrix-body {
+    grid-template-columns: 1fr;
+  }
+
+  .labor-matrix-scroll {
+    max-height: 260px;
+  }
+
+  .labor-matrix-detail-head {
+    flex-direction: column;
+  }
+
+  .labor-matrix-totals {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .labor-matrix-totals span {
+    text-align: left;
+  }
+}

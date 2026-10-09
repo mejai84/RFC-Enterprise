@@ -22,7 +22,7 @@ const tabs: Array<{ value: SettingsTab; label: string; hint: string }> = [
   { value: "proposal", label: "Propuesta", hint: "Valores con los que se abre una cotización nueva." },
   { value: "company", label: "Empresa y nómina", hint: "Datos de la empresa, nómina e impresión." },
   { value: "labor_rates", label: "Costos y tablas salariales", hint: "Tablas de mano de obra por cliente, vigencia y cargo." },
-  { value: "labor_costs", label: "Par?metros laborales", hint: "Porcentajes nacionales que calculan el costo de mano de obra." },
+  { value: "labor_costs", label: "Parámetros laborales", hint: "Porcentajes nacionales que calculan el costo de mano de obra." },
 ];
 
 const signatureToggles: Array<{ key: keyof CompanyBranding; label: string }> = [

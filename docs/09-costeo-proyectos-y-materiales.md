@@ -292,3 +292,7 @@ Flujo: fuente salarial oficial por cliente y escala ? condiciones de la obra y c
 El motor de costo laboral toma los aportes y provisiones activos desde `labor_cost_parameters`, no desde porcentajes fijos del frontend. Un parametro puede sumar o restar, usar como base salario mas transporte, cesantias calculadas, o salario/transporte mas extras para descuentos. El divisor permite representar reglas como interes de cesantias sin crear formulas especiales.
 
 La tabla salarial fuente por empresa conserva solo sus valores publicados. Para cada nueva cotizacion, la seleccion de cargos y las condiciones de obra se calculan con los parametros nacionales vigentes y se guardan junto con el resultado. Asi, una modificacion posterior no altera una cotizacion ya calculada.
+
+## Dotacion: costo vs entrega real
+
+El APU usa el costo de la matriz de dotacion del cargo. Cada linea tiene cantidad, valor y dias de reposicion; el costo diario se deriva de esos datos. La entrega fisica solo se permite cuando el trabajador esta asignado a la obra. La funcion de entrega valida existencias, registra el responsable y crea el movimiento de entrada o salida que actualiza Kardex.

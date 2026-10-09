@@ -710,3 +710,9 @@ Antes de gestionar APU, la cotizaci?n debe guardar un costeo laboral: plazo, d?a
 **Decision (2026-10-09):** los porcentajes de costo laboral no se duplican por empresa. Se administran como catalogo nacional en `labor_cost_parameters`, porque son reglas generales del modelo comercial que pueden cambiar con la normativa. Cada fila define codigo, etiqueta, tasa, base de calculo, efecto, divisor, estado y descripcion.
 
 **Consecuencias:** las tablas salariales de cada empresa continuan aportando salarios y auxilios documentales; el calculo comercial consume el catalogo nacional. Un cambio recalcula costos vigentes en BD y las cotizaciones nuevas guardan los parametros dentro de su instantanea para preservar trazabilidad historica.
+
+## ADR-140 - Separacion entre dotacion estimada y dotacion entregada
+
+**Decision (2026-10-09):** la dotacion se gestiona en dos capas. La matriz de cargo y los perfiles reutilizables alimentan el costo comercial del APU; las entregas al trabajador se registran despues, contra una obra aprobada, y producen el unico movimiento que afecta inventario.
+
+**Consecuencias:** no se descuenta bodega al cotizar. El mismo oficio puede compartir perfil entre empresas, pero una tabla salarial o un cargo puede conservar una excepcion. Cada articulo declara su ciclo de reposicion para evitar amortizar casco, botas y consumibles con el mismo numero de dias.

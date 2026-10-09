@@ -251,3 +251,7 @@ Cada tabla salarial conserva dos capas: los valores documentales del nivel y el 
 ## Parametros nacionales de costo laboral (2026-10-09)
 
 Configuracion incorpora la pestana **Parametros laborales**. Sus porcentajes viven en `labor_cost_parameters`, una tabla nacional y extensible: se pueden modificar, desactivar o agregar sin editar codigo. Solo administracion, ingenieria residente y gerencia general pueden cambiarlos; los demas miembros autenticados los consultan. Cada parametro declara base, efecto y divisor. Al cambiarlo, la base recalcula los costos vigentes y las cotizaciones nuevas guardan una copia de los parametros utilizados.
+
+## Dotacion reutilizable y entrega operativa (2026-10-09)
+
+Separa el costo de dotacion del movimiento fisico. Los perfiles reutilizables permiten que un mismo oficio comparta dotacion entre tablas salariales de OCENSA, CENIT y ODC, con excepciones por cargo. Una entrega se registra contra trabajador y obra, crea un movimiento de inventario y descuenta existencias dentro de la misma transaccion.

@@ -115,3 +115,7 @@ En implementaci?n. Riesgo a evitar: usar como f?rmula legal universal el Excel h
 ### SAL-007 - Revision de parametros laborales nacionales
 
 Mitigado tecnicamente el 2026-10-09: los porcentajes dejaron de depender de constantes del codigo y ya se persisten en la base de datos con control de acceso. Riesgo operativo residual: antes de modificar o agregar un parametro, un responsable debe validar su vigencia, base y efecto para el modelo comercial. El modulo estima APU/cotizaciones; no liquida nomina ni sustituye PILA.
+
+### DOT-001 - Completar perfiles y vinculos con inventario
+
+En progreso. La base ya permite perfiles reutilizables, excepciones por cargo y entregas reales. Antes de usarla masivamente se debe revisar la matriz de cada cargo, asociar cada concepto con su articulo de inventario y completar el catalogo salarial OCENSA desde su fuente oficial.

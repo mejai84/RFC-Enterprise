@@ -216,6 +216,14 @@
   aspect-ratio: 4 / 3;
   box-shadow: 0 30px 70px rgba(22, 36, 28, 0.18);
 }
+.panelVideoAlt::after {
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.16), transparent 31%, rgba(176, 120, 22, 0.16));
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
 .panelVideo video,
 .panelVideoAlt video {
   position: absolute; inset: 0;
@@ -356,4 +364,6 @@
   .btn, .btnGhost { width: 100%; }
   .strip { padding-block: 14px; }
   .panelVideo, .panelVideoAlt { border-radius: 12px; }
+  .panelVideoAlt { aspect-ratio: 4 / 5; box-shadow: 0 20px 42px rgba(22, 36, 28, 0.2); }
+  .panelVideoAlt video { object-position: 58% center; }
 }

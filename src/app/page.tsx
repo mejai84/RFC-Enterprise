@@ -138,9 +138,9 @@ export default function Home() {
         </div>
         <ParallaxVideo
           className={styles.panelVideoAlt}
-          poster="/workshop-fabrication-rfc.png"
           source="/rfc-metalmecanica.mp4"
           speed={0.09}
+          mobilePlayback
         />
       </section>
 

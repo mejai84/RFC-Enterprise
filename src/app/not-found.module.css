@@ -1,0 +1,49 @@
+.page {
+  background: #f7f5ef;
+  color: #16241c;
+  display: grid;
+  min-height: 100dvh;
+  overflow: hidden;
+  padding: clamp(18px, 3vw, 42px);
+  position: relative;
+}
+.page::before {
+  background-image: linear-gradient(rgba(22, 36, 28, .055) 1px, transparent 1px), linear-gradient(90deg, rgba(22, 36, 28, .055) 1px, transparent 1px);
+  background-size: 44px 44px;
+  content: "";
+  inset: 0;
+  mask-image: linear-gradient(90deg, black, transparent 74%);
+  pointer-events: none;
+  position: absolute;
+}
+.nav { align-items: center; display: flex; justify-content: space-between; position: relative; z-index: 1; }
+.brand { align-items: center; color: inherit; display: inline-flex; font-size: 11px; font-weight: 750; gap: 11px; letter-spacing: .11em; line-height: 1.22; text-transform: uppercase; }
+.brand img { height: 42px; width: 42px; }
+.portal { align-items: center; border-bottom: 1px solid #8b9a90; display: inline-flex; font-size: 14px; font-weight: 700; gap: 9px; min-height: 44px; }
+.content { align-items: center; display: grid; gap: clamp(38px, 8vw, 128px); grid-template-columns: minmax(0, .9fr) minmax(320px, .8fr); margin: auto; max-width: 1180px; padding: clamp(42px, 8vh, 104px) 0; position: relative; width: 100%; z-index: 1; }
+.copy { max-width: 560px; }
+.code { color: #ae7515; font-size: 12px; font-weight: 800; letter-spacing: .16em; margin: 0 0 18px; text-transform: uppercase; }
+.copy h1 { font-family: var(--font-display, Georgia, serif); font-size: clamp(48px, 6.4vw, 82px); font-weight: 400; letter-spacing: -.065em; line-height: .94; margin: 0; }
+.copy > p:not(.code) { color: #52645a; font-size: clamp(16px, 1.6vw, 19px); line-height: 1.58; margin: 24px 0 0; max-width: 480px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+.primary, .secondary { align-items: center; display: inline-flex; font-weight: 750; justify-content: center; min-height: 48px; padding: 12px 18px; }
+.primary { background: #10251c; color: #fffdf8; gap: 20px; box-shadow: 0 16px 34px rgba(16, 37, 28, .17); }
+.primary:hover { background: #0b7a47; transform: translateY(-1px); }
+.secondary { border: 1px solid #bdc7be; color: #16241c; }
+.secondary:hover { border-color: #0b7a47; color: #065c34; }
+.diagram { aspect-ratio: 1 / 1; border: 1px solid rgba(22, 36, 28, .22); min-height: 360px; overflow: hidden; position: relative; }
+.diagram::before, .diagram::after { background: #0b7a47; content: ""; position: absolute; }
+.diagram::before { height: 1px; left: 0; right: 0; top: 50%; }
+.diagram::after { bottom: 0; top: 0; width: 1px; left: 50%; }
+.cornerA, .cornerB, .beamA, .beamB { border: 2px solid #16241c; display: block; position: absolute; transform-origin: center; }
+.cornerA { height: 40%; left: 15%; top: 16%; width: 34%; animation: settle-a 3.8s cubic-bezier(.22, .8, .2, 1) infinite alternate; }
+.cornerB { bottom: 14%; height: 31%; right: 16%; width: 38%; animation: settle-b 4.4s cubic-bezier(.22, .8, .2, 1) infinite alternate; }
+.beamA { background: #b07816; border: 0; height: 2px; left: 23%; top: 51%; width: 58%; animation: pulse-line 2.6s ease-in-out infinite; }
+.beamB { background: #0b7a47; border: 0; height: 54%; right: 50%; top: 23%; width: 2px; animation: pulse-line 2.6s ease-in-out .8s infinite; }
+.core { align-items: center; background: #f7f5ef; color: #16241c; display: flex; font-family: var(--font-display, Georgia, serif); font-size: clamp(56px, 8vw, 96px); height: 38%; justify-content: center; left: 31%; letter-spacing: -.09em; line-height: 1; position: absolute; top: 31%; width: 42%; z-index: 1; }
+.measure { bottom: 18px; color: #63736a; font-size: 10px; font-weight: 800; left: 20px; letter-spacing: .12em; position: absolute; }
+@keyframes settle-a { from { transform: translate(-14px, 10px) rotate(-4deg); } to { transform: translate(6px, -3px) rotate(1deg); } }
+@keyframes settle-b { from { transform: translate(14px, -8px) rotate(4deg); } to { transform: translate(-5px, 4px) rotate(-1deg); } }
+@keyframes pulse-line { 0%, 100% { opacity: .42; } 50% { opacity: 1; } }
+@media (max-width: 720px) { .content { grid-template-columns: 1fr; padding: 70px 0 32px; } .diagram { margin: 0 auto; min-height: 0; width: min(100%, 430px); } .copy h1 { font-size: clamp(45px, 13vw, 66px); } }
+@media (prefers-reduced-motion: reduce) { .cornerA, .cornerB, .beamA, .beamB { animation: none; } .primary:hover { transform: none; } }

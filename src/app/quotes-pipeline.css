@@ -1532,3 +1532,9 @@
 .new-quote-optional-costing > .quote-field-hint { margin: 0 14px 12px; max-width: 80ch; }
 .new-quote-optional-costing .new-quote-subgroup, .new-quote-optional-costing .new-quote-labor-project { margin: 0 12px 12px; }
 @media (width <= 560px) { .new-quote-optional-costing > summary { align-items: flex-start; flex-direction: column; } }
+
+
+.quote-payment-split { display: grid; gap: 8px; }
+.quote-payment-split__values { display: flex; justify-content: space-between; gap: 12px; color: var(--brand-dark); font-size: 0.82rem; }
+.quote-payment-split input[type="range"] { min-height: 44px; width: 100%; accent-color: var(--brand); cursor: pointer; }
+@media (width <= 420px) { .quote-payment-split__values { flex-direction: column; gap: 3px; } }

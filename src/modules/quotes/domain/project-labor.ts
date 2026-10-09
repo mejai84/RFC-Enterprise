@@ -563,8 +563,6 @@ export type QuoteLaborSnapshot = {
   dias: number;
   /** Dias fisicos usados para productividad y horas extras. */
   diasFisicos?: number;
-  /** Horas efectivas disponibles para producir por dia fisico. */
-  horasProductivasDia?: number;
   diasAlojamiento: number;
   /** Fecha en que se calculó. */
   calculadoEn: string;

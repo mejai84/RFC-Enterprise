@@ -37,7 +37,6 @@ export type ProjectLaborDraft = {
   dias: number;
   /** Dias fisicos de trabajo usados para productividad. */
   diasFisicos: number;
-  horasProductivasDia: number;
   diasAlojamiento: number;
   fechaInicio?: string;
   fechaFin?: string;
@@ -85,7 +84,6 @@ export function LaborProjectModal({
   const [diasFisicos, setDiasFisicos] = useState(0);
   const [diasTocados, setDiasTocados] = useState(false);
   const [diasAlojamiento, setDiasAlojamiento] = useState(0);
-  const [horasProductivasDia, setHorasProductivasDia] = useState(5.333);
   const [perDiem, setPerDiem] = useState<ProjectPerDiemValues>(emptyPerDiem());
   const [hours, setHours] = useState<HoursInput>(emptyHours);
   const [personal, setPersonal] = useState<Record<string, number>>({});
@@ -255,7 +253,6 @@ export function LaborProjectModal({
     onSave({
       dias,
       diasFisicos,
-      horasProductivasDia,
       diasAlojamiento,
       fechaInicio: fechaInicio || undefined,
       fechaFin: fechaFin || undefined,
@@ -269,7 +266,6 @@ export function LaborProjectModal({
       snapshot: {
         dias,
         diasFisicos,
-        horasProductivasDia,
         escala: scale,
         diasAlojamiento,
         calculadoEn: new Date().toISOString(),
@@ -337,7 +333,6 @@ export function LaborProjectModal({
             <label>Dias fisicos estimados<input type="number" min={0} value={diasFisicos} onChange={(e) => cambiarDiasFisicos(Number(e.target.value) || 0)} /><small>Dias reales de trabajo de la cuadrilla. Es el dato principal si aun no tiene fechas.</small></label>
             <label>Dias remunerados de personal<input type="number" min={0} step="0.1" value={dias} onChange={(e) => cambiarDiasRemunerados(Number(e.target.value) || 0)} /><small>Mano de obra: por defecto, dias fisicos x 7 / 5.</small></label>
             <label>Dias de alojamiento<input type="number" min={0} value={diasAlojamiento} onChange={(e) => setDiasAlojamiento(Number(e.target.value) || 0)} /><small>Solo para viaticos aplicables.</small></label>
-            <label>Horas productivas por dia<input type="number" min={0} step="0.001" value={horasProductivasDia} onChange={(e) => setHorasProductivasDia(Number(e.target.value) || 0)} /><small>Supuesto OCENSA inicial; no es jornada legal.</small></label>
           </div>
           <p className={styles["labor-project-note"]}>No necesita conocer las fechas para costear. Los dias fisicos salen del rendimiento y cantidad de cada actividad en el APU; aqui puede usar una estimacion de la obra. La mano de obra usa dias remunerados; equipos, transporte y rendimiento usan dias fisicos.</p>
           <details className={styles["labor-project-calendar"]}>

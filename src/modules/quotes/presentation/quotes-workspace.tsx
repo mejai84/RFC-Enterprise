@@ -680,7 +680,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
 
   /* ── Crear nueva cotización ────────────────────────────── */
   const handleCreateQuote = useCallback(
-    (e: FormEvent<HTMLFormElement>) => {
+    async (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       const fd = new FormData(e.currentTarget);
       const title = String(fd.get("title") ?? "").trim();
@@ -692,12 +692,11 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       const requestBody = String(fd.get("requestBody") ?? "").trim();
       const validityDays = Number(fd.get("validityDays") || 30);
       const deliveryTimeWeeks = Number(fd.get("deliveryTimeWeeks") || 3);
-      const paymentTerms = String(
-        fd.get("paymentTerms") ?? "50% anticipo, 50% contra entrega",
-      ).trim();
+      const paymentTerms = String(fd.get("paymentTerms") ?? "").trim();
       const folderUrl = String(fd.get("folderUrl") ?? "").trim();
       const reqVisit = fd.get("reqVisit") === "on";
       const deadline = String(fd.get("deadline") ?? "").trim();
+      const receivedAt = String(fd.get("receivedAt") ?? "").trim();
       const notes = String(fd.get("notes") ?? "").trim();
 
       const laborRateTableId = String(fd.get("laborRateTableId") ?? "").trim() || undefined;
@@ -722,6 +721,14 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       const estSum = matVal + labVal + eqVal;
 
       if (!title || !client) return;
+      if (!paymentTerms) {
+        setActionNotice("Define el porcentaje de anticipo y contraentrega antes de guardar.");
+        return;
+      }
+      if (!companyId || !isRemoteReady) {
+        setActionNotice("Aun no hay conexion con la base de datos. Intenta de nuevo cuando termine la carga.");
+        return;
+      }
 
       const code = getNextQuoteCode(quotes, client, title);
       const now = new Date().toISOString();
@@ -770,7 +777,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
             }
           : undefined,
         folderUrl: folderUrl || undefined,
-        receivedAt: now.slice(0, 10),
+        receivedAt: receivedAt || now.slice(0, 10),
         deadline: deadline || undefined,
         notes: notes || undefined,
         nextAction: reqVisit
@@ -792,12 +799,23 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         updatedAt: now,
       };
 
+      try {
+        await saveQuote(companyId, newQuote);
+      } catch (error) {
+        setActionNotice(
+          error instanceof Error
+            ? `No se guardo la cotizacion: ${error.message}`
+            : "No se pudo guardar la cotizacion en la base de datos.",
+        );
+        return;
+      }
+
       setQuotes((prev) => [newQuote, ...prev]);
       setShowNewForm(false);
       setSelectedQuote(newQuote);
-      setActionNotice(`Cotización ${code} registrada exitosamente.`);
+      setActionNotice(`Cotizacion ${code} guardada en la base de datos.`);
     },
-    [quotes],
+    [companyId, isRemoteReady, quotes],
   );
 
   return (
@@ -2054,6 +2072,7 @@ function NewQuoteModal({
   // desde Configuracion para no escribirlos a mano en cada cotizacion nueva.
   const { config: companySettings } = useCompanyConfig();
   const proposalDefaults = companySettings?.proposalDefaults;
+  const [anticipoPorcentaje, setAnticipoPorcentaje] = useState(0);
   const [laborTables, setLaborTables] = useState<Array<{ id: string; name: string; version: string; client_name: string; activity_type: "general" | "propias" | "no_propias" | "mixta" }>>([]);
   // Mano de obra por obra: tabla elegida, conceptos digitados y resultado congelado.
   const [selectedLaborTableId, setSelectedLaborTableId] = useState("");
@@ -2172,16 +2191,18 @@ function NewQuoteModal({
 
           <div className="new-quote-row">
             <label className="form-field">
-              Teléfono de contacto
-              <input
-                name="contactPhone"
-                type="tel"
-                placeholder="+57 310 123 4567"
-              />
+              Telefono de contacto
+              <input name="contactPhone" type="tel" placeholder="+57 310 123 4567" />
             </label>
             <label className="form-field">
-              Fecha límite para cotizar
+              Fecha de llegada del correo o solicitud
+              <input name="receivedAt" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+              <small className="quote-field-hint">Se conserva la fecha real en que el cliente envio la solicitud.</small>
+            </label>
+            <label className="form-field">
+              Fecha maxima para entregar la cotizacion
               <input name="deadline" type="date" />
+              <small className="quote-field-hint">Solo si el cliente indico cuando espera recibir la propuesta.</small>
             </label>
           </div>
 
@@ -2239,14 +2260,24 @@ function NewQuoteModal({
                 min={1}
               />
             </label>
-            <label className="form-field">
-              Condiciones de pago
+            <div className="form-field quote-payment-split">
+              <span>Condiciones de pago</span>
+              <div className="quote-payment-split__values" aria-live="polite">
+                <strong>Anticipo {anticipoPorcentaje}%</strong>
+                <strong>Contraentrega {100 - anticipoPorcentaje}%</strong>
+              </div>
               <input
-                name="paymentTerms"
-                type="text"
-                defaultValue={proposalDefaults?.paymentTerms ?? "50% anticipo, 50% contra entrega"}
+                aria-label="Porcentaje de anticipo"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={anticipoPorcentaje}
+                onChange={(event) => setAnticipoPorcentaje(Number(event.target.value))}
               />
-            </label>
+              <input type="hidden" name="paymentTerms" value={`${anticipoPorcentaje}% anticipo, ${100 - anticipoPorcentaje}% contraentrega`} readOnly />
+              <small className="quote-field-hint">Al ajustar el anticipo, la contraentrega cambia automaticamente para conservar siempre 100 %.</small>
+            </div>
           </div>
 
 

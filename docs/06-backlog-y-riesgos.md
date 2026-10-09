@@ -135,3 +135,15 @@ Mitigado parcialmente el 2026-10-09: el precosteo separa dias fisicos, dias remu
 **Control APU-014 (extras):** las horas extra y dominicales del precosteo inician en cero. El responsable debe ingresarlas con base en la programacion real; se elimina el prorrateo automatico de referencias historicas que podia crear extras inexistentes.
 
 **APU-015 - Fechas como requisito prematuro:** mitigado el 2026-10-09. El precosteo permite costear con dias fisicos estimados sin fechas; el calendario es opcional. Pendiente: calcular automaticamente la duracion por actividad a partir de cantidades, rendimientos y cuadrillas dentro del APU.
+
+### COT-015 - Confundir fechas comerciales y de ejecucion
+
+Mitigado el 2026-10-09: la fecha de recepcion se captura separada de la fecha maxima para entregar cotizacion. Esta ultima es opcional y no determina la duracion de obra. Se retira del modelo cualquier dato de horas productivas usado solo como ejemplo contextual.
+
+### COT-016 - Condiciones de pago inconsistentes
+
+Mitigado el 2026-10-09: anticipo y contraentrega se ajustan en un unico control que mantiene el total en 100 %. Riesgo residual: condiciones distintas (hitos, retenciones o pagos por acta) requieren una modalidad comercial futura; no se deben simular con un porcentaje simple.
+
+### COT-017 - Confirmacion de pago sin persistencia
+
+Mitigado el 2026-10-09: la nueva cotizacion guarda por RPC antes de cerrar el formulario o confirmar exito. Si falla la base de datos, informa el error y no presenta el registro como guardado.

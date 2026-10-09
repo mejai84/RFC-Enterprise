@@ -312,3 +312,9 @@ Para dos semanas completas de lunes a viernes, el precosteo propone 10 dias fisi
 Las horas extra no se derivan automaticamente de los dias del plazo. Para una obra ordinaria de lunes a viernes bajo 42 horas semanales, el precosteo comienza en cero; se agregan manualmente las horas diurnas, nocturnas o dominicales planificadas.
 
 El precosteo admite dias fisicos estimados sin fechas. Cuando se conocen inicio y fin, el calendario opcional cuenta lunes a viernes y propone los dias remunerados. En la etapa APU, la duracion debe calcularse por actividad: cantidad / (rendimiento diario de cuadrilla), antes de convertirse en dias remunerados de mano de obra.
+
+La fecha de recepcion del correo pertenece al expediente comercial; la fecha maxima de entrega pertenece al compromiso de respuesta. Ambas son independientes de los dias fisicos, dias remunerados y de cualquier rendimiento APU. Las horas productivas no forman parte de la instantanea de precosteo hasta que exista una regla tecnica concreta por actividad.
+
+Las condiciones de pago no forman parte del costo APU. La cotizacion comercial estandar conserva anticipo y contraentrega como porcentajes complementarios que suman 100 %, independientes de materiales, mano de obra, equipos, dias o rendimiento.
+
+La condicion de pago es comercial, no un costo APU: anticipo y contraentrega se complementan hasta 100 % y se guardan como parte de la cotizacion. El registro solo se confirma en pantalla luego de persistirse correctamente en la base de datos.

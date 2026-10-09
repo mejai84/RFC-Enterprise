@@ -271,3 +271,15 @@ El estimado opcional de cuadrilla calcula dias fisicos de lunes a viernes y prop
 **Extras del precosteo:** no se prorratean automaticamente desde las referencias historicas de una tabla. Inician en cero y se ingresan segun el turno o programacion real del periodo; los dias fisicos ayudan a revisar su coherencia, pero no crean recargos por si mismos.
 
 **Duracion sin fechas:** el precosteo no exige inicio ni fin. El usuario estima dias fisicos mientras construye la oferta; las fechas viven en un calendario opcional de programacion. Al desarrollar cada APU, cantidad, rendimiento y cuadrilla seran la fuente tecnica de los dias fisicos.
+
+## Fechas comerciales de la solicitud (2026-10-09)
+
+Cotizaciones diferencia la fecha de llegada real del correo o solicitud de la fecha maxima que el cliente dio para entregar la cotizacion. La segunda es opcional y representa un compromiso comercial, no la fecha de inicio o duracion de la obra. Las horas productivas de ejemplo no se capturan ni persisten en el precosteo.
+
+## Condicion de pago proporcional (2026-10-09)
+
+La solicitud nueva define anticipo y contraentrega mediante un control proporcional: ambos siempre suman 100 %. El valor se conserva como condicion comercial legible en la cotizacion y propuesta; no es un costo ni altera el precosteo.
+
+## Condicion de pago definida al crear la cotizacion (2026-10-09)
+
+El control comercial no impone 50/50: inicia en 0 % de anticipo y 100 % de contraentrega. Al moverlo, ambos valores se complementan hasta 100 %. La cotizacion solo confirma exito cuando la escritura en la base de datos responde correctamente.

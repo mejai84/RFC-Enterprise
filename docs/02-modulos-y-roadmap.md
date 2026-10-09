@@ -259,3 +259,7 @@ Separa el costo de dotacion del movimiento fisico. Los perfiles reutilizables pe
 ## Estimado inicial plegable (2026-10-09)
 
 La creacion de cotizaciones mantiene plegados el estimado comercial y la planeacion preliminar de cuadrilla. Son opcionales y solo se abren para respuesta rapida, viabilidad o preparacion antes del APU; no bloquean la creacion de una solicitud ni sustituyen el costo tecnico final.
+
+## Criterios de jornada y productividad para APU (contexto, 2026-10-09)
+
+Para el costeo RFC se manejaran por separado: jornada ordinaria programada de 42 horas semanales (lunes a viernes, con almuerzo no laborado), dias fisicos de produccion, dias calendario remunerados y horas efectivas de produccion. Como supuesto inicial para estaciones OCENSA se reconoce 5,333 horas productivas por dia; es configurable por frente, actividad y restriccion operativa, no una jornada legal ni un rendimiento obligatorio.

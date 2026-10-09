@@ -722,3 +722,9 @@ Antes de gestionar APU, la cotizaci?n debe guardar un costeo laboral: plazo, d?a
 **Decision (2026-10-09):** el precosteo se conserva como estimado opcional y plegable, no como fuente automatica del precio final. Sirve para respuesta rapida, viabilidad y preparacion de cuadrilla; el APU validado por actividad conserva la autoridad para el costo tecnico definitivo.
 
 **Consecuencias:** una cotizacion puede crearse sin estimado. Cuando se usa, queda trazabilidad de ambos momentos y sus diferencias se emplean para control comercial.
+
+## ADR-142 - Variables independientes de jornada para costeo APU
+
+**Decision (2026-10-09):** el costeo laboral diferenciara jornada ordinaria programada, dias fisicos de trabajo, dias calendario remunerados y horas efectivas de produccion. La referencia actual de RFC es 42 horas semanales de lunes a viernes; la productividad inicial de estaciones OCENSA es 5,333 horas/dia y queda configurable por actividad/frente.
+
+**Consecuencias:** el factor presupuestal 7/5 solo puede aplicarse cuando la tarifa diaria no haya incorporado ya el descanso remunerado. Equipos y transporte usan sus propias unidades de cobro y no reciben dicho factor automaticamente.

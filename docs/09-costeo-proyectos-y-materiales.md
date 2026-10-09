@@ -300,3 +300,7 @@ El APU usa el costo de la matriz de dotacion del cargo. Cada linea tiene cantida
 ## Estimado comercial inicial y APU
 
 La cotizacion puede conservar un estimado plegable y opcional cuando aun no existe detalle tecnico. Sirve para responder rapido, evaluar viabilidad o preparar una visita. El APU posterior es independiente: calcula el costo por actividad con cantidades, rendimientos, materiales, equipos y cargos reales; el sistema no presenta el estimado como costo definitivo.
+
+## Jornada, dias remunerados y horas productivas
+
+La jornada ordinaria de referencia es 42 horas por semana, distribuida de lunes a viernes con el almuerzo fuera del tiempo laborado. Para APU no equivale a tiempo productivo: dias fisicos, dias calendario remunerados y horas efectivas se calculan en variables distintas. El supuesto inicial para una estacion OCENSA es 5,333 horas efectivas/dia, editable por actividad y frente. Para semanas completas el factor 7/5 se usa solo si la tarifa salarial no incluye ya el descanso remunerado; maquinaria, transporte y equipos se calculan segun su propia modalidad (dia efectivo, calendario, mes, hora o viaje).

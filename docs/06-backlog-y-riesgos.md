@@ -123,3 +123,7 @@ En progreso. La base ya permite perfiles reutilizables, excepciones por cargo y 
 ### COT-014 - Separacion entre estimado y APU definitivo
 
 Mitigado el 2026-10-09: el estimado comercial y la planeacion de cuadrilla son opcionales y plegables. Riesgo residual: antes de emitir la oferta final el responsable debe revisar la variacion frente a los APUs terminados; no se debe copiar un estimado como valor definitivo sin esa revision.
+
+### APU-014 - Confundir jornada legal, remuneracion y produccion
+
+Abierto. El modelo futuro debe impedir que 42 horas semanales, el factor presupuestal de dias remunerados y las horas efectivas productivas se mezclen o se apliquen dos veces. Para OCENSA, 5,333 horas productivas/dia es un supuesto editable; no se debe tratar como jornada legal ni como regla universal.

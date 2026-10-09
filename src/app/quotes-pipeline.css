@@ -1524,3 +1524,11 @@
 .labor-rate-add-entry input,
 .labor-rate-add-entry select,
 .labor-rate-add-entry textarea { min-height: 44px; }
+
+
+.new-quote-optional-costing { margin: 14px 0; border: 1px solid #cbd5e1; border-radius: 12px; background: #f8fafc; }
+.new-quote-optional-costing > summary { display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; color: #0f172a; font-size: 0.92rem; font-weight: 700; cursor: pointer; }
+.new-quote-optional-costing > summary span { color: #64748b; font-size: 0.74rem; font-weight: 600; }
+.new-quote-optional-costing > .quote-field-hint { margin: 0 14px 12px; max-width: 80ch; }
+.new-quote-optional-costing .new-quote-subgroup, .new-quote-optional-costing .new-quote-labor-project { margin: 0 12px 12px; }
+@media (width <= 560px) { .new-quote-optional-costing > summary { align-items: flex-start; flex-direction: column; } }

@@ -716,3 +716,9 @@ Antes de gestionar APU, la cotizaci?n debe guardar un costeo laboral: plazo, d?a
 **Decision (2026-10-09):** la dotacion se gestiona en dos capas. La matriz de cargo y los perfiles reutilizables alimentan el costo comercial del APU; las entregas al trabajador se registran despues, contra una obra aprobada, y producen el unico movimiento que afecta inventario.
 
 **Consecuencias:** no se descuenta bodega al cotizar. El mismo oficio puede compartir perfil entre empresas, pero una tabla salarial o un cargo puede conservar una excepcion. Cada articulo declara su ciclo de reposicion para evitar amortizar casco, botas y consumibles con el mismo numero de dias.
+
+## ADR-141 - Estimado inicial opcional separado del APU
+
+**Decision (2026-10-09):** el precosteo se conserva como estimado opcional y plegable, no como fuente automatica del precio final. Sirve para respuesta rapida, viabilidad y preparacion de cuadrilla; el APU validado por actividad conserva la autoridad para el costo tecnico definitivo.
+
+**Consecuencias:** una cotizacion puede crearse sin estimado. Cuando se usa, queda trazabilidad de ambos momentos y sus diferencias se emplean para control comercial.

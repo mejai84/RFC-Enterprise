@@ -296,3 +296,7 @@ La tabla salarial fuente por empresa conserva solo sus valores publicados. Para 
 ## Dotacion: costo vs entrega real
 
 El APU usa el costo de la matriz de dotacion del cargo. Cada linea tiene cantidad, valor y dias de reposicion; el costo diario se deriva de esos datos. La entrega fisica solo se permite cuando el trabajador esta asignado a la obra. La funcion de entrega valida existencias, registra el responsable y crea el movimiento de entrada o salida que actualiza Kardex.
+
+## Estimado comercial inicial y APU
+
+La cotizacion puede conservar un estimado plegable y opcional cuando aun no existe detalle tecnico. Sirve para responder rapido, evaluar viabilidad o preparar una visita. El APU posterior es independiente: calcula el costo por actividad con cantidades, rendimientos, materiales, equipos y cargos reales; el sistema no presenta el estimado como costo definitivo.

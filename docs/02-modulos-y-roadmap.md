@@ -255,3 +255,7 @@ Configuracion incorpora la pestana **Parametros laborales**. Sus porcentajes viv
 ## Dotacion reutilizable y entrega operativa (2026-10-09)
 
 Separa el costo de dotacion del movimiento fisico. Los perfiles reutilizables permiten que un mismo oficio comparta dotacion entre tablas salariales de OCENSA, CENIT y ODC, con excepciones por cargo. Una entrega se registra contra trabajador y obra, crea un movimiento de inventario y descuenta existencias dentro de la misma transaccion.
+
+## Estimado inicial plegable (2026-10-09)
+
+La creacion de cotizaciones mantiene plegados el estimado comercial y la planeacion preliminar de cuadrilla. Son opcionales y solo se abren para respuesta rapida, viabilidad o preparacion antes del APU; no bloquean la creacion de una solicitud ni sustituyen el costo tecnico final.

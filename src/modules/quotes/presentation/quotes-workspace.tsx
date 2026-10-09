@@ -2185,6 +2185,9 @@ function NewQuoteModal({
             </label>
           </div>
 
+          <details className="new-quote-optional-costing">
+            <summary>Estimado comercial inicial <span>Opcional antes de APU</span></summary>
+            <p className="quote-field-hint">Util para una respuesta rapida, viabilidad o presupuesto preliminar. No fija el valor final: los APUs validos lo reemplazan como soporte tecnico.</p>
           {/* Pre-costeo preliminar */}
           <div className="new-quote-subgroup">
             <span className="subgroup-title">
@@ -2224,6 +2227,7 @@ function NewQuoteModal({
               </label>
             </div>
           </div>
+          </details>
 
           <div className="new-quote-row">
             <label className="form-field">
@@ -2274,6 +2278,9 @@ function NewQuoteModal({
             ) : null}
           </div>
 
+          <details className="new-quote-optional-costing new-quote-labor-details">
+            <summary>Planeacion preliminar de cuadrilla <span>Opcional antes de APU</span></summary>
+            <p className="quote-field-hint">Define cargos, dias y condiciones de campo solo cuando necesite estimar mano de obra antes de elaborar los APUs.</p>
           <div className="new-quote-labor-project">
             <button
               type="button"
@@ -2282,8 +2289,8 @@ function NewQuoteModal({
               disabled={!selectedLaborTableId}
             >
               {laborDraft
-                ? "Editar mano de obra de esta obra"
-                : "Armar mano de obra de esta obra"}
+                ? "Editar planeacion preliminar de cuadrilla"
+                : "Planear cuadrilla y condiciones de obra"}
             </button>
             <p className="labor-project-summary">
               {laborDraft
@@ -2313,6 +2320,7 @@ function NewQuoteModal({
               }}
             />
           ) : null}
+          </details>
 
           <label className="form-field">
             Enlace a carpeta de planos / especificaciones (Drive, OneDrive)

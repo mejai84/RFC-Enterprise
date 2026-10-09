@@ -119,3 +119,7 @@ Mitigado tecnicamente el 2026-10-09: los porcentajes dejaron de depender de cons
 ### DOT-001 - Completar perfiles y vinculos con inventario
 
 En progreso. La base ya permite perfiles reutilizables, excepciones por cargo y entregas reales. Antes de usarla masivamente se debe revisar la matriz de cada cargo, asociar cada concepto con su articulo de inventario y completar el catalogo salarial OCENSA desde su fuente oficial.
+
+### COT-014 - Separacion entre estimado y APU definitivo
+
+Mitigado el 2026-10-09: el estimado comercial y la planeacion de cuadrilla son opcionales y plegables. Riesgo residual: antes de emitir la oferta final el responsable debe revisar la variacion frente a los APUs terminados; no se debe copiar un estimado como valor definitivo sin esa revision.

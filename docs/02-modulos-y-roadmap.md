@@ -283,3 +283,7 @@ La solicitud nueva define anticipo y contraentrega mediante un control proporcio
 ## Condicion de pago definida al crear la cotizacion (2026-10-09)
 
 El control comercial no impone 50/50: inicia en 0 % de anticipo y 100 % de contraentrega. Al moverlo, ambos valores se complementan hasta 100 %. La cotizacion solo confirma exito cuando la escritura en la base de datos responde correctamente.
+
+## Dotacion por cargo, cotizacion y obra (2026-10-09)
+
+La matriz de dotacion ahora conserva por articulo la cantidad, el valor y la frecuencia de reposicion en dias fisicos. Al configurar la cuadrilla de una cotizacion, el valor de dotacion se calcula por cargo con los dias fisicos estimados y se guarda dentro de la instantanea que consume el APU. En Proyectos > Personal de obra aparece Entrega de dotacion: el encargado escoge trabajador, tipo de movimiento y uno o varios articulos, por ejemplo dos uniformes y un casco, en un solo comprobante.

@@ -28,6 +28,7 @@ import {
   type ToolLoan,
 } from "../index";
 import { PrintableDispatchVoucher } from "./printable-dispatch-voucher";
+import { DotacionDeliveryPanel } from "./dotacion-delivery-panel";
 import { CurrencyInput } from "@/shared/components/currency-input";
 import {
   isSupabaseConfigured,
@@ -1591,6 +1592,7 @@ export function ProjectsWorkspace({
                   </p>
                 )}
               </div>
+              {scope ? <DotacionDeliveryPanel companyId={scope.companyId} projectId={selectedProject.id} employees={selectedProject.assignedEmployees ?? []} /> : null}
             </div>
           )}
         </section>

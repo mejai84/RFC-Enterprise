@@ -104,12 +104,20 @@ export function LaborRateSettingsPanel({ companyId }: { companyId: string }) {
           <strong>{table.name} · {table.version}</strong>
           <span>{table.client_name || "Uso general"} · {table.valid_from}{table.valid_to ? ` a ${table.valid_to}` : ""}</span>
           {isCurrent(table) ? <em className="labor-rate-badge">Vigente hoy</em> : null}
-          <button className="labor-rate-view-button" onClick={() => void loadEntries(table)} type="button">{selected?.id === table.id ? "Detalle abierto" : "Ver detalle"}</button>
+          <button
+            aria-controls="labor-rate-detail"
+            aria-expanded={selected?.id === table.id}
+            className="labor-rate-view-button"
+            onClick={() => void loadEntries(selected?.id === table.id ? null : table)}
+            type="button"
+          >
+            {selected?.id === table.id ? "Cerrar detalle" : "Ver detalle"}
+          </button>
         </article>
       ))}
     </div>
     {selected ? <>
-      <section className="labor-rate-detail" aria-labelledby="labor-rate-detail-title">
+      <section className="labor-rate-detail" aria-labelledby="labor-rate-detail-title" id="labor-rate-detail">
         <div className="labor-rate-entries-heading">
           <div><p className="labor-rate-detail-kicker">Detalle de la tabla vigente</p><h3 className="settings-subheading" id="labor-rate-detail-title">{selected.name} · {selected.version}</h3><p className="panel-intro">{selected.client_name || "Uso general"} · Vigencia {selected.valid_from}{selected.valid_to ? ` a ${selected.valid_to}` : ""}{selected.source_document ? ` · Fuente: ${selected.source_document}` : ""}</p></div>
           <button className="inventory-action" disabled={isExporting || entries.length === 0} onClick={() => void handleExport()} type="button">{isExporting ? "Generando…" : "Exportar a Excel"}</button>

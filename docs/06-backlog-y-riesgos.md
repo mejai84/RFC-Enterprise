@@ -147,3 +147,7 @@ Mitigado el 2026-10-09: anticipo y contraentrega se ajustan en un unico control 
 ### COT-017 - Confirmacion de pago sin persistencia
 
 Mitigado el 2026-10-09: la nueva cotizacion guarda por RPC antes de cerrar el formulario o confirmar exito. Si falla la base de datos, informa el error y no presenta el registro como guardado.
+
+### DOT-002 - Frecuencias reales y puesta en uso de dotacion
+
+Mitigado funcionalmente el 2026-10-09: 240 dias deja de ser el divisor fijo del APU. Cada articulo por cargo expone su frecuencia de reposicion en dias fisicos y el valor se calcula por la duracion estimada de la obra. Riesgo residual: los perfiles heredados que aun tengan 240 deben revisarse articulo por articulo antes de emitir una cotizacion; ese numero es un dato editable, no una norma de RFC.

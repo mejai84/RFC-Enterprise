@@ -25,6 +25,8 @@ type Concepto = {
 type Fila = {
   concept_id: string;
   quantity: number;
+  /** Cada cuántos días físicos se repone; no es una regla fija de 240 días. */
+  replacement_days: number;
   unit_value_override: number | null;
   inherited_from_level: boolean;
   notes: string;
@@ -149,7 +151,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
     setError("");
     void db()
       .from("labor_role_dotacion")
-      .select("concept_id,quantity,unit_value_override,inherited_from_level,notes")
+      .select("concept_id,quantity,replacement_days,unit_value_override,inherited_from_level,notes")
       .eq("labor_rate_role_id", rolId)
       .then(({ data, error: e }) => {
         if (e) { setError(e.message); return; }
@@ -158,6 +160,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
           mapa[f.concept_id] = {
             concept_id: f.concept_id,
             quantity: Number(f.quantity),
+            replacement_days: Math.max(1, Number(f.replacement_days ?? 240)),
             unit_value_override: f.unit_value_override == null ? null : Number(f.unit_value_override),
             inherited_from_level: f.inherited_from_level,
             notes: f.notes ?? "",
@@ -207,6 +210,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
           labor_rate_role_id: rolId,
           concept_id: conceptoId,
           quantity: fila.quantity,
+          replacement_days: fila.replacement_days,
           unit_value_override: fila.unit_value_override,
           inherited_from_level: false,
           notes: fila.notes,
@@ -242,7 +246,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
 
     const { error: e } = await db()
       .from("labor_role_dotacion")
-      .update({ quantity: Number(item?.quantity ?? 0), inherited_from_level: true, unit_value_override: null, notes: "" })
+      .update({ quantity: Number(item?.quantity ?? 0), replacement_days: 240, inherited_from_level: true, unit_value_override: null, notes: "" })
       .eq("labor_rate_role_id", rolId)
       .eq("concept_id", conceptoId);
     if (e) { setError(e.message); setGuardando(null); return; }
@@ -253,6 +257,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
       [conceptoId]: {
         ...m[conceptoId],
         quantity: Number(item?.quantity ?? 0),
+        replacement_days: 240,
         unit_value_override: null,
         inherited_from_level: true,
         notes: "",
@@ -305,6 +310,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
             labor_rate_role_id: data.id as string,
             concept_id: concepto.id,
             quantity: Number(p.quantity),
+            replacement_days: 240,
             unit_value_override: null,
             inherited_from_level: true,
             notes: "",
@@ -480,7 +486,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
               <p className="labor-matrix-note">
                 {resumen.conceptos} conceptos · {resumen.corregidas} corregidos a mano sobre la
                 plantilla del nivel. La suma da <strong>{money(resumen.total)}</strong>.
-                Los conceptos que no aparecen en la lista llevan cantidad cero.
+                Configure cada concepto según su vida útil: la cotización aplica las reposiciones por días físicos de la obra; 240 días es solo el valor de referencia heredado y puede cambiarse.
               </p>
 
               <div className="labor-matrix-table-wrap">
@@ -490,6 +496,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
                       <th>Concepto</th>
                       <th>Cantidad</th>
                       <th>Precio</th>
+                      <th>Reposición</th>
                       <th>Total</th>
                       <th>Origen</th>
                       <th aria-label="Acciones" />
@@ -521,6 +528,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
                                   [c.id]: {
                                     concept_id: c.id,
                                     quantity: Number(e.target.value) || 0,
+                                    replacement_days: m[c.id]?.replacement_days ?? 240,
                                     unit_value_override: m[c.id]?.unit_value_override ?? null,
                                     inherited_from_level: false,
                                     notes: m[c.id]?.notes ?? "",
@@ -542,6 +550,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
                                   [c.id]: {
                                     concept_id: c.id,
                                     quantity: m[c.id]?.quantity ?? 0,
+                                    replacement_days: m[c.id]?.replacement_days ?? 240,
                                     unit_value_override: Number(e.target.value) || 0,
                                     inherited_from_level: false,
                                     notes: m[c.id]?.notes ?? "",
@@ -549,6 +558,31 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
                                 }))
                               }
                             />
+                          </td>
+                          <td>
+                            <label className="sr-only" htmlFor={`reposicion-${c.id}`}>Días físicos para reponer {c.name}</label>
+                            <input
+                              id={`reposicion-${c.id}`}
+                              type="number"
+                              min={1}
+                              step={1}
+                              value={fila?.replacement_days ?? 240}
+                              aria-label={`Reponer ${c.name} cada cuántos días físicos`}
+                              onChange={(e) =>
+                                setMatriz((m) => ({
+                                  ...m,
+                                  [c.id]: {
+                                    concept_id: c.id,
+                                    quantity: m[c.id]?.quantity ?? 0,
+                                    replacement_days: Math.max(1, Number(e.target.value) || 1),
+                                    unit_value_override: m[c.id]?.unit_value_override ?? null,
+                                    inherited_from_level: false,
+                                    notes: m[c.id]?.notes ?? "",
+                                  },
+                                }))
+                              }
+                            />
+                            <small>días físicos</small>
                           </td>
                           <td>{money(total)}</td>
                           <td>

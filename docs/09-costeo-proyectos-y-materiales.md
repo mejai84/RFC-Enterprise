@@ -318,3 +318,9 @@ La fecha de recepcion del correo pertenece al expediente comercial; la fecha max
 Las condiciones de pago no forman parte del costo APU. La cotizacion comercial estandar conserva anticipo y contraentrega como porcentajes complementarios que suman 100 %, independientes de materiales, mano de obra, equipos, dias o rendimiento.
 
 La condicion de pago es comercial, no un costo APU: anticipo y contraentrega se complementan hasta 100 % y se guardan como parte de la cotizacion. El registro solo se confirma en pantalla luego de persistirse correctamente en la base de datos.
+
+## Dotacion dependiente de duracion fisica
+
+Para cada cargo, la matriz tiene articulos con cantidad, valor y frecuencia de reposicion en dias fisicos. La cotizacion estima cada linea como `cantidad x valor x techo(dias fisicos / frecuencia)` y permite ajustar el total solo para ese expediente. Ese resultado queda congelado en la instantanea laboral y el APU recibe ese valor, sin recalcularlo con cambios posteriores en la matriz.
+
+La entrega fisica es otro evento: se realiza desde **Proyectos > Personal de obra > Entrega de dotacion**. Requiere trabajador asignado, admite varias lineas en un solo comprobante y crea el movimiento de inventario transaccional. Por ello, cotizar no baja stock y entregar si lo baja.

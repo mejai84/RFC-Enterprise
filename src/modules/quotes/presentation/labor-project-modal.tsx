@@ -28,9 +28,19 @@ type Entry = {
   food_allowance: number;
   non_salary_allowance: number;
   total_daily_rate: number;
-  /** Dotacion total del perfil para 240 dias, tomada del cliente. */
+  /** Valor heredado solo si no existe matriz por cargo; la matriz se calcula por dias fisicos. */
   dotacion_total: number | null;
+  dotacionItems?: Array<{ quantity: number; replacementDays: number; unitValue: number }>;
 };
+
+function dotacionParaObra(entry: Entry, diasFisicos: number) {
+  if (!entry.dotacionItems?.length) return Number(entry.dotacion_total ?? 0);
+  const dias = Math.max(1, diasFisicos);
+  return entry.dotacionItems.reduce(
+    (total, item) => total + item.quantity * item.unitValue * Math.ceil(dias / Math.max(1, item.replacementDays)),
+    0,
+  );
+}
 
 export type ProjectLaborDraft = {
   /** Dias remunerados usados para el costo laboral. */
@@ -113,26 +123,32 @@ export function LaborProjectModal({
           const baseEntries = (data ?? []) as Entry[];
           const { data: roleRows, error: rolesError } = await supabase
             .from("labor_rate_roles")
-            .select("id,code,name,labor_rate_entry_id")
+            .select("id,code,name,labor_rate_entry_id,dotacion_total")
             .eq("labor_rate_table_id", tableId)
             .eq("is_active", true)
             .eq("scale", scale)
             .order("name");
           if (rolesError) setError(rolesError.message);
           const byEntry = new Map(baseEntries.map((entry) => [entry.id, entry]));
+          const roleIds = (roleRows ?? []).map((role) => role.id);
+          const { data: matrixRows, error: matrixError } = roleIds.length
+            ? await supabase.from("labor_role_dotacion").select("labor_rate_role_id,quantity,replacement_days,unit_value_override,concept:labor_dotacion_concepts(default_unit_value)").in("labor_rate_role_id", roleIds)
+            : { data: [], error: null };
+          if (matrixError) setError(matrixError.message);
+          const matrixByRole = new Map<string, Array<{ quantity: number; replacementDays: number; unitValue: number }>>();
+          for (const row of matrixRows ?? []) {
+            const concept = Array.isArray(row.concept) ? row.concept[0] : row.concept;
+            const values = matrixByRole.get(row.labor_rate_role_id) ?? [];
+            values.push({ quantity: Number(row.quantity), replacementDays: Number(row.replacement_days ?? 1), unitValue: Number(row.unit_value_override ?? concept?.default_unit_value ?? 0) });
+            matrixByRole.set(row.labor_rate_role_id, values);
+          }
           const roleEntries = (roleRows ?? []).flatMap((role) => {
             const rate = byEntry.get(role.labor_rate_entry_id);
-            return rate ? [{ ...rate, id: role.id, code: role.code, name: role.name }] : [];
+            return rate ? [{ ...rate, id: role.id, code: role.code, name: role.name, dotacion_total: Number(role.dotacion_total ?? rate.dotacion_total ?? 0), dotacionItems: matrixByRole.get(role.id) ?? [] }] : [];
           });
-          const filas = (data ?? []) as Entry[];
+          const filas = roleEntries.length ? roleEntries : baseEntries;
           setEntries(filas);
-          // La dotacion del perfil ya viene calculada desde la tabla del
-          // cliente. Se propone como punto de partida y queda editable.
-          const inicial: Record<string, number> = {};
-          filas.forEach((fila) => {
-            if (fila.dotacion_total) inicial[fila.code] = Number(fila.dotacion_total);
-          });
-          setDotacion(inicial);
+          setDotacion({});
         }
         setCargando(false);
       });
@@ -219,7 +235,7 @@ export function LaborProjectModal({
             dias,
             diasFisicos,
             diasAlojamiento,
-            dotacion: dotacion[code] ?? 0,
+            dotacion: dotacion[code] ?? dotacionParaObra(entry, diasFisicos),
             hours,
             perDiem,
             aplicaViaticos: viaticos[code] ?? /capataz|conductor/i.test(entry.name),
@@ -455,11 +471,11 @@ export function LaborProjectModal({
                           />
                         </label>
                         <label>
-                          Dotación total
+                          Dotación para los días físicos
                           <input
                             type="number"
                             min={0}
-                            value={dotacion[entry.code] ?? 0}
+                            value={dotacion[entry.code] ?? dotacionParaObra(entry, diasFisicos)}
                             onChange={(e) =>
                               setDotacion({
                                 ...dotacion,

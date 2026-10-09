@@ -758,3 +758,9 @@ Antes de gestionar APU, la cotizaci?n debe guardar un costeo laboral: plazo, d?a
 **Decision (2026-10-09):** anticipo y contraentrega son porcentajes complementarios; la interfaz inicia en 0 % y 100 %, sin imponer 50/50. La creacion de una cotizacion espera la confirmacion de la RPC de guardado antes de cerrar el formulario.
 
 **Consecuencias:** mover el anticipo a 30 % produce 70 % de contraentrega, sin riesgo de que el total supere o quede por debajo de 100 %. Ante un error remoto, el usuario conserva el formulario y recibe el error real.
+
+## ADR-148 - Dotacion calculada por obra y entrega registrada
+
+**Decision (2026-10-09):** la matriz conserva frecuencia de reposicion por articulo y cargo. La cotizacion usa los dias fisicos estimados para calcular cuantos ciclos requiere cada articulo y congela ese costo junto con la mano de obra para el APU. El valor historico 240 queda solo como frecuencia editable de perfiles ya existentes, no como regla de calculo global.
+
+**Consecuencias:** no se descuenta inventario al cotizar. Despues, en Proyectos > Personal de obra, un responsable registra la entrega real a un trabajador ya asignado, con varias lineas en un comprobante. La RPC valida permiso, obra, trabajador y existencias, y registra el movimiento de Kardex en la misma transaccion.

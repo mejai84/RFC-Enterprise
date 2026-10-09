@@ -689,3 +689,14 @@ La exportaci?n de una tabla contiene la hoja de valores por nivel y una hoja `Ca
 <!-- 2026-10-08: Correction: the 68 OCENSA positions are the pre-existing mapped catalogue, not a verified complete transcription of all own-activity positions. Complete the OCENSA own-position map only from its official role-to-level annex; do not infer it from CENIT or ODC. Official source views exclude provisions and extra-hour references. -->
 
 <!-- 2026-10-08: A job title is reusable across companies, but its salary mapping is never global. labor_rate_roles is scoped by company_id, labor_rate_table_id and labor_rate_entry_id, so the same title may map to a different level and official value for each company, contract/version and validity period. -->
+
+<!-- 2026-10-08: Salary tables uploaded for each company are documentary source data and mandatory inputs to the contractor calculation model. They are not standalone APU final costs: RFC preserves published values, then derives project/APU cost in a separate auditable snapshot without modifying the source table. -->
+
+## 2026-10-08 ? Costeo laboral contractual por cotizaci?n
+
+La tabla salarial de cada cliente queda como fuente documental inmutable. La cotizaci?n define una ?nica tabla contractual visible ?por ejemplo, `OCENSA ? 2026?2027`? y, dentro de ella, una escala aplicable (`propias` o `no propias`). Las escalas pueden permanecer separadas internamente porque sus valores por nivel son distintos, pero no deben presentarse al usuario como dos tablas OCENSA independientes.
+
+Antes de gestionar APU, la cotizaci?n debe guardar un costeo laboral: plazo, d?as laborables, jornada/recargos, cuadrilla, vi?ticos y conceptos operativos. Cada componente declara si integra IBC, prestaciones y parafiscales; no se replica ciegamente la f?rmula hist?rica de Excel. El APU consume el costo diario congelado del cargo en esa cotizaci?n, nunca el total oficial documental como costo final. La unidad operativa preferida es `jornales por unidad`; si se presenta rendimiento, se rotula como `unidades por jornada` y se convierte expl?citamente.
+
+## 2026-10-08 ? L?mite del m?dulo de costeo
+

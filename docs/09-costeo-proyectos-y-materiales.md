@@ -273,3 +273,12 @@ El costo de mano de obra para una cotizaci?n/APU se calcula desde esa base media
 <!-- 2026-10-08: Correction: the 68 OCENSA positions are the pre-existing mapped catalogue, not a verified complete transcription of all own-activity positions. Complete the OCENSA own-position map only from its official role-to-level annex; do not infer it from CENIT or ODC. Official source views exclude provisions and extra-hour references. -->
 
 <!-- 2026-10-08: A job title is reusable across companies, but its salary mapping is never global. labor_rate_roles is scoped by company_id, labor_rate_table_id and labor_rate_entry_id, so the same title may map to a different level and official value for each company, contract/version and validity period. -->
+
+<!-- 2026-10-08: Salary tables uploaded for each company are documentary source data and mandatory inputs to the contractor calculation model. They are not standalone APU final costs: RFC preserves published values, then derives project/APU cost in a separate auditable snapshot without modifying the source table. -->
+
+## Costeo laboral de una cotizaci?n
+
+Flujo: fuente salarial oficial por cliente y escala ? condiciones de la obra y cuadrilla ? costo diario real por cargo ? jornales por unidad dentro de cada APU. Los valores publicados por nivel no se reescriben. Alimentaci?n oficial, alimentaci?n de campo, hotel, transporte operativo, hidrataci?n, m?dico, alturas, espacio confinado y dotaci?n son conceptos diferenciados y cada uno conserva su base de aplicaci?n (persona/d?a, persona, cargo o valor fijo de obra). Hotel y transporte operativo se habilitan por defecto para Capataz y Conductor y requieren motivo para otro cargo.
+
+### Alcance del c?lculo laboral
+

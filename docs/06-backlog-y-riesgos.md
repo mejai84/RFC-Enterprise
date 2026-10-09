@@ -99,3 +99,11 @@ Mitigado el 2026-10-08: el riesgo de cotizar un cargo con un nivel incompleto se
 <!-- 2026-10-08: Correction: the 68 OCENSA positions are the pre-existing mapped catalogue, not a verified complete transcription of all own-activity positions. Complete the OCENSA own-position map only from its official role-to-level annex; do not infer it from CENIT or ODC. Official source views exclude provisions and extra-hour references. -->
 
 <!-- 2026-10-08: A job title is reusable across companies, but its salary mapping is never global. labor_rate_roles is scoped by company_id, labor_rate_table_id and labor_rate_entry_id, so the same title may map to a different level and official value for each company, contract/version and validity period. -->
+
+<!-- 2026-10-08: Salary tables uploaded for each company are documentary source data and mandatory inputs to the contractor calculation model. They are not standalone APU final costs: RFC preserves published values, then derives project/APU cost in a separate auditable snapshot without modifying the source table. -->
+
+### SAL-006 ? Costeo contractual e IBC configurable
+
+En implementaci?n. Riesgo a evitar: usar como f?rmula legal universal el Excel hist?rico de OCENSA, que no incluye todos los conceptos en su base de salud/pensi?n. Cada concepto de remuneraci?n debe conservar su tratamiento de IBC, prestaciones y parafiscales con vigencia y soporte; los costos operativos (hotel, agua, EPP y m?dico) se separan de la n?mina.
+
+<!-- Alcance SAL-006: el c?lculo es comercial para cotizaci?n y APU, no liquidaci?n de n?mina ni declaraci?n PILA. -->

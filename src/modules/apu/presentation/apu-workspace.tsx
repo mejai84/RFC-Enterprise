@@ -201,7 +201,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   const [boqItems, setBoqItems] = useState<ProjectBoqItem[]>([]);
   const [boqCosts, setBoqCosts] = useState<ProjectBoqCost[]>([]);
   /** Datos de la cotización de origen, para buscar y ubicar cada actividad. */
-  const [quoteOrigin, setQuoteOrigin] = useState<Map<string, { code: string; title: string; client: string; status: string; laborRateTableId?: string }>>(new Map());
+  const [quoteOrigin, setQuoteOrigin] = useState<Map<string, { code: string; title: string; client: string; status: string; laborRateTableId?: string; laborProjectSnapshot?: { resultados?: Array<{ codigo: string; valorDia: number }> } }>>(new Map());
   const [quoteSearch, setQuoteSearch] = useState("");
   const [search, setSearch] = useState("");
   /** Rubros plegados. Solo es una preferencia visual, no afecta los datos guardados. */
@@ -275,6 +275,10 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
       .slice(0, 6);
   }, [quoteOptions, quoteSearch]);
   const activeLaborTableId = quoteContext?.laborRateTableId ?? (quoteContext?.quoteId ? quoteOrigin.get(quoteContext.quoteId)?.laborRateTableId : undefined);
+  const frozenLaborRates = useMemo(() => new Map(
+    (quoteContext?.quoteId ? quoteOrigin.get(quoteContext.quoteId)?.laborProjectSnapshot?.resultados ?? [] : [])
+      .map((result) => [result.codigo, Number(result.valorDia)]),
+  ), [quoteContext?.quoteId, quoteOrigin]);
 
   function openQuoteApu(quote: QuoteOption) {
     const params = new URLSearchParams({
@@ -405,13 +409,13 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   useEffect(() => {
     let active = true;
     getLaborPositionCatalog(activeLaborTableId)
-      .then((catalog) => { if (active) setLaborCatalog(catalog); })
+      .then((catalog) => { if (active) setLaborCatalog({ ...catalog, positions: catalog.positions.map((position) => ({ ...position, totalDailyRate: frozenLaborRates.get(position.code) ?? position.totalDailyRate })) }); })
       .catch(() => {
         if (active) setLaborCatalog({ positions: [], source: "fallback", warning: "No fue posible cargar el catálogo de cargos. Intenta actualizar la página." });
       })
       .finally(() => { if (active) setIsLaborLoading(false); });
     return () => { active = false; };
-  }, [activeLaborTableId]);
+  }, [activeLaborTableId, frozenLaborRates]);
 
   useEffect(() => {
     let active = true;

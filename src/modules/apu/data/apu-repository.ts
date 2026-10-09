@@ -5,7 +5,7 @@ import { apuTotal, defaultApuMargins, lineTotal, type Apu, type ApuLine } from "
 export type ApuProject = { id: string; code: string; name: string };
 export type ProjectBoqItem = { id: string; projectId: string; apuAnalysisId: string; apuVersionId: string; code: string; description: string; unit: string; contractQuantity: number; budgetTotal: number; status: string };
 export type ProjectBoqCost = { id: string; boqItemId: string; costType: "committed" | "actual"; amount: number; reference?: string; occurredAt: string };
-export type ApuWorkspaceData = { companyId: string; apus: Apu[]; projects: ApuProject[]; boqItems: ProjectBoqItem[]; boqCosts: ProjectBoqCost[]; quoteOrigin?: Map<string, { code: string; title: string; client: string; status: string; laborRateTableId?: string }> };
+export type ApuWorkspaceData = { companyId: string; apus: Apu[]; projects: ApuProject[]; boqItems: ProjectBoqItem[]; boqCosts: ProjectBoqCost[]; quoteOrigin?: Map<string, { code: string; title: string; client: string; status: string; laborRateTableId?: string; laborProjectSnapshot?: { resultados?: Array<{ codigo: string; valorDia: number }> } }> };
 
 const uuid = (value?: string) => Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value));
 const num = (value: unknown) => Number(value || 0);
@@ -68,10 +68,10 @@ export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
   // código, nombre de actividad o empresa que contrata.
   const { data: quoteRows } = await supabase
     .from("quotes")
-    .select("id, code, title, client, status, labor_rate_table_id")
+    .select("id, code, title, client, status, labor_rate_table_id, labor_project_snapshot")
     .eq("company_id", companyId)
     .order("updated_at", { ascending: false });
-  const quoteById = new Map((quoteRows ?? []).map((quote) => [quote.id, { code: quote.code, title: quote.title, client: quote.client, status: quote.status, laborRateTableId: quote.labor_rate_table_id || undefined }] as const));
+  const quoteById = new Map((quoteRows ?? []).map((quote) => [quote.id, { code: quote.code, title: quote.title, client: quote.client, status: quote.status, laborRateTableId: quote.labor_rate_table_id || undefined, laborProjectSnapshot: quote.labor_project_snapshot as { resultados?: Array<{ codigo: string; valorDia: number }> } | undefined }] as const));
   const analysisIds = (analysisRows ?? []).map((row) => row.id);
   const { data: versionRows } = analysisIds.length ? await supabase.from("apu_versions").select("id, apu_analysis_id, version_number").in("apu_analysis_id", analysisIds).order("version_number", { ascending: false }) : { data: [] };
   const currentVersionByAnalysis = new Map<string, { id: string; version_number: number }>();

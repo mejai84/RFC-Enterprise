@@ -495,6 +495,8 @@ export type QuoteLaborSnapshot = {
   tablaId?: string;
   tablaNombre?: string;
   /** Valores de la tabla en el momento del cálculo. */
+  /** Escala interna de la tabla contractual; evita mezclar propias y no propias. */
+  escala?: "general" | "propias" | "no_propias";
   tabla: {
     id?: string;
     code: string;

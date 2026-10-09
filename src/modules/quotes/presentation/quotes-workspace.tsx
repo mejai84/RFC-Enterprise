@@ -2076,9 +2076,10 @@ function NewQuoteModal({
   // desde Configuracion para no escribirlos a mano en cada cotizacion nueva.
   const { config: companySettings } = useCompanyConfig();
   const proposalDefaults = companySettings?.proposalDefaults;
-  const [laborTables, setLaborTables] = useState<Array<{ id: string; name: string; version: string; client_name: string }>>([]);
+  const [laborTables, setLaborTables] = useState<Array<{ id: string; name: string; version: string; client_name: string; activity_type: "general" | "propias" | "no_propias" | "mixta" }>>([]);
   // Mano de obra por obra: tabla elegida, conceptos digitados y resultado congelado.
   const [selectedLaborTableId, setSelectedLaborTableId] = useState("");
+  const [selectedLaborScale, setSelectedLaborScale] = useState<"propias" | "no_propias">("propias");
   const [laborModalOpen, setLaborModalOpen] = useState(false);
   const [laborDraft, setLaborDraft] = useState<ProjectLaborDraft | null>(null);
   const laborPayload = useMemo(
@@ -2088,7 +2089,7 @@ function NewQuoteModal({
   useEffect(() => {
     if (!companySettings?.companyId || !supabaseUrl || !supabasePublishableKey) return;
     const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
-    void supabase.from("labor_rate_tables").select("id,name,version,client_name").eq("company_id", companySettings.companyId).eq("is_active", true).order("valid_from", { ascending: false }).then(({ data }) => setLaborTables(data ?? []));
+    void supabase.from("labor_rate_tables").select("id,name,version,client_name,activity_type").eq("company_id", companySettings.companyId).eq("is_active", true).order("valid_from", { ascending: false }).then(({ data }) => setLaborTables((data ?? []) as Array<{ id: string; name: string; version: string; client_name: string; activity_type: "general" | "propias" | "no_propias" | "mixta" }>));
   }, [companySettings?.companyId]);
 
   // Vista previa en vivo del código que se generará
@@ -2283,6 +2284,16 @@ function NewQuoteModal({
                 ))}
               </select>
             </label>
+            {laborTables.find((table) => table.id === selectedLaborTableId)?.activity_type === "mixta" ? (
+              <label className="form-field">
+                Escala salarial aplicable
+                <select value={selectedLaborScale} onChange={(e) => { setSelectedLaborScale(e.target.value as "propias" | "no_propias"); setLaborDraft(null); }}>
+                  <option value="propias">Actividades propias</option>
+                  <option value="no_propias">Actividades no propias</option>
+                </select>
+                <small>La tabla OCENSA es una sola; esta opci?n define la escala con la que se costear?n sus cargos.</small>
+              </label>
+            ) : null}
           </div>
 
           <div className="new-quote-labor-project">
@@ -2312,6 +2323,7 @@ function NewQuoteModal({
           {laborModalOpen && selectedLaborTableId ? (
             <LaborProjectModal
               tableId={selectedLaborTableId}
+              scale={laborTables.find((table) => table.id === selectedLaborTableId)?.activity_type === "mixta" ? selectedLaborScale : "general"}
               tableName={
                 laborTables.find((t) => t.id === selectedLaborTableId)?.name ??
                 "Tabla salarial"

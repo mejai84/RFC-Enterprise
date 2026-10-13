@@ -28,7 +28,8 @@ function seedMovements(): StockMovement[] {
     { id: "mov-007", productId: "prd-004", branchId: MAIN_BRANCH, type: "salida", reason: "merma", quantity: 12, note: "Rotura en transporte", registeredBy: "usr-002", occurredAt: new Date(now - day) },
     { id: "mov-008", productId: "prd-005", branchId: MAIN_BRANCH, type: "entrada", reason: "compra", quantity: 200, note: null, registeredBy: "usr-001", occurredAt: new Date(now - 8 * day) },
     { id: "mov-009", productId: "prd-005", branchId: MAIN_BRANCH, type: "salida", reason: "venta", quantity: 150, note: null, registeredBy: "usr-002", occurredAt: new Date(now - 5 * day) },
-    { id: "mov-010", productId: "prd-006", branchId: MAIN_BRANCH, type: "salida", reason: "consumo_proyecto", quantity: 18, note: null, registeredBy: "usr-001", occurredAt: new Date(now - 2 * day) },
+    { id: "mov-010", productId: "prd-006", branchId: MAIN_BRANCH, type: "entrada", reason: "compra", quantity: 30, note: null, registeredBy: "usr-001", occurredAt: new Date(now - 7 * day) },
+    { id: "mov-011", productId: "prd-006", branchId: MAIN_BRANCH, type: "salida", reason: "consumo_proyecto", quantity: 18, note: null, registeredBy: "usr-001", occurredAt: new Date(now - 2 * day) },
   ];
 }
 

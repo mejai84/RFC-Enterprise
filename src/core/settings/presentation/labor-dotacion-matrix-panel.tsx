@@ -340,7 +340,6 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
     <div className="labor-matrix">
       <div className="labor-matrix-head">
         <div>
-          <h3>Dotación por cargo</h3>
           <p>
             La fila de la matriz es el cargo, no el nivel. Un oficial y un ayudante
             pueden compartir nivel y llevar cosa distinta. Cada cambio recalcula el

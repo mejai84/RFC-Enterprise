@@ -135,7 +135,6 @@ export function LaborRateSettingsPanel({ companyId }: { companyId: string }) {
       </section>
       <details className="labor-rate-add-entry"><summary>Agregar nivel o cargo a esta tabla</summary><form className="labor-rate-entry-form" onSubmit={createEntry}><input name="code" placeholder="Código" required /><input name="name" placeholder="Cargo o nivel" required /><input min="1" name="level" placeholder="Nivel" type="number" /><input min="0" name="basic" placeholder="Salario básico diario" type="number" step="0.01" /><input min="0" name="transport" placeholder="Transporte" type="number" step="0.01" /><input min="0" name="food" placeholder="Alimentación" type="number" step="0.01" /><input min="0" name="nonSalary" placeholder="No salarial" type="number" step="0.01" /><input min="0" name="total" placeholder="Total diario (opcional)" type="number" step="0.01" /><button className="inventory-action" disabled={busy} type="submit">Agregar cargo</button></form></details>
     </> : <p className="panel-intro">Seleccione una tabla para revisar y completar sus cargos.</p>}
-    <LaborDotacionMatrixPanel companyId={companyId} />
     <details className="labor-rate-import-details">
       <summary>Importar una tabla desde Excel</summary>
       <LaborRatesImport companyId={companyId} onDone={(tableId) => void loadEntries(tables.find((t) => t.id === tableId) ?? null)} />

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import { HelpHint } from "@/shared/help-hint";
 
 /**
  * Editor de la matriz de dotacion por cargo.
@@ -25,7 +26,8 @@ type Concepto = {
 type Fila = {
   concept_id: string;
   quantity: number;
-  /** Cada cuántos días físicos se repone; no es una regla fija de 240 días. */
+  /** Cada cuántos días se repone el concepto. Cero significa que la reposicion
+   *  todavia no se ha definido: la cantidad se aplica una sola vez. */
   replacement_days: number;
   unit_value_override: number | null;
   inherited_from_level: boolean;
@@ -58,6 +60,21 @@ const money = (v: number | null | undefined) =>
 
 const escala = (s: Rol["scale"]) =>
   s === "propias" ? "Actividades propias" : s === "no_propias" ? "Actividades no propias" : "General";
+
+/* El ano de referencia es el que usa la tabla del cliente para el promedio
+   diario. Solo se usa para proyectar las reposiciones, no como supuesto de
+   que todo se repone cada 240 dias. */
+const ANIO_REFERENCIA = 240;
+
+/* Cuantas veces se repone el concepto dentro del ano de referencia. Con la
+   reposicion en cero no se repone ninguna: se aplica una sola vez. */
+function repeticionesAnuales(replacementDays: number) {
+  if (!replacementDays || replacementDays <= 0) return 1;
+  const veces = ANIO_REFERENCIA / replacementDays;
+  /* Un casco con reposicion de 2 anos no se repone dentro del ano, pero
+     tampoco se puede pedir menos de la dotación inicial. */
+  return Math.max(1, Math.round(veces * 100) / 100);
+}
 
 export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
   const [tablas, setTablas] = useState<Tabla[]>([]);
@@ -160,7 +177,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
           mapa[f.concept_id] = {
             concept_id: f.concept_id,
             quantity: Number(f.quantity),
-            replacement_days: Math.max(1, Number(f.replacement_days ?? 240)),
+            replacement_days: Math.max(0, Number(f.replacement_days ?? 0)),
             unit_value_override: f.unit_value_override == null ? null : Number(f.unit_value_override),
             inherited_from_level: f.inherited_from_level,
             notes: f.notes ?? "",
@@ -246,7 +263,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
 
     const { error: e } = await db()
       .from("labor_role_dotacion")
-      .update({ quantity: Number(item?.quantity ?? 0), replacement_days: 240, inherited_from_level: true, unit_value_override: null, notes: "" })
+      .update({ quantity: Number(item?.quantity ?? 0), replacement_days: 0, inherited_from_level: true, unit_value_override: null, notes: "" })
       .eq("labor_rate_role_id", rolId)
       .eq("concept_id", conceptoId);
     if (e) { setError(e.message); setGuardando(null); return; }
@@ -257,7 +274,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
       [conceptoId]: {
         ...m[conceptoId],
         quantity: Number(item?.quantity ?? 0),
-        replacement_days: 240,
+        replacement_days: 0,
         unit_value_override: null,
         inherited_from_level: true,
         notes: "",
@@ -310,7 +327,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
             labor_rate_role_id: data.id as string,
             concept_id: concepto.id,
             quantity: Number(p.quantity),
-            replacement_days: 240,
+            replacement_days: 0,
             unit_value_override: null,
             inherited_from_level: true,
             notes: "",
@@ -485,19 +502,64 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
               <p className="labor-matrix-note">
                 {resumen.conceptos} conceptos · {resumen.corregidas} corregidos a mano sobre la
                 plantilla del nivel. La suma da <strong>{money(resumen.total)}</strong>.
-                Configure cada concepto según su vida útil: la cotización aplica las reposiciones por días físicos de la obra; 240 días es solo el valor de referencia heredado y puede cambiarse.
+                Los <strong>días de reposición</strong> nacen en cero: todavía no se ha definido y el concepto se cuenta una sola vez. Cuando se definan, la cotización repetirá la entrega tantas veces como dure la obra. Los 240 días del documento no se heredan aquí.
               </p>
 
               <div className="labor-matrix-table-wrap">
                 <table className="labor-matrix-table">
                   <thead>
                     <tr>
-                      <th>Concepto</th>
-                      <th>Cantidad</th>
-                      <th>Precio</th>
-                      <th>Reposición</th>
-                      <th>Total</th>
-                      <th>Origen</th>
+                      <th>
+                        Concepto
+                        <HelpHint title="Qué lleva este cargo" compact>
+                          El concepto de dotación de la fila: el elemento que recibe el
+                          worker. No es el nivel salarial, es el cargo. Un oficial y un
+                          ayudante pueden compartir nivel y llevar cosas distintas.
+                        </HelpHint>
+                      </th>
+                      <th>
+                        Cantidad
+                        <HelpHint title="Cantidad por entrega" compact>
+                          Cuántas unidades entrega la empresa cada vez que repone este
+                          concepto: dos pares de guantes, un casco. Es la cantidad de
+                          una reposición, no la cantidad total de la obra.
+                        </HelpHint>
+                      </th>
+                      <th>
+                        Precio
+                        <HelpHint title="Precio unitario" compact>
+                          Cuánto cuesta una unidad. Sale del catálogo de conceptos y se
+                          puede corregir aquí para este cargo sin tocar el catálogo,
+                          cuando la compra real difiere del valor estimado.
+                        </HelpHint>
+                      </th>
+                      <th>
+                        Días de reposición
+                        <HelpHint title="Cada cuántos días se repone" compact>
+                          Cuántos días dura el concepto antes de reponerse: los guantes
+                          duran semanas, el casco años. En <strong>cero</strong> todavía
+                          no se ha definido y el concepto se compra una sola vez, sin
+                          repetir. No es un valor heredado de los 240 días de la tabla.
+                        </HelpHint>
+                      </th>
+                      <th>
+                        Total
+                        <HelpHint title="Costo de la dotación en un año" compact>
+                          Cantidad por precio, repetido tantas veces al año como diga la
+                          reposición. Es el promedio que se divide entre los días del
+                          año para obtener el costo diario que consume el APU. Con la
+                          reposición en cero es una sola entrega.
+                        </HelpHint>
+                      </th>
+                      <th>
+                        Origen
+                        <HelpHint title="De dónde sale esta fila" compact>
+                          <strong>Del nivel</strong> es la plantilla que trae el documento
+                          del cliente para ese nivel. <strong>Corregido</strong> es que se
+                          ajustó a mano para este cargo y ya no sigue la plantilla. El
+                          botón «Volver al nivel» deshace la corrección.
+                        </HelpHint>
+                      </th>
                       <th aria-label="Acciones" />
                     </tr>
                   </thead>
@@ -506,7 +568,11 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
                       const fila = matriz[c.id];
                       const cantidad = fila?.quantity ?? 0;
                       const precio = fila?.unit_value_override ?? c.default_unit_value;
-                      const total = cantidad * precio;
+                      /* Sin reposicion definida el total es una sola dotacion.
+                         Con reposicion, se proyecta a un ano para que el diario
+                         del cargo sea comparable entre conceptos. */
+                      const veces = repeticionesAnuales(fila?.replacement_days ?? 0);
+                      const total = cantidad * precio * veces;
                       const editada = fila ? !fila.inherited_from_level : false;
                       return (
                         <tr key={c.id} className={editada ? "is-editada" : ""}>
@@ -527,7 +593,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
                                   [c.id]: {
                                     concept_id: c.id,
                                     quantity: Number(e.target.value) || 0,
-                                    replacement_days: m[c.id]?.replacement_days ?? 240,
+                                    replacement_days: m[c.id]?.replacement_days ?? 0,
                                     unit_value_override: m[c.id]?.unit_value_override ?? null,
                                     inherited_from_level: false,
                                     notes: m[c.id]?.notes ?? "",
@@ -549,7 +615,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
                                   [c.id]: {
                                     concept_id: c.id,
                                     quantity: m[c.id]?.quantity ?? 0,
-                                    replacement_days: m[c.id]?.replacement_days ?? 240,
+                                    replacement_days: m[c.id]?.replacement_days ?? 0,
                                     unit_value_override: Number(e.target.value) || 0,
                                     inherited_from_level: false,
                                     notes: m[c.id]?.notes ?? "",
@@ -563,9 +629,9 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
                             <input
                               id={`reposicion-${c.id}`}
                               type="number"
-                              min={1}
+                              min={0}
                               step={1}
-                              value={fila?.replacement_days ?? 240}
+                              value={fila?.replacement_days ?? 0}
                               aria-label={`Reponer ${c.name} cada cuántos días físicos`}
                               onChange={(e) =>
                                 setMatriz((m) => ({
@@ -573,7 +639,7 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
                                   [c.id]: {
                                     concept_id: c.id,
                                     quantity: m[c.id]?.quantity ?? 0,
-                                    replacement_days: Math.max(1, Number(e.target.value) || 1),
+                                    replacement_days: Math.max(0, Number(e.target.value) || 0),
                                     unit_value_override: m[c.id]?.unit_value_override ?? null,
                                     inherited_from_level: false,
                                     notes: m[c.id]?.notes ?? "",
@@ -581,9 +647,20 @@ export function LaborDotacionMatrixPanel({ companyId }: { companyId: string }) {
                                 }))
                               }
                             />
-                            <small>días físicos</small>
+                            <small>
+                              {fila && fila.replacement_days > 0
+                                ? `${repeticionesAnuales(fila.replacement_days)} al año`
+                                : "sin definir"}
+                            </small>
                           </td>
-                          <td>{money(total)}</td>
+                          <td>
+                            {money(total)}
+                            <small>
+                              {veces > 1
+                                ? `${veces} entregas al año`
+                                : "una sola entrega"}
+                            </small>
+                          </td>
                           <td>
                             {editada ? (
                               <span className="labor-matrix-badge is-editada">corregido</span>

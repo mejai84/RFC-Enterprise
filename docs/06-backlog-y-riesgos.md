@@ -66,11 +66,12 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 
 
 | MOB-001 | Alta | Modal de mano de obra por obra (Cotización nueva) | Al crear una cotización, un modal carga la tabla salarial vigente del cliente y permite digitar los valores que se estiman solo para esa obra. Las columnas de la tabla se muestran recalculadas en vivo, igual que la hoja de cálculo del usuario, y el resultado (costo diario por puesto y nivel) queda congelado en esa cotización. Nada se escribe en la tabla oficial ni en otras cotizaciones. |
-| MOB-002 | Media | Columna DOTACIÓN en la tabla salarial | El usuario tiene el concepto en su hoja pero todavía no lo ha definido. Queda pendiente de regla de cálculo. |
+| MOB-002 | Media | Valores de reposicion de la dotacion por concepto | La regla de cálculo ya existe (ADR-148, ADR-149): la reposición nace en cero y se proyecta a las veces que quepan en el año. Falta que el usuario defina, concepto por concepto, cada quantos días se repone. |
 | MOB-003 | Media | Valor del equipo y costo de alquiler dentro del APU de la obra | El usuario necesita incluir el valor del equipo y el costo de alquiler de las obras en el análisis. Falta definir si es una línea propia del APU o concepto del proyecto. |
 
 - **2026-10-08**: mano de obra y viáticos por obra (ADR-126). Motor de cálculo verificado contra el libro real de la obra Trampa Granjita: provisioned, horas y dominicales coinciden al peso. Modal «Mano de obra de esta obra» en cotización nueva, con plazo que calcula los días, conceptos digitables de la obra, desglose en vivo y total congelado en esa cotización. Se corrige la subestimación del 32% al 49% en el valor diario de los cargos. Se bloquean en `.gitignore` los documentos de cliente dentro de `public/`.
 - **2026-10-08**: asistente de importación de tablas salariales con vista previa y mapeo de columnas, montado en Configuración › Costos y tablas salariales.
+- **2026-10-13**: dotación sin el supuesto de los 240 días (ADR-150). Los 2.699 registros de `labor_role_dotacion` quedan con `replacement_days` en cero y la nota de que el valor venía heredado. La matriz de configuración muestra "Días de reposición" con icono de ayuda, y el total de la fila proyecta las entregas del año en vez de callarlas. Se corrigió el texto centrado de las ayudas, que venía centered en todos los módulos.
 
 ## Última entrega verificada
 
@@ -85,11 +86,11 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 - **Pendiente de evolución — importación de tablas salariales:** los formatos de clientes no son homogéneos. La primera entrega permite crear tabla y cargos manualmente; la próxima debe añadir asistente de importación con vista previa y mapeo de columnas, sin interpretar automáticamente hojas informativas.
 
 
-- **SAL-002 � Importaci�n documental de salarios:** Excel se importa con selecci�n de hoja, mapeo y vista previa. PDF y Word quedan como fuente documental hasta implementar extracci�n asistida con confirmaci�n obligatoria; no se debe publicar una tabla inferida autom�ticamente.
+- **SAL-002 � Importaci�n documental de salarios:** Excel se importa con selecci�n de hoja, mapeo y vista previa. PDF y Word quedan como fuente documental hasta implementar extracci�n asistida con confirmaci�n obligatoria; no se debe publicar una tabla inferida autom�ticamente.
 
-- **SAL-003 � Consulta verificable:** la tabla salarial vigente debe poder revisarse dentro de la aplicaci�n con los mismos componentes que se exportan; la exportaci�n no es la �nica forma de auditar los valores.
+- **SAL-003 � Consulta verificable:** la tabla salarial vigente debe poder revisarse dentro de la aplicaci�n con los mismos componentes que se exportan; la exportaci�n no es la �nica forma de auditar los valores.
 
-- **SAL-004 � Fuente oficial:** el Total d�a de cada nivel se preserva tal como aparece en el documento fuente. Cualquier c�lculo espec�fico de una cotizaci�n debe conservarse como instant�nea separada, sin sobrescribir la tabla salarial.
+- **SAL-004 � Fuente oficial:** el Total d�a de cada nivel se preserva tal como aparece en el documento fuente. Cualquier c�lculo espec�fico de una cotizaci�n debe conservarse como instant�nea separada, sin sobrescribir la tabla salarial.
 
 
 ### SAL-005 - Trazabilidad completa de cargos por nivel

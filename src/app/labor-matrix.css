@@ -263,6 +263,39 @@
   font-weight: 600;
 }
 
+/* La ayuda va al lado del nombre de la columna, sin que la columna se
+   estire mas de lo que necesita. */
+.labor-matrix-table thead th .quote-help {
+  margin-left: 4px;
+  vertical-align: -4px;
+}
+
+.labor-matrix-table thead th .quote-help-trigger {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  height: 20px;
+  width: 20px;
+}
+
+.labor-matrix-table thead th .quote-help-trigger:hover,
+.labor-matrix-table thead th .quote-help:focus-within .quote-help-trigger {
+  background: var(--brand, #0b7a47);
+  border-color: var(--brand, #0b7a47);
+  color: #fff;
+}
+
+/* Los textos queacompanan al numero: cuantas veces se repone, cuanto
+   cuesta al ano. */
+.labor-matrix-table td small {
+  display: block;
+  font-size: 0.66rem;
+  color: var(--muted);
+  line-height: 1.25;
+  margin-top: 2px;
+}
+
 .labor-matrix-table td:first-child {
   display: flex;
   flex-direction: column;

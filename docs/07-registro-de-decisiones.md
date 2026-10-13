@@ -667,17 +667,17 @@ La ruta pÃºblica `/` presenta el sÃ­mbolo RFC de carga durante un mÃ­nimo de dos
 ## 2026-10-08 â€” ViÃ¡ticos por desplazamiento en mano de obra
 Hotel y transporte operativo se modelan como viÃ¡ticos de desplazamiento, separados del auxilio legal de transporte. Por defecto aplican a Conductor y Capataz, porque se desplazan a los frentes de obra; los demÃ¡s cargos locales no los reciben. Cada lÃ­nea del APU podrÃ¡ registrar una excepciÃ³n justificada cuando el proyecto lo requiera.
 
-## 2026-10-08 — Costeo salarial por cargo y viáticos
+## 2026-10-08 ï¿½ Costeo salarial por cargo y viï¿½ticos
 
-Los cargos del APU se resuelven desde la tabla salarial elegida en la cotización. Cada cargo toma el valor de su nivel dentro de esa tabla y queda congelado al guardar la oferta. Hotel y transporte operativo son viáticos de desplazamiento: Capataz y Conductor los reciben por defecto; cualquier otro cargo exige una justificación que queda dentro de la instantánea de la cotización. Los demás conceptos de la obra se calculan por separado del auxilio legal de transporte.
+Los cargos del APU se resuelven desde la tabla salarial elegida en la cotizaciï¿½n. Cada cargo toma el valor de su nivel dentro de esa tabla y queda congelado al guardar la oferta. Hotel y transporte operativo son viï¿½ticos de desplazamiento: Capataz y Conductor los reciben por defecto; cualquier otro cargo exige una justificaciï¿½n que queda dentro de la instantï¿½nea de la cotizaciï¿½n. Los demï¿½s conceptos de la obra se calculan por separado del auxilio legal de transporte.
 
-## 2026-10-08 — Consulta de tablas salariales
+## 2026-10-08 ï¿½ Consulta de tablas salariales
 
-Abrir una tabla salarial vigente muestra un detalle de solo consulta con nivel, puestos asociados y cada componente del valor diario. La vista interna y la exportación utilizan el mismo conjunto de datos para que el usuario pueda comprobar valores antes de usarlos en una cotización.
+Abrir una tabla salarial vigente muestra un detalle de solo consulta con nivel, puestos asociados y cada componente del valor diario. La vista interna y la exportaciï¿½n utilizan el mismo conjunto de datos para que el usuario pueda comprobar valores antes de usarlos en una cotizaciï¿½n.
 
-## 2026-10-08 — Total diario oficial de tablas salariales
+## 2026-10-08 ï¿½ Total diario oficial de tablas salariales
 
-El campo `Total día` de una tabla salarial es un dato documental de su fuente (por ejemplo, el PDF de OCENSA), no un valor que RFC recalcula ni reemplaza con provisiones o recargos. La consulta, exportación y APU consumen exactamente ese valor por nivel; los cálculos particulares de una obra se registran por separado y nunca alteran la tabla oficial.
+El campo `Total dï¿½a` de una tabla salarial es un dato documental de su fuente (por ejemplo, el PDF de OCENSA), no un valor que RFC recalcula ni reemplaza con provisiones o recargos. La consulta, exportaciï¿½n y APU consumen exactamente ese valor por nivel; los cï¿½lculos particulares de una obra se registran por separado y nunca alteran la tabla oficial.
 
 
 ### 2026-10-08 - Niveles oficiales y cargos son entidades distintas
@@ -765,3 +765,16 @@ Antes de gestionar APU, la cotizaci?n debe guardar un costeo laboral: plazo, d?a
 **Decision (2026-10-09):** la matriz conserva frecuencia de reposicion por articulo y cargo. La cotizacion usa los dias fisicos estimados para calcular cuantos ciclos requiere cada articulo y congela ese costo junto con la mano de obra para el APU. El valor historico 240 queda solo como frecuencia editable de perfiles ya existentes, no como regla de calculo global.
 
 **Consecuencias:** no se descuenta inventario al cotizar. Despues, en Proyectos > Personal de obra, un responsable registra la entrega real a un trabajador ya asignado, con varias lineas en un comprobante. La RPC valida permiso, obra, trabajador y existencias, y registra el movimiento de Kardex en la misma transaccion.
+
+## ADR-150 - La reposicion de dotacion nace en cero
+
+**Decision (2026-10-13):** los dias de reposicion de cada concepto de dotacion no se heredan de la tabla del cliente. La tabla esta construida sobre 240 dias, y ese numero se habia quedado como valor por defecto de las 2.699 filas de la matriz, como si todo se repone cada 240 dias. No es un dato del documento: es un supuesto.
+
+Los 2.699 registros quedaron en cero. En cero significa "todavia no se ha definido": el concepto se compra una sola vez, sin repetir por el plazo. Queda registrado en la nota de cada fila de donde venia el valor, para que no se pierda el rastro.
+
+**Consecuencias:**
+
+- La matriz muestra el encabezado "Dias de reposicion" con un icono de ayuda que explica el significado de cero, en vez de un supuesto invisible.
+- El total de la fila proyecta la cantidad por precio repetida tantas veces al anno como indique la reposicion; con cero, una sola entrega. El total que se ve es el mismo que guarda el motor.
+- El ano de 240 dias se conserva solo para obtener el promedio diario que consume el APU. No decide cuantas compras hacen falta.
+- Los valores concretos los define el responsable. Hasta entonces la dotacion se subestima de forma conocida y visible, no de forma oculta.

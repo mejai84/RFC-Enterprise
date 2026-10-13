@@ -50,7 +50,7 @@
   width:320px;
   z-index:60;
 }
-.quote-help:hover .quote-help-popover,.quote-help:focus-within .quote-help-popover { opacity:1; pointer-events:auto; transform:translateY(0); visibility:visible; }.quote-help-popover strong { font-size:12px; }.quote-help-popover span { color:#d9ecdf; font-size:11px; line-height:1.38; }.quote-help-popover b { color:#fff; }.quote-help.is-compact { margin-left:6px; }.quote-help.is-compact .quote-help-trigger { height:20px; width:20px; font-size:11px; }.quote-help.is-compact .quote-help-popover { left:auto; right:0; top:calc(100% + 7px); }
+.quote-help:hover .quote-help-popover,.quote-help:focus-within .quote-help-popover { opacity:1; pointer-events:auto; transform:translateY(0); visibility:visible; }.quote-help-popover { text-align:left; }.quote-help-popover > strong:first-child { display:block; font-size:12px; margin-bottom:3px; }.quote-help-popover strong { font-size:12px; }.quote-help-popover span { color:#d9ecdf; font-size:11px; line-height:1.38; }.quote-help-popover b { color:#fff; }.quote-help.is-compact { margin-left:6px; }.quote-help.is-compact .quote-help-trigger { height:20px; width:20px; font-size:11px; }.quote-help.is-compact .quote-help-popover { left:auto; right:0; top:calc(100% + 7px); }
 
 .quotes-subtitle {
   color: var(--muted);

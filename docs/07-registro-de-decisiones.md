@@ -1,3 +1,4 @@
+<!-- ADR-149 2026-10-13: el rendimiento se declara para la cuadrilla completa y se guarda por version de APU junto con su tamano. La duracion tecnica es techo(cantidad/rendimiento) en dias fisicos; el tamano no multiplica otra vez el rendimiento. -->
 
 
 ## 2026-10-08 — ADR-126: modelo de mano de obra y viáticos por obra

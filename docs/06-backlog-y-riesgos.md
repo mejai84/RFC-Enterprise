@@ -1,3 +1,4 @@
+<!-- APU-015 actualizado 2026-10-13: la duracion por actividad ya se calcula y se congela por version desde cantidad/rendimiento de cuadrilla. Pendiente: consolidar las duraciones de varios APUs segun secuencia y frentes paralelos. -->
 ---
 estado: vigente
 propietario: Producto y Líder de proyecto RFC Enterprise

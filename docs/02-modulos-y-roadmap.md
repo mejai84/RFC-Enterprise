@@ -1,3 +1,4 @@
+<!-- Registro 2026-10-13: cada version de APU conserva rendimiento diario de la cuadrilla y tamano de cuadrilla. La duracion tecnica se calcula como techo(cantidad de obra / rendimiento diario), en dias fisicos; no usa fechas comerciales ni crea dias remunerados o extras. -->
 ---
 estado: vigente
 propietario: Producto y Desarrollo RFC Enterprise

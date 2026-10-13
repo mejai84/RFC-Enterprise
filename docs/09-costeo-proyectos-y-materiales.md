@@ -1,3 +1,4 @@
+<!-- Registro 2026-10-13: el APU calcula y presenta la duracion fisica de cada actividad con cantidad de obra y rendimiento diario de cuadrilla. Ambos datos se congelan al guardar su version, separados de dias remunerados, recargos y fechas comerciales. -->
 ---
 estado: vigente
 propietario: Producto y Operaciones RFC Enterprise

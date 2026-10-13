@@ -32,6 +32,10 @@ export type Apu = {
   name: string;
   unit: string;
   workQuantity: number;
+  /** Produccion diaria de la cuadrilla completa, en la unidad de la actividad. */
+  crewYieldPerDay?: number;
+  /** Personas previstas en la cuadrilla; informa la planeacion, no multiplica el rendimiento. */
+  crewSize?: number;
   lines: ApuLine[];
   categoryMargins?: ApuCategoryMargins;
   quoteId?: string;
@@ -50,6 +54,11 @@ export const apuCategoryMeta: Record<ApuCategory, { label: string; description: 
   labor: { label: "Mano de obra", description: "Cantidad x salario diario x rendimiento" },
   transport: { label: "Transporte", description: "Cantidad x tarifa x rendimiento" },
 };
+
+export function apuPhysicalDays(apu: Pick<Apu, "workQuantity" | "crewYieldPerDay">) {
+  const yieldPerDay = Number(apu.crewYieldPerDay || 0);
+  return yieldPerDay > 0 ? Math.ceil(Math.max(0, apu.workQuantity) / yieldPerDay) : null;
+}
 
 export function lineTotal(line: ApuLine) {
   const factor = line.category === "materials" ? 1 : line.yieldPerDay || 1;

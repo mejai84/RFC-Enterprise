@@ -3,6 +3,7 @@ export {
   apuCostBreakdown,
   apuCostTotal,
   apuEffectiveMarginPercent,
+  apuPhysicalDays,
   apuProfitAmount,
   apuSellingBreakdown,
   apuSellingTotal,

@@ -73,8 +73,8 @@ export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
     .order("updated_at", { ascending: false });
   const quoteById = new Map((quoteRows ?? []).map((quote) => [quote.id, { code: quote.code, title: quote.title, client: quote.client, status: quote.status, laborRateTableId: quote.labor_rate_table_id || undefined, laborProjectSnapshot: quote.labor_project_snapshot as { resultados?: Array<{ codigo: string; valorDia: number }> } | undefined }] as const));
   const analysisIds = (analysisRows ?? []).map((row) => row.id);
-  const { data: versionRows } = analysisIds.length ? await supabase.from("apu_versions").select("id, apu_analysis_id, version_number").in("apu_analysis_id", analysisIds).order("version_number", { ascending: false }) : { data: [] };
-  const currentVersionByAnalysis = new Map<string, { id: string; version_number: number }>();
+  const { data: versionRows } = analysisIds.length ? await supabase.from("apu_versions").select("id, apu_analysis_id, version_number, crew_yield_per_day, crew_size").in("apu_analysis_id", analysisIds).order("version_number", { ascending: false }) : { data: [] };
+  const currentVersionByAnalysis = new Map<string, { id: string; version_number: number; crew_yield_per_day?: number | null; crew_size?: number | null }>();
   for (const row of versionRows ?? []) if (!currentVersionByAnalysis.has(row.apu_analysis_id)) currentVersionByAnalysis.set(row.apu_analysis_id, row);
   const versionIds = Array.from(currentVersionByAnalysis.values()).map((row) => row.id);
   const [{ data: lineRows }, { data: costRows }] = await Promise.all([
@@ -91,7 +91,7 @@ export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
     companyId,
     apus: (analysisRows ?? []).map((row) => {
       const version = currentVersionByAnalysis.get(row.id);
-      return { id: row.id, code: row.code, name: row.name, unit: row.unit, workQuantity: num(row.work_quantity), lines: version ? linesByVersion.get(version.id) ?? [] : [], quoteId: row.quote_id || undefined, quoteCode: row.quote_code || undefined, projectId: row.project_id || undefined, revision: version?.version_number ?? row.current_version, versionId: version?.id, status: row.status, categoryMargins: readMargins(row.category_margins), createdAt: row.created_at, updatedAt: row.updated_at } as Apu;
+      return { id: row.id, code: row.code, name: row.name, unit: row.unit, workQuantity: num(row.work_quantity), crewYieldPerDay: version?.crew_yield_per_day ? num(version.crew_yield_per_day) : undefined, crewSize: version?.crew_size ? num(version.crew_size) : undefined, lines: version ? linesByVersion.get(version.id) ?? [] : [], quoteId: row.quote_id || undefined, quoteCode: row.quote_code || undefined, projectId: row.project_id || undefined, revision: version?.version_number ?? row.current_version, versionId: version?.id, status: row.status, categoryMargins: readMargins(row.category_margins), createdAt: row.created_at, updatedAt: row.updated_at } as Apu;
     }),
     projects: (projects ?? []).map((row) => ({ id: row.id, code: row.code, name: row.name })),
     quoteOrigin: quoteById,
@@ -108,7 +108,7 @@ export async function saveApuAnalysis(companyId: string, apu: Apu) {
   if (analysisError) throw analysisError;
   const { data: latest } = await supabase.from("apu_versions").select("version_number").eq("apu_analysis_id", apu.id).order("version_number", { ascending: false }).limit(1).maybeSingle();
   const versionNumber = (latest?.version_number ?? 0) + 1;
-  const { data: version, error: versionError } = await supabase.from("apu_versions").insert({ apu_analysis_id: apu.id, company_id: companyId, version_number: versionNumber, status: apu.status === "approved" ? "approved" : "draft", direct_cost: directCost, total_cost: directCost, change_note: `Guardado desde APU ${apu.code}` }).select("id").single();
+  const { data: version, error: versionError } = await supabase.from("apu_versions").insert({ apu_analysis_id: apu.id, company_id: companyId, version_number: versionNumber, status: apu.status === "approved" ? "approved" : "draft", direct_cost: directCost, total_cost: directCost, crew_yield_per_day: apu.crewYieldPerDay || null, crew_size: apu.crewSize || null, change_note: `Guardado desde APU ${apu.code}` }).select("id").single();
   if (versionError || !version) throw versionError || new Error("No fue posible crear la versión del APU.");
   if (apu.lines.length) {
     const { error: linesError } = await supabase.from("apu_version_lines").insert(apu.lines.map((line) => ({ apu_version_id: version.id, company_id: companyId, category: line.category, name: line.name, quantity: line.quantity, yield_per_day: line.yieldPerDay, daily_rate: line.dailyRate, line_total: lineTotal(line), inventory_product_id: uuid(line.inventoryProductId) ? line.inventoryProductId : null, labor_position_id: uuid(line.laborPositionId) ? line.laborPositionId : null, labor_code: line.laborCode || null, labor_level: line.laborLevel || null, labor_activity_type: line.laborActivityType || null, transport_item_id: uuid(line.transportItemId) ? line.transportItemId : null, transport_code: line.transportCode || null, unit: line.unit || null })));

@@ -211,11 +211,9 @@ function parseSheet(sheet: import("exceljs").Worksheet): { preview?: ApuImportPr
     const firstMarker = markerRows[0];
     name ||= firstDescriptiveText(rows, firstMarker.row.rowNumber, sheet.name);
     const values = rowValues(firstMarker.row);
-    const columns = detectColumns(values, firstMarker.markers[0].column);
-    const lastKnown = Math.max(columns.partial ?? -1, columns.rate ?? -1, columns.yieldPerDay ?? -1, columns.quantity ?? -1);
-    for (let column = lastKnown + 1; column < values.length; column += 1) {
+    for (let column = 0; column < values.length; column += 1) {
       const candidate = cellText(values[column]);
-      if (!candidate || parseNumericCell(candidate) !== null) continue;
+      if (!candidate || categoryFromCell(candidate) || headerRole(candidate) || parseNumericCell(candidate) !== null) continue;
       unit = candidate;
       for (const row of rows.filter((item) => item.rowNumber > firstMarker.row.rowNumber).slice(0, 3)) {
         const quantity = parseNumericCell(rowValues(row)[column]);

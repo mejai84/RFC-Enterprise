@@ -21,6 +21,7 @@
   flex-direction: column;
   padding: 24px 16px;
   position: relative;
+  overflow-x: hidden;
   z-index: 25;
 }
 
@@ -197,10 +198,17 @@
 }
 
 .dashboard-shell.is-sidebar-collapsed .dashboard-brand span,
+.dashboard-shell.is-sidebar-collapsed .dashboard-nav-search,
 .dashboard-shell.is-sidebar-collapsed .dashboard-nav-label,
+.dashboard-shell.is-sidebar-collapsed .dashboard-nav-group-label,
+.dashboard-shell.is-sidebar-collapsed .dashboard-sidebar-note,
 .dashboard-shell.is-sidebar-collapsed .dashboard-nav-item span,
 .dashboard-shell.is-sidebar-collapsed .dashboard-sidebar-footer > div:not(.dashboard-avatar) {
   display: none;
+}
+
+.dashboard-shell.is-sidebar-collapsed .dashboard-nav-group {
+  display: contents;
 }
 
 .dashboard-shell.is-sidebar-collapsed .dashboard-nav-item {

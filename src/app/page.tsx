@@ -171,6 +171,7 @@ export default function Home() {
           poster="/hero-industrial-rfc.png"
           source="/rfc-caucasia-oil-station.mp4"
           speed={0.075}
+          mobilePlayback
         />
         <div className={styles.panelCopy}>
           <p className={styles.label}>Proyectos que se mantienen vivos</p>

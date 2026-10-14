@@ -74,7 +74,7 @@ Todo módulo interno, incluido Alquiler rápido, se compone dentro de `Dashboard
 | `core` | Administración | Operativo v0.4 | Directorio persistente de empleados, roles, permisos individuales, activación, auditoría, empresas, sedes, sesión y cierre de sesión |
 | `site` | Sitio institucional | Operativo v0.4 | Portada corporativa ampliada, capacidades, enfoque de trabajo, imágenes sectoriales, acceso superior al portal de empleados y formulario que prepara el correo para el canal corporativo |
 | `dashboard` | Dashboard Ejecutivo | Operativo v0.4 | Panel principal e informes funcionales con filtros, KPIs, gráficos SVG accesibles, exportación CSV, impresión y análisis de inventario, Kardex, stock crítico y obras |
-| `quotes` | Cotizaciones & Pipeline | Operativo v0.3 | Tablero Kanban y lista, consecutivo `COT-###-AAAA-EMPRESA-OBRA`, pre-costeo por 3 rubros (Materiales, Cuadrillas, Equipos), control de revisiones (R1/R2), inspección técnica en campo, procedimiento de trabajo y matriz de riesgos privados/versionados, semáforo de vigencia comercial, conversión 1-click a obra y propuesta membretada imprimible en PDF |
+| `quotes` | Cotizaciones & Pipeline | Operativo v0.3 | Tablero Kanban y lista, consecutivo `COT-###-AAAA-EMPRESA-OBRA`, pre-costeo por 3 rubros (Materiales, Cuadrillas, Equipos), control de revisiones (R1/R2), comparador de revisiones de solo lectura, expediente comercial privado (solicitud, planos, correos, orden de servicio, aprobación), inspección técnica en campo, procedimiento de trabajo y matriz de riesgos privados/versionados, semáforo de vigencia comercial, conversión 1-click a obra y propuesta membretada imprimible en PDF |
 | `inventory` | Inventarios & Kardex | Operativo v0.5 | Catálogo, kardex, conteos, alta de artículos, ubicaciones, custodia y despachos. Se inicia la persistencia empresarial del ciclo requisición de obra → despacho/remisión firmada → devolución. |
 | `projects` | Costeo de Proyectos | Operativo v0.4 | Centro de costos, tipo de proyecto, código consecutivo automático, asignación de empleados, calendario de inicio/entrega estimada, estado de obra, presupuestos y control de sobrecostos |
 | `attendance` | Registro de Jornada | Operativo v0.3 | Jornada con entrada, salida y tramos consecutivos de trabajo, desplazamiento o pausa; las actividades se encadenan sin cerrar la jornada. Ubicación declarada de forma opcional y solo por acción del empleado. Consulta gerencial por día, semana o mes, habilitada por el permiso `attendance.team.view` |
@@ -223,11 +223,11 @@ Circuito de abastecimiento (pendiente el eslabón de compra): APU → conversió
 - **Tablas salariales versionadas (en curso):** Configuración incorpora Costos y tablas salariales para administrar tablas de mano de obra por cliente, vigencia, actividad y cargo; Cotizaciones selecciona una tabla y conserva su copia de valores.
 
 
-- **Costos / tablas salariales (2026-10-08):** la tabla elegida por cada cotizaci�n alimenta el selector de cargos del APU. Se persiste el v�nculo cargo�nivel�tabla y se distingue auxilio legal de transporte de vi�ticos operativos. Pendiente: ampliar el importador para Word/PDF con una etapa de revisi�n humana; Excel ya usa mapeo y vista previa.
+- **Costos / tablas salariales (2026-10-08):** la tabla elegida por cada cotizaci�n alimenta el selector de cargos del APU. Se persiste el v�nculo cargo�nivel�tabla y se distingue auxilio legal de transporte de vi�ticos operativos. Pendiente: ampliar el importador para Word/PDF con una etapa de revisi�n humana; Excel ya usa mapeo y vista previa.
 
-- **Consulta de tabla salarial (2026-10-08):** al abrir una tabla vigente en Configuraci�n se muestran sus niveles, puestos asociados, componentes oficiales y total d�a en una vista de consulta equivalente al Excel exportado. En m�vil la tabla conserva sus columnas dentro de un contenedor desplazable, sin romper el ancho de la pantalla.
+- **Consulta de tabla salarial (2026-10-08):** al abrir una tabla vigente en Configuraci�n se muestran sus niveles, puestos asociados, componentes oficiales y total d�a en una vista de consulta equivalente al Excel exportado. En m�vil la tabla conserva sus columnas dentro de un contenedor desplazable, sin romper el ancho de la pantalla.
 
-- **Costos / correcci�n de fuente oficial (2026-10-08):** el detalle y el APU consumen el `Total d�a` publicado por cada tabla salarial. Se retir� el rec�lculo que lo sobrescrib�a y la consulta solo presenta los componentes presentes en la fuente.
+- **Costos / correcci�n de fuente oficial (2026-10-08):** el detalle y el APU consumen el `Total d�a` publicado por cada tabla salarial. Se retir� el rec�lculo que lo sobrescrib�a y la consulta solo presenta los componentes presentes en la fuente.
 
 
 ## Cat?logo oficial de cargos por tabla salarial (2026-10-08)
@@ -284,6 +284,22 @@ La solicitud nueva define anticipo y contraentrega mediante un control proporcio
 ## Condicion de pago definida al crear la cotizacion (2026-10-09)
 
 El control comercial no impone 50/50: inicia en 0 % de anticipo y 100 % de contraentrega. Al moverlo, ambos valores se complementan hasta 100 %. La cotizacion solo confirma exito cuando la escritura en la base de datos responde correctamente.
+
+## Expediente comercial de la cotizacion (2026-10-14)
+
+La ficha de la cotizacion incorpora una seccion **Expediente comercial** que conserva los soportes de la relacion con el cliente: solicitud original, planos, correos y soportes, orden de servicio y aprobacion del cliente. Cada soporte tiene tipo, nombre, fecha, responsable y su archivo o enlace.
+
+El expediente es **aditivo y separado** de los documentos tecnicos (procedimiento de trabajo y matriz de riesgos): no los reemplaza, no participa de la conversion a obra y no altera el flujo de estados. Los archivos viven en el bucket privado `quote-commercial-documents` y se abren con URL firmada de corta duracion; tambien se admite un enlace externo (Drive, OneDrive, SharePoint) en lugar de archivo, nunca ambos. Cada alta, confirmacion de subida y eliminacion queda en `public.audit_logs`.
+
+## Comparador de revisiones (2026-10-14)
+
+Vista de **solo lectura** para contrastar dos revisiones de la misma cotizacion (por ejemplo R1 contra R2). Marca en ambar unicamente los campos que cambiaron y muestra en neutro los que se mantienen, para que el contexto siga siendo legible. Compara valor total, desglose de costeo, APU/actividades, alcance y notas, condiciones de pago, vigencia, plazo de entrega y fechas.
+
+No crea revisiones ni permite editar: la foto de cada revision la toma un trigger al guardar la cotizacion, asi que el flujo actual de "Crear revision" queda intacto. Las revisiones anteriores a esta migracion no tienen foto historica y el comparador lo explica en pantalla en vez de inventar diferencias. Funciona en escritorio y movil sin desplazamiento horizontal de la pagina.
+
+## Indicadores comerciales de Cotizaciones (2026-10-14)
+
+Informes incorpora una vista de indicadores calculada sobre datos reales de `quotes` y `quote_history`: cantidad y valor ganado/perdido, tasa de adjudicacion, tiempo promedio por etapa, cotizaciones vencidas o sin seguimiento y motivos de perdida. Admite filtros por periodo, responsable y cliente. Es de solo lectura y cada consulta queda registrada en `public.audit_logs` con los filtros aplicados. Ruta propia: `/reports/cotizaciones`, aislada de la pantalla general de Informes.
 
 ## Dotacion por cargo, cotizacion y obra (2026-10-09)
 

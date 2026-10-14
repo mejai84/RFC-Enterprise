@@ -6,6 +6,10 @@ Este archivo registra cambios funcionales visibles y decisiones de entrega. Sigu
 
 ### Añadido
 
+- Expediente comercial de la cotización: solicitud original, planos, correos y soportes, orden de servicio y aprobación del cliente, con tipo, nombre, fecha, responsable y archivo privado o enlace externo. Queda auditado y no reemplaza los documentos técnicos.
+- Comparador de revisiones (R1 vs R2) de solo lectura: contrasta valor total, desglose, APU/actividades, alcance, notas, condiciones de pago, vigencia, plazo de entrega y fechas, resaltando únicamente lo que cambió.
+- Indicadores comerciales de Cotizaciones en Informes (`/reports/cotizaciones`): ganadas y perdidas con su valor, tasa de adjudicación, tiempo promedio por etapa, cotizaciones vencidas o sin seguimiento y motivos de pérdida, con filtros por período, responsable y cliente.
+
 - Alta de proyectos con tipo (Obra, Mantenimiento u Otro) y código consecutivo automático por tipo y fecha de inicio.
 - Formato automático de pesos colombianos en presupuestos, costos y ajustes al abandonar el campo.
 - Gestión de personal de obra mediante una lista que permite agregar y retirar empleados activos por proyecto.

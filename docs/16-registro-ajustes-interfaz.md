@@ -30,3 +30,8 @@ ultima_actualizacion: 2026-10-14
 ## 2026-10-14 — Faltantes del APU bajo demanda
 
 - El panel de faltantes y el botón Generar requisición solo se muestran cuando el APU tiene materiales o equipos que no cubre Inventarios.
+
+
+## 2026-10-14 — Color de Planeación de cuadrilla
+
+- Planeación de cuadrilla usa la paleta azul informativa del APU; no debe verse como una advertencia.

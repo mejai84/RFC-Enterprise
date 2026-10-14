@@ -71,7 +71,8 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 
 - **2026-10-08**: mano de obra y viáticos por obra (ADR-126). Motor de cálculo verificado contra el libro real de la obra Trampa Granjita: provisioned, horas y dominicales coinciden al peso. Modal «Mano de obra de esta obra» en cotización nueva, con plazo que calcula los días, conceptos digitables de la obra, desglose en vivo y total congelado en esa cotización. Se corrige la subestimación del 32% al 49% en el valor diario de los cargos. Se bloquean en `.gitignore` los documentos de cliente dentro de `public/`.
 - **2026-10-08**: asistente de importación de tablas salariales con vista previa y mapeo de columnas, montado en Configuración › Costos y tablas salariales.
-- **2026-10-13**: dotación sin el supuesto de los 240 días (ADR-150). Los 2.699 registros de `labor_role_dotacion` quedan con `replacement_days` en cero y la nota de que el valor venía heredado. La matriz de configuración muestra "Días de reposición" con icono de ayuda, y el total de la fila proyecta las entregas del año en vez de callarlas. Se corrigió el texto centrado de las ayudas, que venía centered en todos los módulos.
+
+- **2026-10-13**: dotación sin el supuesto de los 240 días (ADR-150). Los 2.699 registros de `labor_role_dotacion` quedan con `replacement_days` en cero y la nota de que el valor venía heredado. La matriz de configuración muestra "Días de reposición" con icono de ayuda, y el total de la fila proyecta las entregas del año en vez de callarlas. Se corrigió el texto centrado de las ayudas, que venía centered en todos los módulos.
 
 ## Última entrega verificada
 
@@ -157,3 +158,19 @@ Mitigado funcionalmente el 2026-10-09: 240 dias deja de ser el divisor fijo del 
 <!-- 2026-10-14: Importación APU con rubros paralelos. Las hojas de actividad no se excluyen solo por mostrar varias categorías en columnas paralelas; se procesa cada bloque y se conserva el nombre de hoja con signos como < y -. -->
 
 <!-- 2026-10-14: La lista lateral de APUs permite abrir una actividad con clic y reorganizarla por arrastre. El orden es una preferencia visual local; incorpora botones Subir/Bajar como alternativa al arrastre. -->
+
+### COT-018 - Expediente comercial sin estructura tipica de clientes
+
+Mitigado el 2026-10-14: los soportes del cliente (solicitud, planos, correos, orden de servicio, aprobacion) se registran con tipo, nombre, fecha, responsable y archivo privado o enlace externo. Riesgo residual: mientras el registro exista solo en el formulario de la ficha, los expedientes previos a esta entrega no tienen respaldo estructurado y deben migrarse a mano si la auditoria los pide.
+
+### COT-019 - Comparar revisiones sin historial historico
+
+Riesgo abierto, aceptado el 2026-10-14: `quotes.revision` es un contador que se sobrescribe, asi que no habia instantanea de R0/R1 anteriores. La foto se toma desde la migracion en adelante mediante trigger al guardar. Mientras eso, el comparador solo puede confrontar revisiones posteriores a la entrega y lo explica en pantalla; no inventa diferencias para cerrar el hueco.
+
+### COT-020 - Motivos de perdida dependientes de notas libres
+
+Riesgo abierto el 2026-10-14: los motivos de perdida se extraen de la nota con la que la cotizacion pasa a "No adjudicado". Si el cierre se registra sin nota, el motivo no existe y el bloque de indicadores lo explica como falta de datos. Si el volumen de cotizaciones perdidas crece, conviene un campo estructurado de motivo; no se agrega ahora para no tocar el flujo de estados.
+
+### COT-021 - Integracion pendiente de los paneles en la ficha
+
+Pendiente el 2026-10-14: `CommercialFileSection` y `RevisionComparator` estan listos y exportados, pero la ficha (`quotes-workspace.tsx`) no los monta todavia, por acuerdo explicito para evitar ediciones concurrentes. Hasta que se integren, las tres mejoras existen en codigo, migraciones y documentacion, pero no son visibles en la pantalla de Cotizaciones.

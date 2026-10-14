@@ -1,0 +1,7 @@
+.card { display: grid; grid-template-columns: minmax(180px, 1fr) 2fr; gap: 18px; padding: 16px; border: 1px solid #b8d8ef; border-left: 4px solid #1883c7; border-radius: 12px; background: #f7fbff; }
+.card[data-level="warning"] { border-color: #f1c766; background: #fffaf0; }
+.card[data-level="danger"] { border-color: #e79a9a; background: #fff6f5; }
+.card[data-level="missing"] { border-color: #cbd5e1; background: #f8fafc; }
+.eyebrow { margin: 0 0 4px; color: #1676ae; font-size: .72rem; font-weight: 800; text-transform: uppercase; }
+.card h4, .card p { margin: 0; } .card p { margin-top: 4px; color: #52677a; font-size: .83rem; }
+.card dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin: 0; } .card dt { color: #64748b; font-size: .72rem; } .card dd { margin: 4px 0 0; color: #0f2e43; font-size: .9rem; font-weight: 800; } @media (max-width: 720px) { .card { grid-template-columns: 1fr; } .card dl { grid-template-columns: repeat(2, 1fr); } }

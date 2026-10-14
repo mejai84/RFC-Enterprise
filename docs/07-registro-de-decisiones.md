@@ -766,6 +766,34 @@ Antes de gestionar APU, la cotizaci?n debe guardar un costeo laboral: plazo, d?a
 
 **Consecuencias:** no se descuenta inventario al cotizar. Despues, en Proyectos > Personal de obra, un responsable registra la entrega real a un trabajador ya asignado, con varias lineas en un comprobante. La RPC valida permiso, obra, trabajador y existencias, y registra el movimiento de Kardex en la misma transaccion.
 
+## ADR-151 - El expediente comercial es un registro aparte, privado y auditado
+
+**Decision (2026-10-14):** los soportes del cliente (solicitud original, planos, correos y soportes, orden de servicio, aprobacion) viven en `public.quote_commercial_documents`, con su propio bucket privado `quote-commercial-documents`. No se mezclan con `quote_technical_documents` ni los sustituyen: el expediente comercial no participa de la condicion de aprobacion tecnica ni de la conversion a obra.
+
+Cada soporte declara tipo, nombre, fecha, responsable y **exactamente una** fuente: archivo en Storage o enlace externo, nunca ambas. El archivo se abre con URL firmada de 300 segundos; el bucket nunca es publico.
+
+**Consecuencias:** el alta pasa por una RPC `security definer` que valida rol, formato y tamano (25 MB), devuelve la ruta y despues el navegador sube el archivo. Si la subida falla, el registro se borra para no dejar un soporte vacio. Las escrituras directas estan revocadas y las politicas de Storage solo permiten leer a miembros de la empresa y escribir sobre el propio registro pendiente.
+
+## ADR-152 - La foto de cada revision la toma la base de datos, no el usuario
+
+**Decision (2026-10-14):** `quotes.revision` es un contador que se sobrescribe, asi que no habia forma de comparar R1 contra R2. Se agrega `public.quote_revision_snapshots` y un trigger `AFTER INSERT/UPDATE` sobre `quotes` que guarda la foto de los campos comerciales en cada revision.
+
+El comparador es de **solo lectura**. No crea revisiones, no edita y no llama ninguna escritura.
+
+**Consecuencias:** el flujo actual de "Crear revision" no cambia: sigue siendo el mismo boton y la misma RPC. La instantanea es un efecto lateral de guardar. Las revisiones anteriores a la migracion no tienen foto historica; el comparador lo dice con claridad en lugar de mostrar diferencias inventadas. El APU que se compara es la ultima version de cada actividad creada antes de la fecha de captura, no el APU de hoy.
+
+## ADR-153 - Los indicadores comerciales se calculan sobre lo persistido y su consulta se audita
+
+**Decision (2026-10-14):** los indicadores de Cotizaciones se calculan en el cliente a partir de `quotes` y `quote_history`, funciones puras en `src/modules/reports/domain`. No se guardan resultados ni se cachean en el navegador: la fuente es siempre la base de datos. `localStorage` queda prohibido como almacen de datos de negocio.
+
+**Consecuencias:** la tasa de adjudicacion se calcula sobre el resultado conocido (ganadas + perdidas) y se muestra tambien sobre el total, para no ocultar las pendientes. El tiempo por etapa excluye la etapa actual de las cotizaciones abiertas, porque todavia no ha ocurrido. Los motivos de perdida se toman de la nota con la que cada cotizacion paso a "No adjudicado"; si no hay nota, el bloque explica que no hay datos en lugar de mostrar un cero que parece un resultado. Cada consulta del informe se registra en `public.audit_logs` con los filtros aplicados.
+
+## ADR-154 - Los tres paneles se entregan como componentes propios y no editan la ficha
+
+**Decision (2026-10-14):** `CommercialFileSection`, `RevisionComparator` y `QuoteIndicatorsView` se crean como componentes autocontenidos con CSS Modules propio y se exportan en el contrato publico del modulo. No se modifica `quotes-workspace.tsx` ni la pantalla general de Informes; la integracion en la ficha la realiza quien la integre, evitando conflictos de edicion entre varios trabajos simultaneos sobre la misma pantalla.
+
+**Consecuencias:** cada componente recibe solo `quoteId` (y, opcionalmente, el responsable por defecto y la revision vigente), por lo que integrarlo es colocarlo en la ficha sin adaptacion. Los indicadores, en cambio, si tienen ruta propia (`/reports/cotizaciones`) porque no dependen de una ficha de cotizacion. El expediente comercial escribe solo mediante sus RPC auditadas; el comparador y los indicadores son de solo lectura.
+
 ## ADR-150 - La reposicion de dotacion nace en cero
 
 **Decision (2026-10-13):** los dias de reposicion de cada concepto de dotacion no se heredan de la tabla del cliente. La tabla esta construida sobre 240 dias, y ese numero se habia quedado como valor por defecto de las 2.699 filas de la matriz, como si todo se repone cada 240 dias. No es un dato del documento: es un supuesto.

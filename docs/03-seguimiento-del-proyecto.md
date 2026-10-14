@@ -7,6 +7,24 @@ audiencia: Dirección, Producto, Desarrollo y Operación
 
 # Seguimiento del proyecto
 
+## Corte 2026-10-14 - Mejoras de Cotizaciones (expediente, comparador e indicadores)
+
+**Alcance:** unicamente el modulo de Cotizaciones y un vista de lectura en Informes. No se toco APU, Inventarios, Compras, seguimiento comercial, rentabilidad ni el flujo de estados de la cotizacion.
+
+**Entregado:**
+
+1. **Expediente comercial** (`quote_commercial_documents`, bucket privado `quote-commercial-documents`, componente `CommercialFileSection`). Soporte por tipo, nombre, fecha, responsable y archivo o enlace. RLS, RPC `security definer` y auditoria en `public.audit_logs`.
+2. **Comparador de revisiones** (`quote_revision_snapshots` + trigger, componente `RevisionComparator`). Solo lectura, marca solo lo que cambio y explica las limitaciones de datos historicos.
+3. **Indicadores comerciales** (`src/modules/reports`, ruta `/reports/cotizaciones`). Ganadas/perdidas, tasa de adjudicacion, tiempo por etapa, vencidas y sin seguimiento, motivos de perdida, con filtros por periodo, responsable y cliente. Cada consulta queda auditada.
+
+**Decisiones:** ADR-151 a ADR-154 en el registro de decisiones.
+
+**Pendiente de la direccion tecnica:** montar `CommercialFileSection` y `RevisionComparator` dentro de `quotes-workspace.tsx`. Los componentes se entregan autocontenidos y con CSS propio para que esa integracion no entre en conflicto con otros trabajos sobre la misma pantalla.
+
+**Riesgos vigentes:** COT-018 a COT-021 en el backlog.
+
+---
+
 ## Tablero ejecutivo
 
 | Área | Estado | Evidencia | Siguiente hito |

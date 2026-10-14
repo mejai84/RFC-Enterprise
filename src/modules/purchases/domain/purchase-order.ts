@@ -1,0 +1,2 @@
+export type PurchaseOrderInput = { requisitionId: string; supplierId: string; expectedAt?: string; notes?: string; lines: Array<{ requisitionLineId: string; quantity: number; unitPrice: number; notes?: string }>; };
+export type PurchaseReceiptInput = { purchaseOrderId: string; invoiceReference?: string; notes?: string; lines: Array<{ purchaseOrderLineId: string; quantity: number; unitCost?: number }>; };

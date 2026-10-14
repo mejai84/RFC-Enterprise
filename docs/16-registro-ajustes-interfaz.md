@@ -25,3 +25,8 @@ ultima_actualizacion: 2026-10-14
 
 - La explicación de rendimiento y duración física se muestra dentro del bloque de Planeación de cuadrilla, junto a los campos que intervienen en el cálculo.
 - La barra inferior del APU queda reservada para guardar, imprimir, exportar, importar y eliminar.
+
+
+## 2026-10-14 — Faltantes del APU bajo demanda
+
+- El panel de faltantes y el botón Generar requisición solo se muestran cuando el APU tiene materiales o equipos que no cubre Inventarios.

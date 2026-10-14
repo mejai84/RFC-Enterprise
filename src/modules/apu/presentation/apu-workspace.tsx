@@ -1160,7 +1160,8 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 <div className="apu-budget-link"><select value={projectToLink} onChange={(event) => setProjectToLink(event.target.value)} aria-label="Obra destino"><option value="">Seleccione obra activa…</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}</select><button type="button" onClick={() => void sendSelectedToBoq()} disabled={(!selected.versionId && !!companyId) || !projectToLink}>Enviar a presupuesto</button></div>
               </section>
 
-              {/* Faltantes del APU → requisición al almacén (APU-012) */}
+              {/* Faltantes del APU → requisición al almacén (APU-012): solo se muestran cuando son necesarios. */}
+              {shortages.length > 0 ? (
               <section className={`apu-shortage-panel ${isShortageCollapsed ? "is-collapsed" : ""}`} aria-label="Faltantes de materiales y equipos">
                 <div className="apu-section-bar">
                   <button
@@ -1234,6 +1235,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 ) : null}
                 </div>
               </section>
+              ) : null}
               {companyId && boqItems.filter((item) => item.apuAnalysisId === selected.id).map((item) => {
                 const committed = boqCosts.filter((cost) => cost.boqItemId === item.id && cost.costType === "committed").reduce((sum, cost) => sum + cost.amount, 0);
                 const actual = boqCosts.filter((cost) => cost.boqItemId === item.id && cost.costType === "actual").reduce((sum, cost) => sum + cost.amount, 0);

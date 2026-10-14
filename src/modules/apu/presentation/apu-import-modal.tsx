@@ -175,7 +175,7 @@ export function ApuImportModal({ onClose, onConfirm }: Props) {
                     </div>;
                   })}
                 </div>
-                {inspection.ignoredSheets.length ? <details className="apu-import-ignored-sheets"><summary>{inspection.ignoredSheets.length} hoja(s) informativa(s) no se importarán</summary><ul>{inspection.ignoredSheets.map((sheet) => <li key={sheet.sheetName}><strong>{sheet.sheetName}</strong>: {sheet.reason}</li>)}</ul></details> : null}
+                {inspection.ignoredSheets.length ? <details className="apu-import-ignored-sheets"><summary>{inspection.ignoredSheets.length} {inspection.ignoredSheets.length === 1 ? "hoja informativa no se importará" : "hojas informativas no se importarán"}</summary><ul>{inspection.ignoredSheets.map((sheet) => <li key={sheet.sheetName}><strong>{sheet.sheetName}</strong>: {sheet.reason}</li>)}</ul></details> : null}
               </div>
               {preview ? (
                 <span className={`apu-import-format is-${preview.confidence}`}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type DragEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   apuCategoryMeta,
@@ -60,6 +60,7 @@ const newId = () => crypto.randomUUID();
 
 /** Preferencia de interfaz (no autoritativa): qué rubros del APU están plegados. */
 const COLLAPSED_KEY = "rfc_apu_rubros_plegados";
+const APU_ORDER_KEY = "rfc_apu_activity_order";
 
 const readCollapsed = (): ApuCategory[] => {
   if (typeof window === "undefined") return [];
@@ -81,6 +82,30 @@ const writeCollapsed = (value: ApuCategory[]) => {
     // Si el navegador bloquea el almacenamiento, la preferencia simplemente no persiste.
   }
 };
+const readApuOrder = (): string[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(APU_ORDER_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+};
+
+const orderApusForWorkspace = (items: Apu[]): Apu[] => {
+  const preferredOrder = new Map(readApuOrder().map((id, index) => [id, index]));
+  return [...items].sort((left, right) => (preferredOrder.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (preferredOrder.get(right.id) ?? Number.MAX_SAFE_INTEGER));
+};
+
+const writeApuOrder = (items: Apu[]) => {
+  try {
+    window.localStorage.setItem(APU_ORDER_KEY, JSON.stringify(items.map((apu) => apu.id)));
+  } catch {
+    // El orden es una preferencia visual: si no se puede guardar, la sesión actual conserva el cambio.
+  }
+};
+
 const parseDecimal = (value: string) => {
   const compact = value.trim().replace(/\s/g, "");
   const normalized = compact.includes(",") ? compact.replace(/\./g, "").replace(",", ".") : compact;
@@ -191,6 +216,8 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   const [isExporting, setIsExporting] = useState(false);
   const [apus, setApus] = useState<Apu[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const [draggedApuId, setDraggedApuId] = useState<string | null>(null);
+  const [dragOverApuId, setDragOverApuId] = useState<string | null>(null);
   const [laborCatalog, setLaborCatalog] = useState<LaborPositionCatalog>(emptyLaborCatalog);
   const [isLaborLoading, setIsLaborLoading] = useState(true);
   const [transportCatalog, setTransportCatalog] = useState<TransportCatalog>({ items: defaultTransportCatalog, source: "fallback" });
@@ -384,7 +411,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
           setBoqItems(remote.boqItems);
           setBoqCosts(remote.boqCosts);
           setQuoteOrigin(remote.quoteOrigin ?? new Map());
-          setApus(remote.apus);
+          setApus(orderApusForWorkspace(remote.apus));
           const visible = filterApusByQuoteContext(remote.apus, quoteContext?.quoteId);
           setSelectedId(visible[0]?.id || "");
           setSaveMessage("APUs cargados desde la base de datos.");
@@ -394,7 +421,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
         if (!active) return;
         setProjects(mergeProjects(loadFallbackProjects(), seedFallback));
         const saved = JSON.parse(localStorage.getItem("rfc_apus") || "[]") as Apu[];
-        setApus(saved);
+        setApus(orderApusForWorkspace(saved));
         const visible = filterApusByQuoteContext(saved, quoteContext?.quoteId);
         setSelectedId(visible[0]?.id || "");
       } catch {
@@ -508,6 +535,28 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     setSaveMessage("Hay cambios pendientes de guardar.");
   }
 
+  function moveApu(draggedId: string, targetId: string) {
+    if (draggedId === targetId) return;
+    setApus((current) => {
+      const fromIndex = current.findIndex((apu) => apu.id === draggedId);
+      const targetIndex = current.findIndex((apu) => apu.id === targetId);
+      if (fromIndex < 0 || targetIndex < 0) return current;
+      const next = [...current];
+      const [dragged] = next.splice(fromIndex, 1);
+      next.splice(targetIndex, 0, dragged);
+      writeApuOrder(next);
+      return next;
+    });
+    setSaveMessage("Orden de actividades actualizado en este dispositivo.");
+  }
+
+  function handleActivityDrop(event: DragEvent<HTMLDivElement>, targetId: string) {
+    event.preventDefault();
+    const draggedId = event.dataTransfer.getData("text/plain") || draggedApuId;
+    if (draggedId) moveApu(draggedId, targetId);
+    setDraggedApuId(null);
+    setDragOverApuId(null);
+  }
   /** Abre el alta manual del rubro, propone como nombre lo que se había buscado. */
   function openManualResource(category: ApuCategory, query: string) {
     if (!selected) return;
@@ -901,30 +950,58 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
               actividad o por la empresa que contrata.
             </p>
           ) : null}
-          {filteredApus.map((apu) => {
+          {filteredApus.map((apu, index) => {
             const origin = apu.quoteId ? quoteOrigin.get(apu.quoteId) : undefined;
             const isEmpty = apu.lines.length === 0;
             return (
-              <button
-                type="button"
+              <div
                 key={apu.id}
-                className={`apu-row ${apu.id === selectedId ? "is-selected" : ""} ${isEmpty ? "is-empty" : ""}`}
-                onClick={() => setSelectedId(apu.id)}
-                title={`${apu.code} · ${apu.name}${origin?.client ? ` · ${origin.client}` : ""}`}
+                className={`apu-row-wrap ${draggedApuId === apu.id ? "is-dragging" : ""} ${dragOverApuId === apu.id ? "is-drag-over" : ""}`}
+                draggable={!isQuoteApuReadOnly}
+                onDragStart={(event) => {
+                  event.dataTransfer.setData("text/plain", apu.id);
+                  event.dataTransfer.effectAllowed = "move";
+                  setDraggedApuId(apu.id);
+                }}
+                onDragOver={(event) => {
+                  if (!draggedApuId || draggedApuId === apu.id) return;
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                  setDragOverApuId(apu.id);
+                }}
+                onDrop={(event) => handleActivityDrop(event, apu.id)}
+                onDragEnd={() => {
+                  setDraggedApuId(null);
+                  setDragOverApuId(null);
+                }}
               >
-                <strong>{apu.code}</strong>
-                <span>{apu.name}</span>
-                {isEmpty ? (
-                  <small className="apu-row-empty">Sin recursos · aún no está cotizada</small>
+                <button
+                  type="button"
+                  className={`apu-row ${apu.id === selectedId ? "is-selected" : ""} ${isEmpty ? "is-empty" : ""}`}
+                  onClick={() => setSelectedId(apu.id)}
+                  title={`${apu.code} · ${apu.name}${origin?.client ? ` · ${origin.client}` : ""}`}
+                >
+                  <strong>{apu.code}</strong>
+                  <span>{apu.name}</span>
+                  {isEmpty ? (
+                    <small className="apu-row-empty">Sin recursos · aún no está cotizada</small>
+                  ) : null}
+                  {origin?.client || apu.quoteCode ? (
+                    <small className="apu-row-origin">
+                      {origin?.client ? origin.client : origin?.title}
+                      {apu.quoteCode ? ` · ${apu.quoteCode}` : ""}
+                    </small>
+                  ) : null}
+                  <small>Venta: {formatCOP(apuSellingTotal(apu))}</small>
+                </button>
+                {!isQuoteApuReadOnly ? (
+                  <div className="apu-row-order-actions" aria-label={`Reorganizar ${apu.code}`}>
+                    <button type="button" onClick={() => { const previous = filteredApus[index - 1]; if (previous) moveApu(apu.id, previous.id); }} disabled={index === 0} aria-label={`Subir ${apu.code}`} title="Subir actividad">↑</button>
+                    <span aria-hidden="true" title="Arrastra la tarjeta para cambiar su posición">↕</span>
+                    <button type="button" onClick={() => { const next = filteredApus[index + 1]; if (next) moveApu(apu.id, next.id); }} disabled={index === filteredApus.length - 1} aria-label={`Bajar ${apu.code}`} title="Bajar actividad">↓</button>
+                  </div>
                 ) : null}
-                {origin?.client || apu.quoteCode ? (
-                  <small className="apu-row-origin">
-                    {origin?.client ? origin.client : origin?.title}
-                    {apu.quoteCode ? ` · ${apu.quoteCode}` : ""}
-                  </small>
-                ) : null}
-                <small>Venta: {formatCOP(apuSellingTotal(apu))}</small>
-              </button>
+              </div>
             );
           })}
         </aside>
@@ -977,19 +1054,23 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                   />
                 </label>
               </div>
-                <label><span>Rendimiento cuadrilla / d?a</span><ApuQuantityField value={selected.crewYieldPerDay ?? 0} onCommit={(next) => updateApu({ ...selected, crewYieldPerDay: next > 0 ? next : undefined })} ariaLabel="Rendimiento diario de la cuadrilla" title="Unidades de esta actividad que completa la cuadrilla por d?a f?sico" /></label>
+                <label><span>Rendimiento cuadrilla / día</span><ApuQuantityField value={selected.crewYieldPerDay ?? 0} onCommit={(next) => updateApu({ ...selected, crewYieldPerDay: next > 0 ? next : undefined })} ariaLabel="Rendimiento diario de la cuadrilla" title="Unidades de esta actividad que completa la cuadrilla por día físico" /></label>
                 <label><span>Personas en cuadrilla</span><ApuQuantityField value={selected.crewSize ?? 0} onCommit={(next) => updateApu({ ...selected, crewSize: next > 0 ? Math.round(next) : undefined })} ariaLabel="Cantidad de personas en la cuadrilla" title="Dato de planeaci?n; el rendimiento ya corresponde a la cuadrilla completa" /></label>
 
               <div className="apu-actions-bar" role="group" aria-label="Acciones del APU seleccionado">
               <p className="apu-resource-note" role="status">
-                {selectedPhysicalDays === null ? "Registra el rendimiento de la cuadrilla para calcular la duraci?n f?sica de esta actividad." : `Duraci?n t?cnica estimada: ${selectedPhysicalDays} d?a${selectedPhysicalDays === 1 ? "" : "s"} f?sico${selectedPhysicalDays === 1 ? "" : "s"} (${formatApuQuantity(selected.workQuantity)} ${selected.unit} ? ${formatApuQuantity(selected.crewYieldPerDay ?? 0)} ${selected.unit}/d?a).`}{selected.crewSize ? ` Cuadrilla: ${selected.crewSize} persona${selected.crewSize === 1 ? "" : "s"}.` : ""}
+                {selectedPhysicalDays === null ? "Registra el rendimiento de la cuadrilla para calcular la duración física de esta actividad." : `Duración técnica estimada: ${selectedPhysicalDays} día${selectedPhysicalDays === 1 ? "" : "s"} físico${selectedPhysicalDays === 1 ? "" : "s"} (${formatApuQuantity(selected.workQuantity)} ${selected.unit} ? ${formatApuQuantity(selected.crewYieldPerDay ?? 0)} ${selected.unit}/día).`}{selected.crewSize ? ` Cuadrilla: ${selected.crewSize} persona${selected.crewSize === 1 ? "" : "s"}.` : ""}
               </p>
+                <div className="apu-actions-main">
+                <div className="apu-actions-primary">
                 <button type="button" className="inventory-action apu-action-primary" onClick={() => void saveSelectedApu()} title="Guarda esta actividad en Supabase">
                   💾 Guardar APU
                 </button>
                 <button type="button" className="apu-print-btn apu-action-secondary" onClick={() => setPrintingApu(selected)} title="Abre el formato imprimible de esta actividad">
                   🖨️ Imprimir APU
                 </button>
+                </div>
+                <div className="apu-actions-secondary">
                 <button
                   type="button"
                   className="apu-print-btn apu-action-secondary"
@@ -1007,7 +1088,8 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                 >
                   📥 Importar XLSX
                 </button>
-                <span className="apu-actions-spacer" />
+                </div>
+                </div>
                 <button type="button" className="apu-delete-apu apu-action-danger" onClick={() => void deleteSelectedApu()} title="Elimina únicamente esta actividad; las demás no se modifican">
                   🗑️ Eliminar APU
                 </button>

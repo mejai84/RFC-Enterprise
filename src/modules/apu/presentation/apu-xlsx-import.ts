@@ -194,7 +194,6 @@ function parseSheet(sheet: import("exceljs").Worksheet): { preview?: ApuImportPr
   });
 
   const markerRows = rows.map((row) => ({ row, markers: categoryMarkers(rowValues(row)) })).filter(({ markers }) => markers.length);
-  if (markerRows.some(({ markers }) => markers.length > 1)) return { reason: "Es un catálogo con varios rubros en paralelo" };
   const tableHeader = findTableHeader(rows);
   if (!tableHeader && !markerRows.length) return { reason: "No contiene rubros ni una tabla APU reconocible" };
 
@@ -229,32 +228,20 @@ function parseSheet(sheet: import("exceljs").Worksheet): { preview?: ApuImportPr
   const skipped: ApuImportPreview["skipped"] = [];
   let currentCategory: ApuCategory | null = null;
   let columns = tableHeader?.columns ?? detectColumns([], 0);
+  let parallelSections: Array<{ category: ApuCategory; columns: ColumnMap }> = [];
 
-  for (const row of rows) {
-    if (tableHeader && row.rowNumber <= tableHeader.row.rowNumber) continue;
-    const values = rowValues(row);
-    const markers = categoryMarkers(values);
-    if (markers.length === 1) {
-      currentCategory = markers[0].category;
-      const sectionColumns = detectColumns(values, markers[0].column);
-      columns = sectionColumns.quantity !== undefined || sectionColumns.rate !== undefined
-        ? sectionColumns
-        : { resource: markers[0].column, quantity: markers[0].column + 1, yieldPerDay: markers[0].column + 2, rate: markers[0].column + 3, partial: markers[0].column + 4 };
-      continue;
-    }
+  const addLine = (category: ApuCategory | null, lineColumns: ColumnMap, values: unknown[], rowNumber: number) => {
+    const resourceText = cellText(values[lineColumns.resource]).trim();
+    if (!resourceText || !category || isSubtotalRow(resourceText) || isSummaryRow(resourceText)) return;
+    if (!/[a-záéíóúñ]{2}/i.test(resourceText) || headerRole(resourceText) === "resource") return;
 
-    const category = (columns.category !== undefined ? categoryFromCell(values[columns.category]) : null) ?? currentCategory;
-    const resourceText = cellText(values[columns.resource]).trim();
-    if (!resourceText || !category || isSubtotalRow(resourceText) || isSummaryRow(resourceText)) continue;
-    if (!/[a-záéíóúñ]{2}/i.test(resourceText) || headerRole(resourceText) === "resource") continue;
-
-    const quantityCell = columns.quantity === undefined ? undefined : values[columns.quantity];
+    const quantityCell = lineColumns.quantity === undefined ? undefined : values[lineColumns.quantity];
     const parsedQuantity = parseNumericCell(quantityCell);
-    const yieldCell = columns.yieldPerDay === undefined ? undefined : values[columns.yieldPerDay];
+    const yieldCell = lineColumns.yieldPerDay === undefined ? undefined : values[lineColumns.yieldPerDay];
     const parsedYield = parseNumericCell(yieldCell);
-    const partialCell = columns.partial === undefined ? undefined : values[columns.partial];
+    const partialCell = lineColumns.partial === undefined ? undefined : values[lineColumns.partial];
     const declaredPartial = parseNumericCell(partialCell);
-    const rateCell = columns.rate === undefined ? undefined : values[columns.rate];
+    const rateCell = lineColumns.rate === undefined ? undefined : values[lineColumns.rate];
     let parsedRate = parseNumericCell(rateCell);
     const quantity = parsedQuantity && parsedQuantity > 0 ? parsedQuantity : 0;
     const yieldPerDay = category === "materials" ? 1 : parsedYield ?? 1;
@@ -284,10 +271,10 @@ function parseSheet(sheet: import("exceljs").Worksheet): { preview?: ApuImportPr
     }
 
     lines.push({
-      rowNumber: row.rowNumber,
+      rowNumber,
       category,
       name: resourceText.slice(0, 200),
-      unit: columns.unit === undefined ? unit : cellText(values[columns.unit]) || unit,
+      unit: lineColumns.unit === undefined ? unit : cellText(values[lineColumns.unit]) || unit,
       quantity,
       yieldPerDay,
       dailyRate,
@@ -295,6 +282,43 @@ function parseSheet(sheet: import("exceljs").Worksheet): { preview?: ApuImportPr
       severity,
       messages,
     });
+  };
+  for (const row of rows) {
+    if (tableHeader && row.rowNumber <= tableHeader.row.rowNumber) continue;
+    const values = rowValues(row);
+    const markers = categoryMarkers(values);
+    if (markers.length === 1) {
+      parallelSections = [];
+      currentCategory = markers[0].category;
+      const sectionColumns = detectColumns(values, markers[0].column);
+      columns = sectionColumns.quantity !== undefined || sectionColumns.rate !== undefined
+        ? sectionColumns
+        : { resource: markers[0].column, quantity: markers[0].column + 1, yieldPerDay: markers[0].column + 2, rate: markers[0].column + 3, partial: markers[0].column + 4 };
+      continue;
+    }
+
+    if (markers.length > 1) {
+      parallelSections = markers.map((marker) => {
+        const sectionColumns = detectColumns(values, marker.column);
+        return {
+          category: marker.category,
+          columns: sectionColumns.quantity !== undefined || sectionColumns.rate !== undefined
+            ? sectionColumns
+            : { resource: marker.column, quantity: marker.column + 1, yieldPerDay: marker.column + 2, rate: marker.column + 3, partial: marker.column + 4 },
+        };
+      });
+      currentCategory = null;
+      continue;
+    }
+
+    if (parallelSections.length) {
+      for (const section of parallelSections) addLine(section.category, section.columns, values, row.rowNumber);
+      if (lines.length >= MAX_LINES_PER_SHEET) break;
+      continue;
+    }
+
+    const category = (columns.category !== undefined ? categoryFromCell(values[columns.category]) : null) ?? currentCategory;
+    addLine(category, columns, values, row.rowNumber);
     if (lines.length >= MAX_LINES_PER_SHEET) break;
   }
 

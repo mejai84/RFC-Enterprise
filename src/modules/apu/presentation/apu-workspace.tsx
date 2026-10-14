@@ -1054,13 +1054,21 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
                   />
                 </label>
               </div>
-                <label><span>Rendimiento cuadrilla / día</span><ApuQuantityField value={selected.crewYieldPerDay ?? 0} onCommit={(next) => updateApu({ ...selected, crewYieldPerDay: next > 0 ? next : undefined })} ariaLabel="Rendimiento diario de la cuadrilla" title="Unidades de esta actividad que completa la cuadrilla por día físico" /></label>
-                <label><span>Personas en cuadrilla</span><ApuQuantityField value={selected.crewSize ?? 0} onCommit={(next) => updateApu({ ...selected, crewSize: next > 0 ? Math.round(next) : undefined })} ariaLabel="Cantidad de personas en la cuadrilla" title="Dato de planeaci?n; el rendimiento ya corresponde a la cuadrilla completa" /></label>
+              <section className="apu-yield-panel" aria-labelledby="apu-yield-title">
+                <div className="apu-yield-panel-heading">
+                  <h2 id="apu-yield-title">Planeación de cuadrilla</h2>
+                  <p>Define el rendimiento para estimar la duración física de esta actividad.</p>
+                </div>
+                <div className="apu-yield-fields">
+                  <label><span>Rendimiento cuadrilla / día</span><ApuQuantityField value={selected.crewYieldPerDay ?? 0} onCommit={(next) => updateApu({ ...selected, crewYieldPerDay: next > 0 ? next : undefined })} ariaLabel="Rendimiento diario de la cuadrilla" title="Unidades de esta actividad que completa la cuadrilla por día físico" /></label>
+                  <label><span>Personas en cuadrilla</span><ApuQuantityField value={selected.crewSize ?? 0} onCommit={(next) => updateApu({ ...selected, crewSize: next > 0 ? Math.round(next) : undefined })} ariaLabel="Cantidad de personas en la cuadrilla" title="Dato de planeación; el rendimiento ya corresponde a la cuadrilla completa" /></label>
+                </div>
+                <p className="apu-resource-note" role="status">
+                  {selectedPhysicalDays === null ? "Registra el rendimiento de la cuadrilla para calcular la duración física de esta actividad." : `Duración técnica estimada: ${selectedPhysicalDays} día${selectedPhysicalDays === 1 ? "" : "s"} físico${selectedPhysicalDays === 1 ? "" : "s"} (${formatApuQuantity(selected.workQuantity)} ${selected.unit} ? ${formatApuQuantity(selected.crewYieldPerDay ?? 0)} ${selected.unit}/día).`}{selected.crewSize ? ` Cuadrilla: ${selected.crewSize} persona${selected.crewSize === 1 ? "" : "s"}.` : ""}
+                </p>
+              </section>
 
               <div className="apu-actions-bar" role="group" aria-label="Acciones del APU seleccionado">
-              <p className="apu-resource-note" role="status">
-                {selectedPhysicalDays === null ? "Registra el rendimiento de la cuadrilla para calcular la duración física de esta actividad." : `Duración técnica estimada: ${selectedPhysicalDays} día${selectedPhysicalDays === 1 ? "" : "s"} físico${selectedPhysicalDays === 1 ? "" : "s"} (${formatApuQuantity(selected.workQuantity)} ${selected.unit} ? ${formatApuQuantity(selected.crewYieldPerDay ?? 0)} ${selected.unit}/día).`}{selected.crewSize ? ` Cuadrilla: ${selected.crewSize} persona${selected.crewSize === 1 ? "" : "s"}.` : ""}
-              </p>
                 <div className="apu-actions-main">
                 <div className="apu-actions-primary">
                 <button type="button" className="inventory-action apu-action-primary" onClick={() => void saveSelectedApu()} title="Guarda esta actividad en Supabase">

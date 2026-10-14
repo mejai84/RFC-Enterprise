@@ -19,3 +19,9 @@ ultima_actualizacion: 2026-10-14
 
 - La campana del encabezado muestra un contador y se ilumina con un pulso breve mientras existan alertas operativas.
 - La señal se desactiva cuando no hay alertas y no se anima si el usuario solicita reducir movimiento.
+
+
+## 2026-10-14 — Planeación de cuadrilla en APU
+
+- La explicación de rendimiento y duración física se muestra dentro del bloque de Planeación de cuadrilla, junto a los campos que intervienen en el cálculo.
+- La barra inferior del APU queda reservada para guardar, imprimir, exportar, importar y eliminar.

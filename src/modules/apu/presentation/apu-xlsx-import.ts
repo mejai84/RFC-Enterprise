@@ -237,7 +237,9 @@ function parseSheet(sheet: import("exceljs").Worksheet): { preview?: ApuImportPr
     if (markers.length === 1) {
       currentCategory = markers[0].category;
       const sectionColumns = detectColumns(values, markers[0].column);
-      if (sectionColumns.quantity !== undefined || sectionColumns.rate !== undefined) columns = sectionColumns;
+      columns = sectionColumns.quantity !== undefined || sectionColumns.rate !== undefined
+        ? sectionColumns
+        : { resource: markers[0].column, quantity: markers[0].column + 1, yieldPerDay: markers[0].column + 2, rate: markers[0].column + 3, partial: markers[0].column + 4 };
       continue;
     }
 

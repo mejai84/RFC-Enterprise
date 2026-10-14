@@ -132,6 +132,16 @@ const navigation = [
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { permissions, isLoading: arePermissionsLoading } = useEffectivePermissions();
+  const [operationalAlertCount, setOperationalAlertCount] = useState(0);
+
+  useEffect(() => {
+    const updateAlertCount = (event: Event) => {
+      const count = (event as CustomEvent<{ count?: number }>).detail?.count;
+      setOperationalAlertCount(typeof count === "number" ? Math.max(0, count) : 0);
+    };
+    window.addEventListener("rfc:operational-alerts-change", updateAlertCount);
+    return () => window.removeEventListener("rfc:operational-alerts-change", updateAlertCount);
+  }, []);
   // Mientras se resuelve no se oculta nada todavía: se espera, para que el menú
   // no aparezca completo y luego se retire medio.
   const allowedHrefs = permissions ? new Set(accessibleModules(permissions).map((module) => module.href)) : null;
@@ -457,8 +467,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <strong>RFC Enterprise</strong>
           </div>
           <div className="dashboard-top-actions">
-            <Link aria-label="Ver alertas operativas" className="dashboard-notifications-link" data-tooltip="Ver alertas operativas" href="/dashboard#operational-alerts">
+            <Link aria-label={operationalAlertCount ? `Ver ${operationalAlertCount} alertas operativas` : "Ver alertas operativas"} className={`dashboard-notifications-link${operationalAlertCount ? " has-active-alerts" : ""}`} data-tooltip={operationalAlertCount ? `${operationalAlertCount} alerta${operationalAlertCount === 1 ? "" : "s"} activa${operationalAlertCount === 1 ? "" : "s"}` : "Ver alertas operativas"} href="/dashboard#operational-alerts">
               <Icon name="bell" />
+              {operationalAlertCount ? <span className="dashboard-notifications-count" aria-hidden="true">{operationalAlertCount > 9 ? "9+" : operationalAlertCount}</span> : null}
             </Link>
             <button className="dashboard-signout" aria-label="Cerrar sesión y cambiar de usuario" disabled={isSigningOut} onClick={() => void signOut()} type="button">
               <Icon name="logout" /><span>{isSigningOut ? "Saliendo…" : "Cerrar sesión"}</span>

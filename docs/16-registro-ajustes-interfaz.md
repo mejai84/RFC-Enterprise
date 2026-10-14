@@ -15,3 +15,7 @@ ultima_actualizacion: 2026-10-14
 
 - La portada debe reproducir en móvil los mismos contenidos audiovisuales usados en escritorio.
 - El video de campo e instalaciones no se sustituye por una imagen fija en móvil; se reproduce sin sonido, dentro de la página y respetando la preferencia de movimiento reducido.
+## 2026-10-14 — Aviso de alertas operativas
+
+- La campana del encabezado muestra un contador y se ilumina con un pulso breve mientras existan alertas operativas.
+- La señal se desactiva cuando no hay alertas y no se anima si el usuario solicita reducir movimiento.

@@ -579,6 +579,15 @@ export function DashboardExecutiveWorkspace({
     requisitions,
   ]);
 
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("rfc:operational-alerts-change", {
+      detail: { count: operationalAlerts.length },
+    }));
+    return () => window.dispatchEvent(new CustomEvent("rfc:operational-alerts-change", {
+      detail: { count: 0 },
+    }));
+  }, [operationalAlerts.length]);
+
   // Modales
   const [activeModal, setActiveModal] = useState<
     | "dispatch"

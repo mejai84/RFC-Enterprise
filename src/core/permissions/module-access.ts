@@ -17,6 +17,7 @@ export const moduleAccess: ModuleAccess[] = [
   { href: "/projects", label: "Proyectos & Obras", permissions: ["projects.view", "projects.manage", "projects.requisitions.create", "projects.requisitions.approve"] },
   { href: "/attendance", label: "Registro de jornada", permissions: ["attendance.self.record", "attendance.team.view"] },
   { href: "/rentals", label: "Alquiler rápido", permissions: ["rentals.view", "rentals.manage"] },
+  { href: "/purchases", label: "Compras", permissions: ["inventory.stock.manage", "inventory.dispatch.create"] },
   { href: "/inventory", label: "Inventarios", permissions: ["inventory.catalog.view", "inventory.stock.manage", "inventory.dispatch.create", "inventory.return.create", "inventory.tools.manage", "inventory.kardex.view"] },
   { href: "/movements", label: "Movimientos", permissions: ["inventory.kardex.view", "inventory.dispatch.create", "inventory.return.create"] },
   { href: "/counts", label: "Conteos físicos", permissions: ["inventory.stock.manage"] },
@@ -48,7 +49,7 @@ export type ModuleGroup = {
 export const moduleGroups: ModuleGroup[] = [
   { id: "comercial", label: "Comercial", hrefs: ["/quotes", "/apu"] },
   { id: "obras", label: "Obras", hrefs: ["/projects", "/attendance", "/rentals"] },
-  { id: "bodega", label: "Bodega", hrefs: ["/inventory", "/movements", "/counts"] },
+  { id: "bodega", label: "Bodega", hrefs: ["/purchases", "/inventory", "/movements", "/counts"] },
   { id: "consultas", label: "Consultas", hrefs: ["/reports"] },
   { id: "administracion", label: "Administración", hrefs: ["/employees", "/perfil", "/settings"] },
 ];

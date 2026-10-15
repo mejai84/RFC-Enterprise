@@ -120,6 +120,7 @@ const navigation = [
   { icon: "building" as const, label: "Proyectos & Obras", href: "/projects" },
   { icon: "clock" as const, label: "Registro de jornada", href: "/attendance" },
   { icon: "briefcase" as const, label: "Alquiler rápido", href: "/rentals" },
+  { icon: "briefcase" as const, label: "Compras", href: "/purchases" },
   { icon: "boxes" as const, label: "Inventarios", href: "/inventory" },
   { icon: "arrows" as const, label: "Movimientos", href: "/movements" },
   { icon: "checklist" as const, label: "Conteos físicos", href: "/counts" },

@@ -17,6 +17,10 @@ Se desarrollan tres capacidades separadas de las mejoras de expediente, comparad
 - El modulo de compras solo crea ordenes a partir de requisiciones y recibe inventario. No reemplaza la aprobacion o el despacho de almacen vigente.
 - Las operaciones sensibles se ejecutan mediante funciones SQL con autorizacion por empresa; las tablas se protegen con RLS.
 
+## Compatibilidad con el inventario existente
+
+La base ya tenía `purchase_receipts` para comprobantes legados sin orden de compra. La nueva recepción se guarda en `purchase_order_receipts` y `purchase_order_receipt_lines`, por lo que ambos circuitos conviven sin alterar recibos históricos.
+
 ## Criterios de terminacion
 
 - Orden de compra trazable a requisicion/proyecto y con recepcion parcial o total.

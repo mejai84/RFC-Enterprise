@@ -19,12 +19,12 @@ create table public.purchase_order_lines (
   received_quantity numeric(14,3) not null default 0 check (received_quantity >= 0), unit_price numeric(16,2) not null check (unit_price >= 0), notes text,
   created_at timestamptz not null default now(), check (received_quantity <= ordered_quantity)
 );
-create table public.purchase_receipts (
+create table public.purchase_order_receipts (
   id uuid primary key default gen_random_uuid(), purchase_order_id uuid not null references public.purchase_orders(id), received_at timestamptz not null default now(),
   invoice_reference text, notes text, received_by uuid not null references auth.users(id) default auth.uid(), created_at timestamptz not null default now()
 );
-create table public.purchase_receipt_lines (
-  id uuid primary key default gen_random_uuid(), receipt_id uuid not null references public.purchase_receipts(id) on delete cascade,
+create table public.purchase_order_receipt_lines (
+  id uuid primary key default gen_random_uuid(), receipt_id uuid not null references public.purchase_order_receipts(id) on delete cascade,
   purchase_order_line_id uuid not null references public.purchase_order_lines(id), quantity numeric(14,3) not null check (quantity > 0),
   unit_cost numeric(16,2) not null check (unit_cost >= 0), created_at timestamptz not null default now(), unique (receipt_id, purchase_order_line_id)
 );
@@ -42,13 +42,13 @@ create index quote_follow_ups_company_pending_idx on public.quote_follow_ups(com
 
 alter table public.purchase_orders enable row level security;
 alter table public.purchase_order_lines enable row level security;
-alter table public.purchase_receipts enable row level security;
-alter table public.purchase_receipt_lines enable row level security;
+alter table public.purchase_order_receipts enable row level security;
+alter table public.purchase_order_receipt_lines enable row level security;
 alter table public.quote_follow_ups enable row level security;
 create policy purchase_orders_member_read on public.purchase_orders for select to authenticated using (exists (select 1 from public.user_roles ur where ur.user_id = (select auth.uid()) and ur.company_id = purchase_orders.company_id));
 create policy purchase_order_lines_member_read on public.purchase_order_lines for select to authenticated using (exists (select 1 from public.purchase_orders o join public.user_roles ur on ur.company_id = o.company_id where o.id = purchase_order_lines.purchase_order_id and ur.user_id = (select auth.uid())));
-create policy purchase_receipts_member_read on public.purchase_receipts for select to authenticated using (exists (select 1 from public.purchase_orders o join public.user_roles ur on ur.company_id = o.company_id where o.id = purchase_receipts.purchase_order_id and ur.user_id = (select auth.uid())));
-create policy purchase_receipt_lines_member_read on public.purchase_receipt_lines for select to authenticated using (exists (select 1 from public.purchase_receipts r join public.purchase_orders o on o.id = r.purchase_order_id join public.user_roles ur on ur.company_id = o.company_id where r.id = purchase_receipt_lines.receipt_id and ur.user_id = (select auth.uid())));
+create policy purchase_order_receipts_member_read on public.purchase_order_receipts for select to authenticated using (exists (select 1 from public.purchase_orders o join public.user_roles ur on ur.company_id = o.company_id where o.id = purchase_order_receipts.purchase_order_id and ur.user_id = (select auth.uid())));
+create policy purchase_order_receipt_lines_member_read on public.purchase_order_receipt_lines for select to authenticated using (exists (select 1 from public.purchase_order_receipts r join public.purchase_orders o on o.id = r.purchase_order_id join public.user_roles ur on ur.company_id = o.company_id where r.id = purchase_order_receipt_lines.receipt_id and ur.user_id = (select auth.uid())));
 create policy quote_follow_ups_member_read on public.quote_follow_ups for select to authenticated using (exists (select 1 from public.user_roles ur where ur.user_id = (select auth.uid()) and ur.company_id = quote_follow_ups.company_id));
 
 create or replace function public.create_purchase_order_from_requisition(target_requisition uuid, target_supplier uuid, target_expected_at date default null, target_notes text default null, order_lines jsonb default '[]'::jsonb)
@@ -89,14 +89,14 @@ begin
   if not private.inventory_manager_for(purchase.company_id) then raise exception 'No tienes permiso para recibir compras'; end if;
   if purchase.status = 'cancelled' then raise exception 'La orden % esta cancelada', purchase.code; end if;
   if jsonb_typeof(receipt_lines) <> 'array' or jsonb_array_length(receipt_lines) = 0 then raise exception 'Registra al menos una cantidad recibida'; end if;
-  insert into public.purchase_receipts(purchase_order_id, invoice_reference, notes) values (purchase.id, nullif(trim(target_invoice_reference), ''), nullif(trim(target_notes), '')) returning id into receipt;
+  insert into public.purchase_order_receipts(purchase_order_id, invoice_reference, notes) values (purchase.id, nullif(trim(target_invoice_reference), ''), nullif(trim(target_notes), '')) returning id into receipt;
   for line in select value from jsonb_array_elements(receipt_lines) loop
     select * into order_line from public.purchase_order_lines where id = (line->>'purchase_order_line_id')::uuid and purchase_order_id = purchase.id for update;
     if not found then raise exception 'Una linea no pertenece a la orden'; end if;
     line_quantity := (line->>'quantity')::numeric; line_cost := coalesce((line->>'unit_cost')::numeric, order_line.unit_price);
     if line_quantity <= 0 or line_cost < 0 then raise exception 'La recepcion tiene cantidad o costo invalidos'; end if;
     if order_line.received_quantity + line_quantity > order_line.ordered_quantity then raise exception 'La recepcion supera lo pedido para %', order_line.item_name_snapshot; end if;
-    insert into public.purchase_receipt_lines(receipt_id, purchase_order_line_id, quantity, unit_cost) values (receipt, order_line.id, line_quantity, line_cost);
+    insert into public.purchase_order_receipt_lines(receipt_id, purchase_order_line_id, quantity, unit_cost) values (receipt, order_line.id, line_quantity, line_cost);
     insert into public.inventory_movements(stock_id, company_id, branch_id, movement_type, quantity, unit_cost, reference, notes, occurred_at, created_by)
     values (order_line.stock_id, purchase.company_id, purchase.branch_id, 'entry', line_quantity, line_cost, 'COMPRA-' || purchase.code, coalesce(nullif(trim(target_notes), ''), 'Recepcion de orden ' || purchase.code), now(), auth.uid());
     update public.purchase_order_lines set received_quantity = received_quantity + line_quantity where id = order_line.id; received := received + 1;

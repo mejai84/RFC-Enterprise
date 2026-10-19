@@ -55,6 +55,7 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 | APU-011 | Media | Cuadrillas reutilizables | Productividad presupuestada contra real, factor prestacional y horas extra |
 | APU-013 | Baja | Control avanzado del APU | Órdenes de cambio, evidencias adjuntas, AIU, impuestos y contingencias configurables, con permisos finos de revisión, aprobación y exportación |
 | APU-014 | Baja | Plantilla RFC con catálogos de apoyo | La exportación actual entrega una hoja oficial por actividad y puede reimportarse sin hojas auxiliares. Si Operación requiere volver a distribuir tablas maestras de materiales, salarios, dotación o transporte, se debe definir la fuente vigente y su régimen de actualización antes de agregarlas al libro. |
+| APU-015 | Baja | La ficha de cotización detecta APU en `localStorage` | `quotes-workspace.tsx` decide si una cotización ya tiene APU leyendo `rfc_apus` del navegador, no la base (ADR-155). Con los APU ya centralizados, ese chequeo debe resolverse con `listApuAnalyses()` una sola vez en la pantalla, en lugar del respaldo local. |
 | REP-002 | Media | Informes por período y rentabilidad | Filtros por período, indicadores de rentabilidad real y permisos por rol para exportaciones sensibles |
 | SITE-002 | Media | Envío directo de solicitudes web | Edge Function que envía la solicitud validada al buzón corporativo con proveedor transaccional y antispam |
 | DOC-001 | Media | Manual de usuario al día | Regenerar el manual desde [15 · Manual de usuario](15-manual-de-usuario.md) para que incluya visitas múltiples, requisición desde visita técnica, auditoría del historial y búsqueda de inventario en el APU |
@@ -73,6 +74,8 @@ Lo ya resuelto se retiró de aquí y quedó registrado como decisiones en
 - **2026-10-08**: asistente de importación de tablas salariales con vista previa y mapeo de columnas, montado en Configuración › Costos y tablas salariales.
 
 - **2026-10-13**: dotación sin el supuesto de los 240 días (ADR-150). Los 2.699 registros de `labor_role_dotacion` quedan con `replacement_days` en cero y la nota de que el valor venía heredado. La matriz de configuración muestra "Días de reposición" con icono de ayuda, y el total de la fila proyecta las entregas del año en vez de callarlas. Se corrigió el texto centrado de las ayudas, que venía centered en todos los módulos.
+
+- **2026-10-19**: lectura única de los APU en pantallas de consulta (ADR-155). El Resumen ejecutivo y el informe de APU ya no leen `apu_analyses` en crudo: usan `listApuAnalyses()` del módulo APU, que mapea `quote_id`/`quote_code`, filtra por la empresa activa y excluye archivados. Se corrige el indicador "APUs vinculados a cotizaciones", que mostraba 0 aunque una cotización tuviera análisis, y las alertas falsas de "requiere APU". También se corrige un `useEffect` que devolvía `boolean` en su limpieza.
 
 ## Última entrega verificada
 

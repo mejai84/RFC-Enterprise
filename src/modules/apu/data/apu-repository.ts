@@ -47,6 +47,79 @@ function client() {
   return createBrowserClient(supabaseUrl, supabasePublishableKey);
 }
 
+const APU_ANALYSIS_COLUMNS =
+  "id, code, name, unit, work_quantity, quote_id, quote_code, project_id, current_version, status, category_margins, created_at, updated_at";
+
+type ApuAnalysisRow = {
+  id: string;
+  code: string;
+  name: string;
+  unit: string;
+  work_quantity: number | null;
+  quote_id: string | null;
+  quote_code: string | null;
+  project_id: string | null;
+  current_version: number | null;
+  status: string | null;
+  category_margins: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
+type ApuBrowserClient = NonNullable<ReturnType<typeof client>>;
+
+/**
+ * Convierte filas crudas de `apu_analyses` al dominio `Apu`, cargando la versión
+ * vigente y sus líneas. Centraliza el mapeo snake_case → camelCase para que
+ * ninguna pantalla lea la tabla cruda y pierda `quoteId` / `quoteCode`.
+ */
+async function mapApuAnalysisRows(supabase: ApuBrowserClient, rows: ApuAnalysisRow[]): Promise<Apu[]> {
+  const analysisIds = rows.map((row) => row.id);
+  const { data: versionRows } = analysisIds.length
+    ? await supabase.from("apu_versions").select("id, apu_analysis_id, version_number, crew_yield_per_day, crew_size").in("apu_analysis_id", analysisIds).order("version_number", { ascending: false })
+    : { data: [] };
+  const currentVersionByAnalysis = new Map<string, { id: string; version_number: number; crew_yield_per_day?: number | null; crew_size?: number | null }>();
+  for (const row of versionRows ?? []) if (!currentVersionByAnalysis.has(row.apu_analysis_id)) currentVersionByAnalysis.set(row.apu_analysis_id, row);
+  const versionIds = Array.from(currentVersionByAnalysis.values()).map((row) => row.id);
+  const { data: lineRows } = versionIds.length
+    ? await supabase.from("apu_version_lines").select("id, apu_version_id, category, name, quantity, yield_per_day, daily_rate, inventory_product_id, labor_position_id, labor_code, labor_level, labor_activity_type, transport_item_id, transport_code, unit").in("apu_version_id", versionIds)
+    : { data: [] };
+  const linesByVersion = new Map<string, ApuLine[]>();
+  for (const row of lineRows ?? []) {
+    const lines = linesByVersion.get(row.apu_version_id) ?? [];
+    lines.push({ id: row.id, category: row.category as ApuLine["category"], name: row.name, quantity: num(row.quantity), yieldPerDay: num(row.yield_per_day), dailyRate: num(row.daily_rate), inventoryProductId: row.inventory_product_id || undefined, laborPositionId: row.labor_position_id || undefined, laborCode: row.labor_code || undefined, laborLevel: row.labor_level || undefined, laborActivityType: row.labor_activity_type || undefined, transportItemId: row.transport_item_id || undefined, transportCode: row.transport_code || undefined, unit: row.unit || undefined });
+    linesByVersion.set(row.apu_version_id, lines);
+  }
+  return rows.map((row) => {
+    const version = currentVersionByAnalysis.get(row.id);
+    return { id: row.id, code: row.code, name: row.name, unit: row.unit, workQuantity: num(row.work_quantity), crewYieldPerDay: version?.crew_yield_per_day ? num(version.crew_yield_per_day) : undefined, crewSize: version?.crew_size ? num(version.crew_size) : undefined, lines: version ? linesByVersion.get(version.id) ?? [] : [], quoteId: row.quote_id || undefined, quoteCode: row.quote_code || undefined, projectId: row.project_id || undefined, revision: version?.version_number ?? row.current_version, versionId: version?.id, status: row.status as Apu["status"], categoryMargins: readMargins(row.category_margins), createdAt: row.created_at, updatedAt: row.updated_at } as Apu;
+  });
+}
+
+/**
+ * Lista los APU de la empresa activa ya mapeados al dominio, excluyendo archivados.
+ * Es la lectura liviana para pantallas de consulta que antes hacían
+ * `select("*")` y casteaban la fila cruda, perdiendo `quoteId` y contando 0 vinculados.
+ */
+export async function listApuAnalyses(): Promise<Apu[]> {
+  const supabase = client();
+  if (!supabase) return [];
+  const { data: auth, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!auth.user) return [];
+  const { data: memberships } = await supabase.from("user_roles").select("company_id").eq("user_id", auth.user.id).limit(1);
+  const companyId = memberships?.[0]?.company_id;
+  if (!companyId) return [];
+  const { data, error } = await supabase
+    .from("apu_analyses")
+    .select(APU_ANALYSIS_COLUMNS)
+    .eq("company_id", companyId)
+    .neq("status", "archived")
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  return mapApuAnalysisRows(supabase, data ?? []);
+}
+
 export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
   const supabase = client();
   if (!supabase) return null;
@@ -58,7 +131,7 @@ export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
   if (!companyId) throw new Error("Tu cuenta no está vinculada a una empresa y rol. Un administrador debe asignarte el acceso antes de guardar APUs.");
 
   const [{ data: analysisRows, error: analysisError }, { data: projects }, { data: boqRows }] = await Promise.all([
-    supabase.from("apu_analyses").select("id, code, name, unit, work_quantity, quote_id, quote_code, project_id, current_version, status, category_margins, created_at, updated_at").eq("company_id", companyId).neq("status", "archived").order("updated_at", { ascending: false }),
+    supabase.from("apu_analyses").select(APU_ANALYSIS_COLUMNS).eq("company_id", companyId).neq("status", "archived").order("updated_at", { ascending: false }),
     supabase.from("projects").select("id, code, name").eq("company_id", companyId).in("status", ["pending", "active", "on_hold"]).order("name"),
     supabase.from("project_boq_items").select("id, project_id, apu_analysis_id, apu_version_id, code, description, unit, contract_quantity, budget_total, status").eq("company_id", companyId).neq("status", "cancelled"),
   ]);
@@ -72,27 +145,13 @@ export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
     .eq("company_id", companyId)
     .order("updated_at", { ascending: false });
   const quoteById = new Map((quoteRows ?? []).map((quote) => [quote.id, { code: quote.code, title: quote.title, client: quote.client, status: quote.status, laborRateTableId: quote.labor_rate_table_id || undefined, laborProjectSnapshot: quote.labor_project_snapshot as { resultados?: Array<{ codigo: string; valorDia: number }> } | undefined }] as const));
-  const analysisIds = (analysisRows ?? []).map((row) => row.id);
-  const { data: versionRows } = analysisIds.length ? await supabase.from("apu_versions").select("id, apu_analysis_id, version_number, crew_yield_per_day, crew_size").in("apu_analysis_id", analysisIds).order("version_number", { ascending: false }) : { data: [] };
-  const currentVersionByAnalysis = new Map<string, { id: string; version_number: number; crew_yield_per_day?: number | null; crew_size?: number | null }>();
-  for (const row of versionRows ?? []) if (!currentVersionByAnalysis.has(row.apu_analysis_id)) currentVersionByAnalysis.set(row.apu_analysis_id, row);
-  const versionIds = Array.from(currentVersionByAnalysis.values()).map((row) => row.id);
-  const [{ data: lineRows }, { data: costRows }] = await Promise.all([
-    versionIds.length ? supabase.from("apu_version_lines").select("id, apu_version_id, category, name, quantity, yield_per_day, daily_rate, inventory_product_id, labor_position_id, labor_code, labor_level, labor_activity_type, transport_item_id, transport_code, unit").in("apu_version_id", versionIds) : Promise.resolve({ data: [] }),
-    (boqRows ?? []).length ? supabase.from("project_boq_cost_entries").select("id, boq_item_id, cost_type, amount, reference, occurred_at").in("boq_item_id", (boqRows ?? []).map((row) => row.id)) : Promise.resolve({ data: [] }),
-  ]);
-  const linesByVersion = new Map<string, ApuLine[]>();
-  for (const row of lineRows ?? []) {
-    const lines = linesByVersion.get(row.apu_version_id) ?? [];
-    lines.push({ id: row.id, category: row.category as ApuLine["category"], name: row.name, quantity: num(row.quantity), yieldPerDay: num(row.yield_per_day), dailyRate: num(row.daily_rate), inventoryProductId: row.inventory_product_id || undefined, laborPositionId: row.labor_position_id || undefined, laborCode: row.labor_code || undefined, laborLevel: row.labor_level || undefined, laborActivityType: row.labor_activity_type || undefined, transportItemId: row.transport_item_id || undefined, transportCode: row.transport_code || undefined, unit: row.unit || undefined });
-    linesByVersion.set(row.apu_version_id, lines);
-  }
+  const { data: costRows } = (boqRows ?? []).length
+    ? await supabase.from("project_boq_cost_entries").select("id, boq_item_id, cost_type, amount, reference, occurred_at").in("boq_item_id", (boqRows ?? []).map((row) => row.id))
+    : { data: [] };
+  const apus = await mapApuAnalysisRows(supabase, analysisRows ?? []);
   return {
     companyId,
-    apus: (analysisRows ?? []).map((row) => {
-      const version = currentVersionByAnalysis.get(row.id);
-      return { id: row.id, code: row.code, name: row.name, unit: row.unit, workQuantity: num(row.work_quantity), crewYieldPerDay: version?.crew_yield_per_day ? num(version.crew_yield_per_day) : undefined, crewSize: version?.crew_size ? num(version.crew_size) : undefined, lines: version ? linesByVersion.get(version.id) ?? [] : [], quoteId: row.quote_id || undefined, quoteCode: row.quote_code || undefined, projectId: row.project_id || undefined, revision: version?.version_number ?? row.current_version, versionId: version?.id, status: row.status, categoryMargins: readMargins(row.category_margins), createdAt: row.created_at, updatedAt: row.updated_at } as Apu;
-    }),
+    apus,
     projects: (projects ?? []).map((row) => ({ id: row.id, code: row.code, name: row.name })),
     quoteOrigin: quoteById,
     boqItems: (boqRows ?? []).map((row) => ({ id: row.id, projectId: row.project_id, apuAnalysisId: row.apu_analysis_id, apuVersionId: row.apu_version_id, code: row.code, description: row.description, unit: row.unit, contractQuantity: num(row.contract_quantity), budgetTotal: num(row.budget_total), status: row.status })),

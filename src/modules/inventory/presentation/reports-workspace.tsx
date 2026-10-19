@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { createBrowserClient } from "@supabase/ssr";
-import { apuTotal, type Apu } from "@/modules/apu";
+import { apuTotal, listApuAnalyses, type Apu } from "@/modules/apu";
 import { initialQuotes, type Quote } from "@/modules/quotes";
 import { type QuickRental } from "@/modules/rentals";
 import {
@@ -107,16 +107,18 @@ export function ReportsWorkspace({
     if (!isSupabaseConfigured || !supabaseUrl || !supabasePublishableKey) return;
     const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
     void (async () => {
-      const [{ data: remoteProjects }, { data: remoteMovements }, { data: remoteQuotes }, { data: remoteApus }] = await Promise.all([
+      const [{ data: remoteProjects }, { data: remoteMovements }, { data: remoteQuotes }, remoteApus] = await Promise.all([
         supabase.from("projects").select("id,code,name,client,location,material_budget,status,start_date,estimated_end_date,actual_end_date,created_at").order("created_at", { ascending: false }),
         supabase.from("inventory_movements").select("id,stock_id,movement_type,quantity,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inner(inventory_items!inner(name,unit)),projects(name)").order("occurred_at", { ascending: false }),
         supabase.from("quotes").select("*").order("created_at", { ascending: false }),
-        supabase.from("apu_analyses").select("*").order("created_at", { ascending: false }),
+        // Los APU se leen mapeados desde el módulo (snake_case → camelCase) para
+        // conservar quoteCode/quoteId y calcular el total de cada análisis.
+        listApuAnalyses().catch(() => [] as Apu[]),
       ]);
       if (remoteProjects) setProjects(remoteProjects.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], type: project.code.startsWith("MANT-") ? "mantenimiento" : "obra", createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date })));
       if (remoteMovements) setMovements(remoteMovements.map((movement) => { const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock; const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items); const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects; return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: movement.occurred_at, reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined }; }));
       if (remoteQuotes) setQuotes(remoteQuotes as Quote[]);
-      if (remoteApus) setApus(remoteApus as Apu[]);
+      setApus(remoteApus);
       setRentals([]);
     })();
   }, []);

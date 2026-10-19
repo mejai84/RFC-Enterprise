@@ -794,6 +794,12 @@ El comparador es de **solo lectura**. No crea revisiones, no edita y no llama ni
 
 **Consecuencias:** cada componente recibe solo `quoteId` (y, opcionalmente, el responsable por defecto y la revision vigente), por lo que integrarlo es colocarlo en la ficha sin adaptacion. Los indicadores, en cambio, si tienen ruta propia (`/reports/cotizaciones`) porque no dependen de una ficha de cotizacion. El expediente comercial escribe solo mediante sus RPC auditadas; el comparador y los indicadores son de solo lectura.
 
+## ADR-155 - Los APU de consulta se leen con el mapeo del módulo, no en crudo
+
+**Decision (2026-10-19):** las pantallas de solo consulta (Resumen ejecutivo y el informe de APU en Informes) dejan de leer `apu_analyses` con `select("*")` y de castear la fila cruda. Usan `listApuAnalyses()` del contrato público del módulo APU, que devuelve el dominio `Apu` ya mapeado (snake_case → camelCase), filtra por la empresa activa y excluye los archivados. `loadApuWorkspaceData` reutiliza el mismo mapeo para no duplicar la conversión.
+
+**Consecuencias:** el indicador "APUs vinculados a cotizaciones" y los totales por actividad reflejan la base real; desaparecen las alertas "requiere APU" que se generaban aunque existieran análisis. El conteo deja de incluir APU archivados o de otra empresa. `localStorage` sigue prohibido como fuente de negocio (ADR-153); el único punto pendiente es el chequeo de la ficha de cotización, registrado como APU-015.
+
 ## ADR-150 - La reposicion de dotacion nace en cero
 
 **Decision (2026-10-13):** los dias de reposicion de cada concepto de dotacion no se heredan de la tabla del cliente. La tabla esta construida sobre 240 dias, y ese numero se habia quedado como valor por defecto de las 2.699 filas de la matriz, como si todo se repone cada 240 dias. No es un dato del documento: es un supuesto.

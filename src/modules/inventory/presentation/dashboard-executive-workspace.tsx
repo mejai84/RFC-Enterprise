@@ -26,7 +26,7 @@ import {
   isStale,
   type Quote,
 } from "@/modules/quotes";
-import { type Apu } from "@/modules/apu";
+import { listApuAnalyses, type Apu } from "@/modules/apu";
 import { SignatureCapture } from "@/shared/components/signature-capture";
 import { prepareRealDataStorage } from "@/shared/browser/real-data-storage";
 import {
@@ -194,7 +194,7 @@ export function DashboardExecutiveWorkspace({
     if (!supabase) return;
 
     const loadSharedOperations = async () => {
-      const [projectResult, requisitionResult, quoteResult, apuResult, movementResult, toolLoanResult] = await Promise.all([
+      const [projectResult, requisitionResult, quoteResult, movementResult, toolLoanResult, remoteApus] = await Promise.all([
         supabase
           .from("projects")
           .select("id,code,name,client,location,material_budget,status,start_date,estimated_end_date,actual_end_date,created_at")
@@ -205,9 +205,11 @@ export function DashboardExecutiveWorkspace({
           .order("created_at", { ascending: false })
           .limit(30),
         supabase.from("quotes").select("*").order("created_at", { ascending: false }),
-        supabase.from("apu_analyses").select("*").order("created_at", { ascending: false }),
         supabase.from("inventory_movements").select("id,stock_id,movement_type,quantity,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inner(inventory_items!inner(name,unit)),projects(name)").order("occurred_at", { ascending: false }),
         supabase.from("inventory_tool_loans").select("id,code,stock_id,worker_name,project_id,status,notes,created_at,expected_return_date,returned_at,delivery_signature_data,return_signature_data,inventory_stock!inner(inventory_items!inner(name)),projects(name)").order("created_at", { ascending: false }).limit(50),
+        // Los APU se leen mapeados desde el módulo (snake_case → camelCase) para
+        // no perder quoteId y poder contar los vinculados a cotizaciones.
+        listApuAnalyses().catch(() => [] as Apu[]),
       ]);
 
       if (!projectResult.error && projectResult.data?.length) {
@@ -257,7 +259,7 @@ export function DashboardExecutiveWorkspace({
         );
       }
       if (!quoteResult.error && quoteResult.data) setQuotes(quoteResult.data as Quote[]);
-      if (!apuResult.error && apuResult.data) setApus(apuResult.data as Apu[]);
+      setApus(remoteApus);
       if (!movementResult.error && movementResult.data) setMovements(movementResult.data.map((movement) => { const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock; const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items); const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects; return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: movement.occurred_at, reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined }; }));
       // Los prestamos se leen de la base. Antes esta lista solo se llenaba al
       // prestar desde esta pantalla, de modo que al recargar aparecia vacia y
@@ -583,9 +585,11 @@ export function DashboardExecutiveWorkspace({
     window.dispatchEvent(new CustomEvent("rfc:operational-alerts-change", {
       detail: { count: operationalAlerts.length },
     }));
-    return () => window.dispatchEvent(new CustomEvent("rfc:operational-alerts-change", {
-      detail: { count: 0 },
-    }));
+    return () => {
+      window.dispatchEvent(new CustomEvent("rfc:operational-alerts-change", {
+        detail: { count: 0 },
+      }));
+    };
   }, [operationalAlerts.length]);
 
   // Modales

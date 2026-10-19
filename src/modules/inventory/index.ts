@@ -25,3 +25,5 @@ export { getNextProjectCode, initialProjects, projectTypeOptions, projectTypeReq
 export { computeRentalPeriod, toRentalMoney, type ProjectRentalTerms, type RentalPeriodSummary } from "./domain/rental-project";
 export type { MaterialRequisition, RequisitionItem, RequisitionStatus } from "./domain/requisition";
 export type { ToolLoan, ToolLoanStatus } from "./domain/tool-loan";
+export { buildOperationalAlerts, type OperationalAlert, type OperationalAlertSeverity } from "./domain/operational-alert";
+export { listOperationalAlerts } from "./data/operational-alert-repository";

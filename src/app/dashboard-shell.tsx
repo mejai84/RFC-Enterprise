@@ -9,6 +9,7 @@ import { accessibleModules, canAccessModule, defaultLandingPath, moduleGroups, n
 import { useEffectivePermissions } from "@/core/permissions/use-effective-permissions";
 import { initialAdministrator } from "@/core/users";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import { listOperationalAlerts, type OperationalAlert } from "@/modules/inventory";
 import { createBrowserClient } from "@supabase/ssr";
 
 type IconName = "grid" | "briefcase" | "building" | "boxes" | "arrows" | "checklist" | "chart" | "users" | "clock" | "logout" | "menu" | "bell" | "close" | "sidebar" | "settings";
@@ -133,16 +134,38 @@ const navigation = [
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { permissions, isLoading: arePermissionsLoading } = useEffectivePermissions();
-  const [operationalAlertCount, setOperationalAlertCount] = useState(0);
+  const [operationalAlerts, setOperationalAlerts] = useState<OperationalAlert[]>([]);
+  const [areAlertsLoading, setAreAlertsLoading] = useState(true);
+  const [alertLoadError, setAlertLoadError] = useState(false);
+  const [isAlertsOpen, setIsAlertsOpen] = useState(false);
+  const alertsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const updateAlertCount = (event: Event) => {
-      const count = (event as CustomEvent<{ count?: number }>).detail?.count;
-      setOperationalAlertCount(typeof count === "number" ? Math.max(0, count) : 0);
+    let active = true;
+    const loadAlerts = async () => {
+      try {
+        const alerts = await listOperationalAlerts();
+        if (!active) return;
+        setOperationalAlerts(alerts);
+        setAlertLoadError(false);
+      } catch (error) {
+        if (!active) return;
+        setAlertLoadError(true);
+        console.error("No fue posible cargar las alertas operativas.", error);
+      } finally {
+        if (active) setAreAlertsLoading(false);
+      }
     };
-    window.addEventListener("rfc:operational-alerts-change", updateAlertCount);
-    return () => window.removeEventListener("rfc:operational-alerts-change", updateAlertCount);
-  }, []);
+    const refreshAlerts = () => void loadAlerts();
+    void loadAlerts();
+    window.addEventListener("focus", refreshAlerts);
+    window.addEventListener("rfc:operational-alerts-refresh", refreshAlerts);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", refreshAlerts);
+      window.removeEventListener("rfc:operational-alerts-refresh", refreshAlerts);
+    };
+  }, [pathname]);
   // Mientras se resuelve no se oculta nada todavía: se espera, para que el menú
   // no aparezca completo y luego se retire medio.
   const allowedHrefs = permissions ? new Set(accessibleModules(permissions).map((module) => module.href)) : null;
@@ -150,6 +173,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const visibleNavigation = allowedHrefs
     ? navigation.filter(({ href }) => allowedHrefs.has(href))
     : navigation;
+  const visibleOperationalAlerts = useMemo(
+    () =>
+      permissions
+        ? operationalAlerts.filter((alert) =>
+            canAccessModule(alert.href.split("?")[0], permissions),
+          )
+        : [],
+    [operationalAlerts, permissions],
+  );
+  const operationalAlertCount = visibleOperationalAlerts.length;
   const navigationByHref = Object.fromEntries(visibleNavigation.map((item) => [item.href, item])) as Record<
     string,
     (typeof navigation)[number]
@@ -234,6 +267,26 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  // La campana se comporta como un panel contextual: se cierra fuera, con Escape
+  // o al seguir uno de sus accesos.
+  useEffect(() => {
+    if (!isAlertsOpen) return;
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!alertsRef.current?.contains(event.target as Node)) setIsAlertsOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsAlertsOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isAlertsOpen]);
 
   // El menú de la cuenta se cierra al pulsar fuera, con Escape o al cambiar de ruta.
   useEffect(() => {
@@ -468,10 +521,77 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             <strong>RFC Enterprise</strong>
           </div>
           <div className="dashboard-top-actions">
-            <Link aria-label={operationalAlertCount ? `Ver ${operationalAlertCount} alertas operativas` : "Ver alertas operativas"} className={`dashboard-notifications-link${operationalAlertCount ? " has-active-alerts" : ""}`} data-tooltip={operationalAlertCount ? `${operationalAlertCount} alerta${operationalAlertCount === 1 ? "" : "s"} activa${operationalAlertCount === 1 ? "" : "s"}` : "Ver alertas operativas"} href="/dashboard#operational-alerts">
-              <Icon name="bell" />
-              {operationalAlertCount ? <span className="dashboard-notifications-count" aria-hidden="true">{operationalAlertCount > 9 ? "9+" : operationalAlertCount}</span> : null}
-            </Link>
+            <div className="dashboard-notifications" ref={alertsRef}>
+              <button
+                aria-controls="global-operational-alerts"
+                aria-expanded={isAlertsOpen}
+                aria-haspopup="dialog"
+                aria-label={operationalAlertCount ? `Ver ${operationalAlertCount} alertas operativas` : "Ver alertas operativas"}
+                className={`dashboard-notifications-link${operationalAlertCount ? " has-active-alerts" : ""}`}
+                data-tooltip={operationalAlertCount ? `${operationalAlertCount} alerta${operationalAlertCount === 1 ? "" : "s"} activa${operationalAlertCount === 1 ? "" : "s"}` : "Ver alertas operativas"}
+                onClick={() => setIsAlertsOpen((open) => !open)}
+                type="button"
+              >
+                <Icon name="bell" />
+                {operationalAlertCount ? <span className="dashboard-notifications-count" aria-hidden="true">{operationalAlertCount > 9 ? "9+" : operationalAlertCount}</span> : null}
+              </button>
+              <span className="dashboard-sr-only" role="status" aria-atomic="true">
+                {areAlertsLoading
+                  ? "Actualizando alertas operativas."
+                  : alertLoadError
+                    ? "No fue posible actualizar las alertas operativas."
+                    : `${operationalAlertCount} alerta${operationalAlertCount === 1 ? "" : "s"} operativa${operationalAlertCount === 1 ? "" : "s"} activa${operationalAlertCount === 1 ? "" : "s"}.`}
+              </span>
+              {isAlertsOpen ? (
+                <section
+                  aria-label="Alertas operativas"
+                  className="dashboard-alert-popover"
+                  id="global-operational-alerts"
+                  role="dialog"
+                >
+                  <header className="dashboard-alert-popover-header">
+                    <div>
+                      <small>Centro de atención</small>
+                      <strong>Alertas operativas</strong>
+                    </div>
+                    <span aria-hidden="true">{operationalAlertCount}</span>
+                  </header>
+                  <div className="dashboard-alert-popover-list">
+                    {areAlertsLoading ? (
+                      <p className="dashboard-alert-popover-state">Actualizando alertas…</p>
+                    ) : alertLoadError ? (
+                      <p className="dashboard-alert-popover-state is-error">No fue posible actualizar las alertas. Intenta de nuevo al recargar.</p>
+                    ) : visibleOperationalAlerts.length ? (
+                      visibleOperationalAlerts.map((alert) => (
+                        <Link
+                          className={`dashboard-alert-item is-${alert.severity}`}
+                          href={alert.href}
+                          key={alert.id}
+                          onClick={() => setIsAlertsOpen(false)}
+                        >
+                          <span className="dashboard-alert-severity" aria-hidden="true" />
+                          <span>
+                            <strong>{alert.title}</strong>
+                            <small>{alert.source} · {alert.detail}</small>
+                          </span>
+                        </Link>
+                      ))
+                    ) : (
+                      <p className="dashboard-alert-popover-state">No hay alertas activas para tus módulos.</p>
+                    )}
+                  </div>
+                  {permissions?.length && canAccessModule("/dashboard", permissions) ? (
+                    <Link
+                      className="dashboard-alert-summary-link"
+                      href="/dashboard#operational-alerts"
+                      onClick={() => setIsAlertsOpen(false)}
+                    >
+                      Abrir resumen completo
+                    </Link>
+                  ) : null}
+                </section>
+              ) : null}
+            </div>
             <button className="dashboard-signout" aria-label="Cerrar sesión y cambiar de usuario" disabled={isSigningOut} onClick={() => void signOut()} type="button">
               <Icon name="logout" /><span>{isSigningOut ? "Saliendo…" : "Cerrar sesión"}</span>
             </button>

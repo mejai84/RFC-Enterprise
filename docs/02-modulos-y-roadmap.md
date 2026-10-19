@@ -1,8 +1,10 @@
+<!-- Registro 2026-10-19: el Resumen del dashboard explica cada indicador con un icono de ayuda contextual; presupuesto de obras, gasto real, saldo, alertas y contadores comerciales indican que miden y de donde salen. -->
+<!-- Registro 2026-10-19: la campana del portal carga las alertas operativas desde el shell compartido y las muestra en todos los modulos autorizados, con acceso directo al caso que requiere atencion. Resumen consume la misma regla para evitar conteos distintos. -->
 <!-- Registro 2026-10-13: cada version de APU conserva rendimiento diario de la cuadrilla y tamano de cuadrilla. La duracion tecnica se calcula como techo(cantidad de obra / rendimiento diario), en dias fisicos; no usa fechas comerciales ni crea dias remunerados o extras. -->
 ---
 estado: vigente
 propietario: Producto y Desarrollo RFC Enterprise
-ultima_actualizacion: 2026-10-07
+ultima_actualizacion: 2026-10-19
 audiencia: Dirección, Producto y Desarrollo
 ---
 

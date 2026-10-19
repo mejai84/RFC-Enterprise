@@ -1,8 +1,9 @@
+<!-- UX-ALERT-001 resuelto 2026-10-19: las alertas dejaron de depender de que Resumen estuviera montado. La campana global consulta la fuente persistida, respeta permisos por modulo y distingue un fallo de carga de un conteo real en cero. -->
 <!-- APU-015 actualizado 2026-10-13: la duracion por actividad ya se calcula y se congela por version desde cantidad/rendimiento de cuadrilla. Pendiente: consolidar las duraciones de varios APUs segun secuencia y frentes paralelos. -->
 ---
 estado: vigente
 propietario: Producto y Líder de proyecto RFC Enterprise
-ultima_actualizacion: 2026-10-07
+ultima_actualizacion: 2026-10-19
 audiencia: Dirección, Producto, Desarrollo y Operación
 ---
 

@@ -800,6 +800,12 @@ El comparador es de **solo lectura**. No crea revisiones, no edita y no llama ni
 
 **Consecuencias:** el indicador "APUs vinculados a cotizaciones" y los totales por actividad reflejan la base real; desaparecen las alertas "requiere APU" que se generaban aunque existieran análisis. El conteo deja de incluir APU archivados o de otra empresa. `localStorage` sigue prohibido como fuente de negocio (ADR-153); el único punto pendiente es el chequeo de la ficha de cotización, registrado como APU-015.
 
+## ADR-156 - Las alertas operativas pertenecen al shell global
+
+**Decisión (2026-10-19):** la campana de alertas carga sus datos desde el shell compartido del portal, no desde el montaje de la pantalla Resumen. La regla de detección es una función pura del módulo de Inventarios y Costos de Obra, reutilizada por Resumen y por la campana. Incluye cotizaciones vencidas o sin respuesta, cotizaciones en costeo sin APU, stock bajo, obras con 80 % o más del presupuesto de materiales comprometido y requisiciones pendientes.
+
+**Consecuencias:** las alertas permanecen disponibles al navegar por Cotizaciones, APU, Obras, Inventario y los demás módulos. En la campana, cada usuario ve solo alertas cuyo destino pertenece a sus módulos autorizados. La campana enlaza directamente al caso correspondiente, actualiza al cambiar de ruta, al recuperar el foco o al cambiar el conjunto de alertas en Resumen, y presenta un error explícito si Supabase no responde; un fallo de carga nunca se muestra como cero alertas. El Resumen deja de leer cotizaciones en crudo: usa el mapeo del módulo de Cotizaciones, de modo que `estimatedValue`, `updatedAt` e `history` llegan con el formato del dominio y el valor confirmado no queda en cero.
+
 ## ADR-150 - La reposicion de dotacion nace en cero
 
 **Decision (2026-10-13):** los dias de reposicion de cada concepto de dotacion no se heredan de la tabla del cliente. La tabla esta construida sobre 240 dias, y ese numero se habia quedado como valor por defecto de las 2.699 filas de la matriz, como si todo se repone cada 240 dias. No es un dato del documento: es un supuesto.

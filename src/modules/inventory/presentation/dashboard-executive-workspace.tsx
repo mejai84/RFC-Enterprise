@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffectivePermissions } from "@/core/permissions/use-effective-permissions";
+import { canAccessModule } from "@/core/permissions";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
@@ -11,8 +12,10 @@ import {
   inventoryRequisitions,
   inventoryToolLoans,
   sampleInitialMovements,
+  buildOperationalAlerts,
   type InventoryMovement,
   type MaterialRequisition,
+  type OperationalAlert,
   type Project,
   type StockProduct,
   type ToolLoan,
@@ -20,14 +23,10 @@ import {
 } from "../index";
 import { PrintableDispatchVoucher } from "./printable-dispatch-voucher";
 import { SearchableProductPicker } from "./searchable-product-picker";
-import {
-  daysSince,
-  initialQuotes,
-  isStale,
-  type Quote,
-} from "@/modules/quotes";
+import { loadQuotesWorkspaceData, type Quote } from "@/modules/quotes";
 import { listApuAnalyses, type Apu } from "@/modules/apu";
 import { SignatureCapture } from "@/shared/components/signature-capture";
+import { HelpHint } from "@/shared/help-hint";
 import { prepareRealDataStorage } from "@/shared/browser/real-data-storage";
 import {
   isSupabaseConfigured,
@@ -46,16 +45,6 @@ const spanishCollator = new Intl.Collator("es-CO", {
   numeric: true,
   sensitivity: "base",
 });
-
-type AlertSeverity = "critical" | "warning" | "info";
-type OperationalAlert = {
-  id: string;
-  severity: AlertSeverity;
-  source: string;
-  title: string;
-  detail: string;
-  href: string;
-};
 
 function AlertSourceIcon({ source }: { source: string }) {
   const path =
@@ -93,11 +82,6 @@ function AlertSourceIcon({ source }: { source: string }) {
       {path}
     </svg>
   );
-}
-
-function daysUntil(isoDate: string) {
-  const target = new Date(`${isoDate}T23:59:59`).getTime();
-  return Math.ceil((target - Date.now()) / 86_400_000);
 }
 
 function formatDateTime(fecha?: string | null) {
@@ -204,7 +188,10 @@ export function DashboardExecutiveWorkspace({
           .select("id,code,project_id,requested_by_name,status,created_at,needed_by,notes,project:projects(name),lines:inventory_requisition_lines(stock_id,item_name_snapshot,requested_quantity,unit_snapshot,unit_cost_snapshot)")
           .order("created_at", { ascending: false })
           .limit(30),
-        supabase.from("quotes").select("*").order("created_at", { ascending: false }),
+        // Las cotizaciones se leen mapeadas desde su módulo (snake_case →
+        // camelCase, con historial) para que el valor confirmado y la
+        // antigüedad se calculen con los campos reales del dominio.
+        loadQuotesWorkspaceData().catch(() => null),
         supabase.from("inventory_movements").select("id,stock_id,movement_type,quantity,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inner(inventory_items!inner(name,unit)),projects(name)").order("occurred_at", { ascending: false }),
         supabase.from("inventory_tool_loans").select("id,code,stock_id,worker_name,project_id,status,notes,created_at,expected_return_date,returned_at,delivery_signature_data,return_signature_data,inventory_stock!inner(inventory_items!inner(name)),projects(name)").order("created_at", { ascending: false }).limit(50),
         // Los APU se leen mapeados desde el módulo (snake_case → camelCase) para
@@ -258,7 +245,7 @@ export function DashboardExecutiveWorkspace({
           }),
         );
       }
-      if (!quoteResult.error && quoteResult.data) setQuotes(quoteResult.data as Quote[]);
+      if (quoteResult?.quotes) setQuotes(quoteResult.quotes);
       setApus(remoteApus);
       if (!movementResult.error && movementResult.data) setMovements(movementResult.data.map((movement) => { const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock; const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items); const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects; return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: movement.occurred_at, reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined }; }));
       // Los prestamos se leen de la base. Antes esta lista solo se llenaba al
@@ -476,121 +463,34 @@ export function DashboardExecutiveWorkspace({
     };
   }, [quotes, apus]);
 
-  const operationalAlerts = useMemo<OperationalAlert[]>(() => {
-    const alerts: OperationalAlert[] = [];
-    const closedStatuses = new Set(["closed", "lost", "work_completed"]);
-    for (const quote of quotes) {
-      if (isStale(quote)) {
-        const days = daysSince(
-          quote.history
-            .filter((item) => item.toStatus === "awaiting_response")
-            .sort((a, b) => b.changedAt.localeCompare(a.changedAt))[0]
-            ?.changedAt ?? quote.updatedAt,
-        );
-        alerts.push({
-          id: `stale-${quote.id}`,
-          severity: days >= 7 ? "critical" : "warning",
-          source: "Cotizaciones",
-          title: `${quote.code} sin respuesta`,
-          detail: `Lleva ${days} días esperando respuesta del cliente.`,
-          href: "/quotes",
-        });
-      }
-      if (quote.deadline && !closedStatuses.has(quote.status)) {
-        const remaining = daysUntil(quote.deadline);
-        if (remaining < 0)
-          alerts.push({
-            id: `overdue-${quote.id}`,
-            severity: "critical",
-            source: "Cotizaciones",
-            title: `${quote.code} vencida`,
-            detail: `La fecha límite venció hace ${Math.abs(remaining)} días.`,
-            href: "/quotes",
-          });
-        else if (remaining <= 2)
-          alerts.push({
-            id: `due-${quote.id}`,
-            severity: "warning",
-            source: "Cotizaciones",
-            title: `${quote.code} vence pronto`,
-            detail:
-              remaining === 0
-                ? "La entrega vence hoy."
-                : `La entrega vence en ${remaining} día${remaining === 1 ? "" : "s"}.`,
-            href: "/quotes",
-          });
-      }
-    }
-    for (const quote of commercialSummary.uncostedQuotes)
-      alerts.push({
-        id: `apu-${quote.id}`,
-        severity: "warning",
-        source: "APU",
-        title: `${quote.code} requiere APU`,
-        detail:
-          "Está en proceso de cotización y aún no tiene análisis de precios.",
-        href: `/apu?quoteId=${encodeURIComponent(quote.id)}&quoteCode=${encodeURIComponent(quote.code)}&quoteTitle=${encodeURIComponent(quote.title)}`,
-      });
-    for (const item of criticalItems.slice(0, 3))
-      alerts.push({
-        id: `stock-${item.id}`,
-        severity: item.available <= 0 ? "critical" : "warning",
-        source: "Inventario",
-        title: `${item.name} bajo mínimo`,
-        detail:
-          item.available <= 0
-            ? "No hay existencias disponibles."
-            : `Faltan ${item.deficit} ${item.unit} para el mínimo.`,
-        href: "/inventory?tab=low-stock",
-      });
-    for (const project of projectStats.filter(
-      (item) => item.progressPercent >= 80,
-    ))
-      alerts.push({
-        id: `project-${project.id}`,
-        severity: project.progressPercent >= 100 ? "critical" : "warning",
-        source: "Obras",
-        title: `${project.code} ${project.progressPercent >= 100 ? "supera" : "alcanza"} presupuesto`,
-        detail: `${project.progressPercent}% del presupuesto de materiales comprometido.`,
-        href: "/projects",
-      });
-    for (const requisition of requisitions
-      .filter((item) => item.status === "pending")
-      .slice(0, 2))
-      alerts.push({
-        id: `req-${requisition.id}`,
-        severity: "info",
-        source: "Inventario",
-        title: `${requisition.code} pendiente`,
-        detail: `Requisición para ${requisition.projectName} esperando despacho.`,
-        href: "/inventory?tab=movements",
-      });
-    const weight: Record<AlertSeverity, number> = {
-      critical: 0,
-      warning: 1,
-      info: 2,
-    };
-    return alerts
-      .sort((a, b) => weight[a.severity] - weight[b.severity])
-      .slice(0, 8);
-  }, [
-    quotes,
-    commercialSummary.uncostedQuotes,
-    criticalItems,
-    projectStats,
-    requisitions,
-  ]);
+  const operationalAlerts = useMemo<OperationalAlert[]>(
+    () =>
+      buildOperationalAlerts({
+        quotes,
+        apus,
+        products,
+        projects,
+        movements,
+        requisitions,
+      }),
+    [quotes, apus, products, projects, movements, requisitions],
+  );
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent("rfc:operational-alerts-change", {
-      detail: { count: operationalAlerts.length },
-    }));
-    return () => {
-      window.dispatchEvent(new CustomEvent("rfc:operational-alerts-change", {
-        detail: { count: 0 },
-      }));
-    };
+    window.dispatchEvent(new Event("rfc:operational-alerts-refresh"));
   }, [operationalAlerts.length]);
+
+  // La campana global y el Resumen muestran solo las alertas cuyo módulo
+  // destino puede abrir la persona; el conteo debe coincidir con esa vista.
+  const visibleOperationalAlerts = useMemo(
+    () =>
+      permissions
+        ? operationalAlerts.filter((alert) =>
+            canAccessModule(alert.href.split("?")[0], permissions),
+          )
+        : operationalAlerts,
+    [operationalAlerts, permissions],
+  );
 
   // Modales
   const [activeModal, setActiveModal] = useState<
@@ -1081,7 +981,14 @@ export function DashboardExecutiveWorkspace({
         hidden={!canViewFinancials}
       >
         <article className="stat-card">
-          <span>Presupuesto Obras ($ COP)</span>
+          <span>
+            Presupuesto Obras ($ COP)
+            <HelpHint compact title="Presupuesto Obras ($ COP)">
+              Suma del presupuesto de materiales de todas las obras registradas,
+              no solo las activas. Es el techo de referencia contra el que se
+              mide el gasto real.
+            </HelpHint>
+          </span>
           <strong>
             {currencyFormatter.format(globalFinancials.totalBudget)}
           </strong>
@@ -1091,7 +998,14 @@ export function DashboardExecutiveWorkspace({
         </article>
 
         <article className="stat-card card-spent">
-          <span>Gasto Real Materiales</span>
+          <span>
+            Gasto Real Materiales
+            <HelpHint compact title="Gasto Real Materiales">
+              Costo de las salidas de inventario registradas en el kardex de
+              cada obra, menos las devoluciones. No incluye compras ni
+              movimientos sin obra asociada.
+            </HelpHint>
+          </span>
           <strong className="text-spent">
             {currencyFormatter.format(globalFinancials.totalSpent)}
           </strong>
@@ -1101,7 +1015,13 @@ export function DashboardExecutiveWorkspace({
         </article>
 
         <article className="stat-card card-remaining">
-          <span>Saldo Disponible Obras</span>
+          <span>
+            Saldo Disponible Obras
+            <HelpHint compact title="Saldo Disponible Obras">
+              Presupuesto total menos el gasto real de materiales. Si el valor
+              es negativo, el conjunto de obras ya superó su presupuesto.
+            </HelpHint>
+          </span>
           <strong className="text-remaining">
             {currencyFormatter.format(globalFinancials.totalRemaining)}
           </strong>
@@ -1109,7 +1029,14 @@ export function DashboardExecutiveWorkspace({
         </article>
 
         <article className="stat-card card-alerts">
-          <span>Alertas de Operación</span>
+          <span>
+            Alertas de Operación
+            <HelpHint compact title="Alertas de Operación">
+              Suma de ítems por debajo del stock mínimo y requisiciones
+              pendientes de despacho. El detalle de cada alerta aparece en el
+              Centro de Atención.
+            </HelpHint>
+          </span>
           <strong>
             {globalFinancials.criticalStockCount +
               globalFinancials.pendingReqsCount}
@@ -1132,33 +1059,41 @@ export function DashboardExecutiveWorkspace({
             <h2 id="operational-alerts-title">Alertas operativas</h2>
           </div>
           <span role="status" aria-atomic="true">
-            {operationalAlerts.length} alerta
-            {operationalAlerts.length === 1 ? "" : "s"} activa
-            {operationalAlerts.length === 1 ? "" : "s"}
+            {visibleOperationalAlerts.length} alerta
+            {visibleOperationalAlerts.length === 1 ? "" : "s"} activa
+            {visibleOperationalAlerts.length === 1 ? "" : "s"}
           </span>
         </div>
-        {operationalAlerts.length ? (
-          <div className="operational-alert-list">
-            {operationalAlerts.map((alert) => (
-              <Link
-                key={alert.id}
-                href={alert.href}
-                className={`operational-alert is-${alert.severity}`}
-              >
-                <span className="operational-alert-origin">
-                  <AlertSourceIcon source={alert.source} />
-                  <span>{alert.source}</span>
-                </span>
-                <span className="operational-alert-copy">
-                  <strong>{alert.title}</strong>
-                  <small>{alert.detail}</small>
-                </span>
-                <span className="operational-alert-action">
-                  Ver <span aria-hidden="true">→</span>
-                </span>
-              </Link>
-            ))}
-          </div>
+        {visibleOperationalAlerts.length ? (
+          <>
+            <div className="operational-alert-list">
+              {visibleOperationalAlerts.slice(0, 8).map((alert) => (
+                <Link
+                  key={alert.id}
+                  href={alert.href}
+                  className={`operational-alert is-${alert.severity}`}
+                >
+                  <span className="operational-alert-origin">
+                    <AlertSourceIcon source={alert.source} />
+                    <span>{alert.source}</span>
+                  </span>
+                  <span className="operational-alert-copy">
+                    <strong>{alert.title}</strong>
+                    <small>{alert.detail}</small>
+                  </span>
+                  <span className="operational-alert-action">
+                    Ver <span aria-hidden="true">→</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+            {visibleOperationalAlerts.length > 8 ? (
+              <p className="operational-alert-more">
+                Se muestran las 8 más urgentes. Abre la campana para ver las{" "}
+                {visibleOperationalAlerts.length - 8} restantes.
+              </p>
+            ) : null}
+          </>
         ) : (
           <div className="operational-alert-empty">
             <span aria-hidden="true">✓</span>
@@ -1180,18 +1115,36 @@ export function DashboardExecutiveWorkspace({
             <p>Resumen integral</p>
             <h2>Comercial, costos y ejecución</h2>
           </div>
-          <small>Actualizado al abrir el dashboard</small>
+          <small>
+            Actualizado al abrir el dashboard
+            <HelpHint compact title="Actualización del resumen">
+              Los contadores se leen de la base al abrir esta pantalla y se
+              recalculan al recargar o al volver a ella. No usan datos
+              guardados en el navegador.
+            </HelpHint>
+          </small>
         </div>
         <div className="module-overview-grid">
           <article className="module-overview-card is-quotes" hidden={!canViewQuotes}>
             <div>
               <span className="module-overview-kicker">Cotizaciones</span>
               <strong>{commercialSummary.inProgress.length}</strong>
-              <p>en proceso de costeo</p>
+              <p>
+                en proceso de costeo
+                <HelpHint compact title="Cotizaciones en proceso de costeo">
+                  Cotizaciones en estado «en proceso» o «por modificar»: las que
+                  se están costeando y todavía se pueden editar.
+                </HelpHint>
+              </p>
             </div>
             <small>
               {commercialSummary.pendingReview.length} por revisar ·{" "}
               {commercialSummary.uncostedQuotes.length} sin APU
+              <HelpHint compact title="Por revisar y sin APU">
+                Por revisar: cotizaciones recibidas o en revisión, pendientes de
+                decisión. Sin APU: cotizaciones en costeo que aún no tienen
+                ningún análisis de precios vinculado.
+              </HelpHint>
             </small>
             <Link href="/quotes">Abrir cotizaciones →</Link>
           </article>
@@ -1199,10 +1152,22 @@ export function DashboardExecutiveWorkspace({
             <div>
               <span className="module-overview-kicker">APU</span>
               <strong>{apus.length}</strong>
-              <p>análisis registrados</p>
+              <p>
+                análisis registrados
+                <HelpHint compact title="Análisis APU registrados">
+                  APU activos de tu empresa, sin contar los archivados. Cada APU
+                  costea una actividad con materiales, mano de obra, equipos y
+                  transporte.
+                </HelpHint>
+              </p>
             </div>
             <small>
               {commercialSummary.linkedApus.length} vinculados a cotizaciones
+              <HelpHint compact title="APU vinculados a cotizaciones">
+                Análisis que nacieron de una cotización y conservan ese vínculo.
+                Los demás son análisis generales del catálogo APU, reutilizables
+                en otras cotizaciones.
+              </HelpHint>
             </small>
             <Link href="/apu">Gestionar APUs →</Link>
           </article>
@@ -1210,11 +1175,22 @@ export function DashboardExecutiveWorkspace({
             <div>
               <span className="module-overview-kicker">Obras</span>
               <strong>{globalFinancials.activeProjectsCount}</strong>
-              <p>frentes activos</p>
+              <p>
+                frentes activos
+                <HelpHint compact title="Frentes de obra activos">
+                  Obras en estado «activa» al abrir el dashboard. Una obra creada
+                  pero todavía no iniciada no cuenta en este número.
+                </HelpHint>
+              </p>
             </div>
             <small>
               {commercialSummary.confirmed.length} cotizaciones confirmadas ·{" "}
               {currencyFormatter.format(commercialSummary.confirmedValue)}
+              <HelpHint compact title="Cotizaciones confirmadas y su valor">
+                Cotizaciones en estado «confirmada» o «en ejecución», y la suma
+                de su valor estimado. Es valor comprometido, no facturación
+                ejecutada.
+              </HelpHint>
             </small>
             <Link href="/projects">Ver obras →</Link>
           </article>

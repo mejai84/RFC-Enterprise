@@ -1,7 +1,7 @@
 ---
 titulo: Registro de ajustes de interfaz
 audiencia: Producto, Desarrollo y Operación
-ultima_actualizacion: 2026-10-14
+ultima_actualizacion: 2026-10-19
 ---
 
 # Registro de ajustes de interfaz
@@ -35,3 +35,17 @@ ultima_actualizacion: 2026-10-14
 ## 2026-10-14 — Color de Planeación de cuadrilla
 
 - Planeación de cuadrilla usa la paleta azul informativa del APU; no debe verse como una advertencia.
+
+
+## 2026-10-19 — Alertas operativas en todos los módulos
+
+- La campana del encabezado deja de depender de que la pantalla Resumen esté montada: carga sus alertas desde el shell compartido y las conserva al navegar por Cotizaciones, APU, Obras, Inventario y los demás módulos.
+- Al abrir la campana se muestra el panel con el detalle de cada alerta y un enlace directo al caso que requiere atención. Cada usuario ve solo las alertas cuyo módulo destino está autorizado para su rol.
+- Mientras carga muestra “Actualizando alertas…”; si la consulta falla muestra un error explícito y nunca un cero engañoso. Se actualiza al cambiar de ruta, al recuperar el foco y cuando cambia el conjunto de alertas del Resumen.
+
+## 2026-10-19 — Ayudas del Resumen del dashboard
+
+- Cada campo del Resumen (los cuatro indicadores financieros y las tarjetas de Cotizaciones, APU y Obras) lleva un icono “?” con la explicación de qué mide y de dónde sale el valor.
+- El presupuesto de obras aclara que suma todas las obras registradas, no solo las activas; el gasto real aclara que son salidas de kardex menos devoluciones; el saldo advierte que puede ser negativo.
+- Los contadores comerciales explican los estados que incluyen: cotizaciones en costeo, por revisar, sin APU, APU vinculados, frentes activos y cotizaciones confirmadas con su valor estimado.
+- Se conserva el patrón visual y de teclado del componente de ayuda usado en Cotizaciones, Configuración y Mano de obra; el popover se abre con hover, foco o toque y no hereda las mayúsculas de las tarjetas.

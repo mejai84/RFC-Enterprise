@@ -120,6 +120,16 @@ export async function listApuAnalyses(): Promise<Apu[]> {
   return mapApuAnalysisRows(supabase, data ?? []);
 }
 
+/** Lectura liviana para integraciones que solo necesitan saber qué cotización tiene APU. */
+export async function listApuQuoteLinks(companyId: string): Promise<Array<{ apuId: string; quoteId: string }>> {
+  const supabase = client();
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("apu_analyses").select("id,quote_id")
+    .eq("company_id", companyId).neq("status", "archived").not("quote_id", "is", null);
+  if (error) throw error;
+  return (data ?? []).flatMap((row) => row.quote_id ? [{ apuId: row.id, quoteId: row.quote_id }] : []);
+}
+
 export async function loadApuWorkspaceData(): Promise<ApuWorkspaceData | null> {
   const supabase = client();
   if (!supabase) return null;

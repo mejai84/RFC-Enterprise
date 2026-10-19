@@ -1,8 +1,9 @@
+<!-- Registro 2026-10-19: las alertas de cotizaciones sin APU, stock bajo, requisiciones pendientes y presupuesto de obra al 80/100 % se consultan desde la campana global en cualquier modulo autorizado. -->
 <!-- Registro 2026-10-13: el APU calcula y presenta la duracion fisica de cada actividad con cantidad de obra y rendimiento diario de cuadrilla. Ambos datos se congelan al guardar su version, separados de dias remunerados, recargos y fechas comerciales. -->
 ---
 estado: vigente
 propietario: Producto y Operaciones RFC Enterprise
-ultima_actualizacion: 2026-09-16
+ultima_actualizacion: 2026-10-19
 audiencia: Direcci√≥n, Operaciones, Almac√©n, Contabilidad y Desarrollo
 ---
 
@@ -255,13 +256,13 @@ Las tarifas de mano de obra se administran por empresa, cliente/contrato, versi√
 ## Vi√°ticos de mano de obra
 El auxilio legal de transporte forma parte de la tarifa salarial. Hotel y transporte operativo son vi√°ticos por desplazamiento: se aplican por defecto a Conductor y Capataz y se pueden habilitar excepcionalmente por l√≠nea de APU, con motivo y trazabilidad.
 
-## Costeo por cargo y vi·ticos (2026-10-08)
+## Costeo por cargo y vi√°ticos (2026-10-08)
 
-La cotizaciÛn selecciona la tabla salarial vigente y el APU obtiene los cargos de esa tabla, aplicando el valor del nivel correspondiente. La instant·nea de cotizaciÛn conserva el c·lculo para auditorÌa. El auxilio legal de transporte pertenece al salario; hotel y transporte operativo son vi·ticos por desplazamiento, predeterminados para Capataz y Conductor y excepcionales para otros cargos con motivo documentado.
+La cotizaci√≥n selecciona la tabla salarial vigente y el APU obtiene los cargos de esa tabla, aplicando el valor del nivel correspondiente. La instant√°nea de cotizaci√≥n conserva el c√°lculo para auditor√≠a. El auxilio legal de transporte pertenece al salario; hotel y transporte operativo son vi√°ticos por desplazamiento, predeterminados para Capataz y Conductor y excepcionales para otros cargos con motivo documentado.
 
-La consulta de una tabla salarial vigente muestra los mismos componentes que su exportaciÛn: nivel, puesto, salario dÌa, auxilios publicados y total dÌa. Esto permite validar el costo antes de incorporarlo a una cotizaciÛn o un APU.
+La consulta de una tabla salarial vigente muestra los mismos componentes que su exportaci√≥n: nivel, puesto, salario d√≠a, auxilios publicados y total d√≠a. Esto permite validar el costo antes de incorporarlo a una cotizaci√≥n o un APU.
 
-La tabla salarial muestra y exporta el Total dÌa oficial de su documento fuente. En OCENSA propias 2026ñ2027, Nivel 1 es $191.387; RFC no suma provisiones ni extras para cambiar ese valor. Los componentes particulares de una obra son una capa separada y no modifican los niveles oficiales.
+La tabla salarial muestra y exporta el Total d√≠a oficial de su documento fuente. En OCENSA propias 2026‚Äì2027, Nivel 1 es $191.387; RFC no suma provisiones ni extras para cambiar ese valor. Los componentes particulares de una obra son una capa separada y no modifican los niveles oficiales.
 
 
 ## Cat?logos de cargos y costo de APU (2026-10-08)

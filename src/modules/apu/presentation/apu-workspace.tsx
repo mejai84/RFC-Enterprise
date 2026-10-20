@@ -31,7 +31,6 @@ import {
   type ApuProject,
   type ProjectBoqCost,
   type ProjectBoqItem,
-  defaultTransportCatalog,
   getTransportCatalog,
   persistTransportItem,
   removeTransportItem,
@@ -220,7 +219,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
   const [dragOverApuId, setDragOverApuId] = useState<string | null>(null);
   const [laborCatalog, setLaborCatalog] = useState<LaborPositionCatalog>(emptyLaborCatalog);
   const [isLaborLoading, setIsLaborLoading] = useState(true);
-  const [transportCatalog, setTransportCatalog] = useState<TransportCatalog>({ items: defaultTransportCatalog, source: "fallback" });
+  const [transportCatalog, setTransportCatalog] = useState<TransportCatalog>({ items: [], source: "database" });
   const [isTransportLoading, setIsTransportLoading] = useState(true);
   const [saveMessage, setSaveMessage] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "database" | "local" | "error">("idle");
@@ -450,8 +449,17 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     let active = true;
     getTransportCatalog()
       .then((catalog) => { if (active) setTransportCatalog(catalog); })
-      .catch(() => {
-        if (active) setTransportCatalog({ items: defaultTransportCatalog, source: "fallback", warning: "Usando catálogo local de transporte." });
+      .catch((error: unknown) => {
+        if (active) {
+          setTransportCatalog({
+            items: [],
+            source: "fallback",
+            warning:
+              error instanceof Error
+                ? error.message
+                : "No fue posible cargar el catálogo de transporte.",
+          });
+        }
       })
       .finally(() => { if (active) setIsTransportLoading(false); });
     return () => { active = false; };
@@ -649,7 +657,7 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     setTransportCatalog((prev) => {
       const idx = prev.items.findIndex((i) => i.id === saved.id);
       const next = idx >= 0 ? prev.items.map((i) => (i.id === saved.id ? saved : i)) : [saved, ...prev.items];
-      return { ...prev, items: next };
+      return { ...prev, items: next, source: "database", warning: undefined };
     });
   }
 
@@ -659,6 +667,8 @@ export function ApuWorkspace({ quoteContext }: { quoteContext?: QuoteContext }) 
     setTransportCatalog((prev) => ({
       ...prev,
       items: prev.items.filter((i) => i.id !== itemId),
+      source: "database",
+      warning: undefined,
     }));
   }
 

@@ -98,8 +98,12 @@ export function ApuTransportPicker({
       });
       setNotice(editingItem.id ? "Transporte actualizado exitosamente." : "Transporte agregado al catálogo.");
       setEditingItem(null);
-    } catch {
-      setNotice("No fue posible guardar el transporte en la base de datos.");
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : "No fue posible guardar el transporte en la base de datos.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -113,8 +117,10 @@ export function ApuTransportPicker({
       await onDeleteItem(item.id);
       if (selectedId === item.id) setSelectedId("");
       setNotice(`"${item.name}" retirado del catálogo.`);
-    } catch {
-      setNotice("No se pudo eliminar el transporte.");
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : "No se pudo eliminar el transporte.",
+      );
     }
   }
 
@@ -210,13 +216,14 @@ export function ApuTransportPicker({
       {/* Estado del catálogo y fuente de datos */}
       <div className="apu-labor-status" aria-live="polite">
         <span className={`apu-source-badge is-${catalog.source}`}>
-          {catalog.source === "database" ? "Base de datos oficial" : "Respaldo local"}
+          {catalog.source === "database" ? "Base de datos oficial" : "Catálogo no disponible"}
         </span>
         <small>
           {matches.length === catalog.items.length
             ? `${catalog.items.length} vehículos y fletes en catálogo`
             : `${matches.length} de ${catalog.items.length} unidades coinciden`}
         </small>
+        {catalog.warning ? <small className="apu-filter-empty">{catalog.warning}</small> : null}
         {matches.length === 0 && catalog.items.length > 0 ? (
           <small className="apu-filter-empty">Sin coincidencias: ajuste la búsqueda o quite el filtro de categoría.</small>
         ) : null}

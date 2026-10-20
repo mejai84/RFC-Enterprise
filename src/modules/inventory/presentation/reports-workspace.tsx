@@ -4,17 +4,27 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { createBrowserClient } from "@supabase/ssr";
 import { apuTotal, listApuAnalyses, type Apu } from "@/modules/apu";
-import { initialQuotes, type Quote } from "@/modules/quotes";
-import { type QuickRental } from "@/modules/rentals";
+import { loadQuotesWorkspaceData, type Quote } from "@/modules/quotes";
 import {
-  inventoryProducts,
-  inventoryProjects,
-  sampleInitialMovements,
-  type InventoryMovement,
-  type Project,
-  type StockProduct,
-} from "../index";
+  listQuickRentalOrders,
+  quickRentalDisplayStatus,
+  quickRentalOrderDepositTotal,
+  quickRentalOrderPendingQuantity,
+  quickRentalOrderRentTotal,
+  quickRentalStatusLabels,
+  type QuickRentalOrder,
+} from "@/modules/rentals";
+import type { InventoryMovement, Project, StockProduct } from "../index";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import {
+  buildConsumptionByProject,
+  buildIdleStockReport,
+  buildRotationReport,
+  buildValuationByGroup,
+  movementsWithinPeriod,
+  totalValuation,
+  type ReportPeriodDays,
+} from "../domain/report-metrics";
 
 type ReportKey =
   | "executive"
@@ -23,6 +33,10 @@ type ReportKey =
   | "inventory"
   | "kardex"
   | "critical"
+  | "consumption"
+  | "rotation"
+  | "idle"
+  | "valuation"
   | "apu"
   | "rentals";
 type ReportGroup = "Gerenciales" | "Operativos" | "Financieros";
@@ -63,6 +77,30 @@ const reportMeta: Array<{
     description: "Entradas y salidas con su trazabilidad.",
   },
   {
+    key: "consumption",
+    label: "Consumo por obra",
+    group: "Operativos",
+    description: "Salidas valorizadas agrupadas por proyecto u obra.",
+  },
+  {
+    key: "rotation",
+    label: "Rotación de inventario",
+    group: "Operativos",
+    description: "Salidas del periodo frente a la existencia actual.",
+  },
+  {
+    key: "idle",
+    label: "Stock inmovilizado",
+    group: "Operativos",
+    description: "Referencias con existencia y sin salidas en el periodo.",
+  },
+  {
+    key: "valuation",
+    label: "Valoración por grupo",
+    group: "Financieros",
+    description: "Valor económico por Bodega, Dotación y Trabajadores.",
+  },
+  {
     key: "critical",
     label: "Stock crítico",
     group: "Operativos",
@@ -96,30 +134,41 @@ export function ReportsWorkspace({
   const [report, setReport] = useState<ReportKey>("executive");
   const [category, setCategory] = useState("all");
   const [projectId, setProjectId] = useState("all");
-  const [products, setProducts] = useState<StockProduct[]>(initialProducts);
+  const [periodDays, setPeriodDays] = useState<ReportPeriodDays>(90);
+  const [now] = useState(() => Date.now());
+  const [products] = useState<StockProduct[]>(initialProducts);
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [apus, setApus] = useState<Apu[]>([]);
-  const [rentals, setRentals] = useState<QuickRental[]>([]);
+  const [rentals, setRentals] = useState<QuickRentalOrder[]>([]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabaseUrl || !supabasePublishableKey) return;
     const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
     void (async () => {
-      const [{ data: remoteProjects }, { data: remoteMovements }, { data: remoteQuotes }, remoteApus] = await Promise.all([
+      const [
+        { data: remoteProjects },
+        { data: remoteMovements },
+        quoteWorkspace,
+        remoteApus,
+        rentalOrders,
+      ] = await Promise.all([
         supabase.from("projects").select("id,code,name,client,location,material_budget,status,start_date,estimated_end_date,actual_end_date,created_at").order("created_at", { ascending: false }),
         supabase.from("inventory_movements").select("id,stock_id,movement_type,quantity,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inner(inventory_items!inner(name,unit)),projects(name)").order("occurred_at", { ascending: false }),
-        supabase.from("quotes").select("*").order("created_at", { ascending: false }),
+        // Las cotizaciones se leen con el repositorio del módulo para conservar
+        // client, estimatedValue y el resto del contrato (no un cast de filas).
+        loadQuotesWorkspaceData().catch(() => null),
         // Los APU se leen mapeados desde el módulo (snake_case → camelCase) para
         // conservar quoteCode/quoteId y calcular el total de cada análisis.
         listApuAnalyses().catch(() => [] as Apu[]),
+        listQuickRentalOrders().catch(() => [] as QuickRentalOrder[]),
       ]);
       if (remoteProjects) setProjects(remoteProjects.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], type: project.code.startsWith("MANT-") ? "mantenimiento" : "obra", createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date })));
       if (remoteMovements) setMovements(remoteMovements.map((movement) => { const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock; const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items); const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects; return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: movement.occurred_at, reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined }; }));
-      if (remoteQuotes) setQuotes(remoteQuotes as Quote[]);
+      if (quoteWorkspace) setQuotes(quoteWorkspace.quotes);
       setApus(remoteApus);
-      setRentals([]);
+      setRentals(rentalOrders);
     })();
   }, []);
   const categories = useMemo(
@@ -136,16 +185,56 @@ export function ReportsWorkspace({
       ),
     [products, category],
   );
-  const relevantMovements = useMemo(
+  const categoryMovements = useMemo(
     () =>
       movements.filter(
         (movement) =>
-          (projectId === "all" || movement.projectId === projectId) &&
-          (category === "all" ||
-            products.find((product) => product.id === movement.productId)
-              ?.category === category),
+          category === "all" ||
+          products.find((product) => product.id === movement.productId)
+            ?.category === category,
       ),
-    [movements, projectId, category, products],
+    [movements, category, products],
+  );
+  const relevantMovements = useMemo(
+    () =>
+      categoryMovements.filter(
+        (movement) => projectId === "all" || movement.projectId === projectId,
+      ),
+    [categoryMovements, projectId],
+  );
+  const periodMovements = useMemo(
+    () => movementsWithinPeriod(relevantMovements, periodDays, now),
+    [relevantMovements, periodDays, now],
+  );
+  const periodOutputValue = useMemo(
+    () =>
+      periodMovements
+        .filter((movement) => movement.type === "exit")
+        .reduce((sum, movement) => sum + movement.totalCost, 0),
+    [periodMovements],
+  );
+  const consumptionRows = useMemo(
+    () => buildConsumptionByProject(relevantMovements, projects, periodDays, now),
+    [relevantMovements, projects, periodDays, now],
+  );
+  // La rotación y el inmovilizado miran el inventario completo de la categoría:
+  // el filtro de proyecto solo tiene sentido para consumo y ejecución por obra.
+  const rotationRows = useMemo(
+    () => buildRotationReport(filteredProducts, categoryMovements, periodDays, now),
+    [filteredProducts, categoryMovements, periodDays, now],
+  );
+  const idleRows = useMemo(
+    () => buildIdleStockReport(filteredProducts, categoryMovements, periodDays, now),
+    [filteredProducts, categoryMovements, periodDays, now],
+  );
+  const valuationRows = useMemo(
+    () => buildValuationByGroup(filteredProducts),
+    [filteredProducts],
+  );
+  const valuationTotal = useMemo(() => totalValuation(valuationRows), [valuationRows]);
+  const idleValue = useMemo(
+    () => idleRows.reduce((sum, row) => sum + row.value, 0),
+    [idleRows],
   );
   const inventoryValue = filteredProducts.reduce(
     (sum, product) => sum + product.available * (product.unitCost || 0),
@@ -187,14 +276,27 @@ export function ReportsWorkspace({
       "closed",
     ].includes(quote.status),
   );
-  const activeRentals = rentals.filter(
-    (rental) => rental.status !== "returned",
-  );
+  const activeRentals = rentals.filter((order) => order.status !== "returned");
   const rentalExpected = rentals.reduce(
-    (sum, rental) => sum + rental.dailyRate + (rental.extraCharge || 0),
+    (sum, order) => sum + quickRentalOrderRentTotal(order),
+    0,
+  );
+  const rentalUnits = activeRentals.reduce(
+    (sum, order) => sum + quickRentalOrderPendingQuantity(order),
     0,
   );
   const selectedMeta = reportMeta.find((item) => item.key === report)!;
+  const periodLabel =
+    periodDays === 0 ? "histórico completo" : `últimos ${periodDays} días`;
+  const projectFilterApplies = [
+    "executive",
+    "projects",
+    "kardex",
+    "consumption",
+  ].includes(report);
+  const periodFilterApplies = ["consumption", "rotation", "idle"].includes(
+    report,
+  );
 
   function exportCsv() {
     const rows =
@@ -208,26 +310,69 @@ export function ReportsWorkspace({
               quote.estimatedValue || 0,
             ]),
           ]
-        : report === "rentals"
+        : report === "consumption"
           ? [
-              [
-                "Código",
-                "Equipo",
-                "Cliente",
-                "Estado",
-                "Tarifa día",
-                "Garantía",
-              ],
-              ...rentals.map((rental) => [
-                rental.code,
-                rental.equipmentName,
-                rental.customerName,
-                rental.status,
-                rental.dailyRate,
-                rental.deposit,
+              ["Obra", "Código", "Movimientos", "Unidades", "Valor", "Última salida"],
+              ...consumptionRows.map((row) => [
+                row.projectName,
+                row.projectCode,
+                row.movements,
+                row.quantity,
+                row.value,
+                row.lastExitAt ?? "",
               ]),
             ]
-          : report === "apu"
+          : report === "rotation"
+            ? [
+                ["SKU", "Artículo", "Existencia", "Salidas", "Rotación", "Valor salidas", "Última salida"],
+                ...rotationRows.map((row) => [
+                  row.sku,
+                  row.name,
+                  row.available,
+                  row.exits,
+                  row.rotation === null ? "" : row.rotation.toFixed(2),
+                  row.exitsValue,
+                  row.lastExitAt ?? "",
+                ]),
+              ]
+            : report === "idle"
+              ? [
+                  ["SKU", "Artículo", "Grupo", "Existencia", "Valor", "Última salida", "Días sin salida"],
+                  ...idleRows.map((row) => [
+                    row.sku,
+                    row.name,
+                    row.inventoryGroupName,
+                    row.available,
+                    row.value,
+                    row.lastExitAt ?? "",
+                    row.daysIdle ?? "",
+                  ]),
+                ]
+              : report === "valuation"
+                ? [
+                    ["Grupo", "Referencias", "Unidades", "Valor", "% del total"],
+                    ...valuationRows.map((row) => [
+                      row.groupName,
+                      row.references,
+                      row.units,
+                      row.value,
+                      valuationTotal > 0 ? ((row.value / valuationTotal) * 100).toFixed(1) : "0.0",
+                    ]),
+                  ]
+                : report === "rentals"
+                  ? [
+                      ["Código", "Equipos", "Cliente", "Estado", "Renta", "Garantía", "Unidades pendientes"],
+                      ...rentals.map((order) => [
+                        order.code,
+                        order.lines.map((line) => line.equipmentName).join(" | "),
+                        order.customerName,
+                        quickRentalStatusLabels[quickRentalDisplayStatus(order, now)],
+                        quickRentalOrderRentTotal(order),
+                        quickRentalOrderDepositTotal(order),
+                        quickRentalOrderPendingQuantity(order),
+                      ]),
+                    ]
+                  : report === "apu"
             ? [
                 ["Código", "Actividad", "Cotización", "Total"],
                 ...apus.map((apu) => [
@@ -346,8 +491,9 @@ export function ReportsWorkspace({
           </select>
         </label>
         <label>
-          Proyecto
+          Proyecto {projectFilterApplies ? "" : "(no aplica a este informe)"}
           <select
+            disabled={!projectFilterApplies}
             value={projectId}
             onChange={(event) => setProjectId(event.target.value)}
           >
@@ -361,7 +507,23 @@ export function ReportsWorkspace({
               ))}
           </select>
         </label>
-        <p>{selectedMeta.description}</p>
+        <label>
+          Periodo de análisis{" "}
+          {periodFilterApplies ? "" : "(no aplica a este informe)"}
+          <select
+            disabled={!periodFilterApplies}
+            value={periodDays}
+            onChange={(event) =>
+              setPeriodDays(Number(event.target.value) as ReportPeriodDays)
+            }
+          >
+            <option value={30}>Últimos 30 días</option>
+            <option value={90}>Últimos 90 días</option>
+            <option value={365}>Últimos 12 meses</option>
+            <option value={0}>Histórico completo</option>
+          </select>
+        </label>
+        <p style={{ gridColumn: "1 / -1" }}>{selectedMeta.description}</p>
       </section>
       <section className="report-kpis">
         <Card
@@ -377,7 +539,7 @@ export function ReportsWorkspace({
         <Card
           label="Alquileres activos"
           value={String(activeRentals.length)}
-          detail={`${rentals.length} registros`}
+          detail={`${rentalUnits} unidad(es) fuera de bodega`}
         />
         <Card
           label="Stock crítico"
@@ -445,6 +607,202 @@ export function ReportsWorkspace({
               .slice(0, 20)}
             empty="No hay artículos con los filtros actuales."
           />
+        </section>
+      )}
+      {report === "consumption" && (
+        <section className="dashboard-panel report-table">
+          <PanelTitle eyebrow="Consumo" title="Salidas valorizadas por obra" />
+          {consumptionRows.length ? (
+            <div className="inventory-table-container">
+              <table className="inventory-data-table">
+                <thead>
+                  <tr>
+                    <th>Obra / proyecto</th>
+                    <th>Movimientos</th>
+                    <th>Unidades</th>
+                    <th>Valor</th>
+                    <th>Última salida</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {consumptionRows.map((row) => (
+                    <tr key={row.key}>
+                      <td>
+                        <strong>{row.projectName}</strong>
+                        <small>{row.projectCode}</small>
+                      </td>
+                      <td>{row.movements}</td>
+                      <td>{row.quantity}</td>
+                      <td>{cop.format(row.value)}</td>
+                      <td>
+                        {row.lastExitAt
+                          ? new Date(row.lastExitAt).toLocaleDateString("es-CO")
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="panel-intro">
+              No hay salidas registradas para {periodLabel} con los filtros actuales.
+            </p>
+          )}
+          <p className="panel-intro">
+            Periodo: {periodLabel}. Valor de salidas del periodo:{" "}
+            <strong>{cop.format(periodOutputValue)}</strong>.
+          </p>
+        </section>
+      )}
+      {report === "rotation" && (
+        <section className="dashboard-panel report-table">
+          <PanelTitle eyebrow="Rotación" title="Salidas frente a existencia actual" />
+          {rotationRows.length ? (
+            <div className="inventory-table-container">
+              <table className="inventory-data-table">
+                <thead>
+                  <tr>
+                    <th>Artículo</th>
+                    <th>Existencia</th>
+                    <th>Salidas</th>
+                    <th>Índice</th>
+                    <th>Valor salidas</th>
+                    <th>Última salida</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rotationRows.map((row) => (
+                    <tr key={row.productId}>
+                      <td>
+                        <strong>{row.name}</strong>
+                        <small>
+                          {row.sku} · {row.category}
+                        </small>
+                      </td>
+                      <td>
+                        {row.available} {row.unit}
+                      </td>
+                      <td>{row.exits}</td>
+                      <td>
+                        <strong>{row.rotation === null ? "—" : row.rotation.toFixed(2)}</strong>
+                      </td>
+                      <td>{cop.format(row.exitsValue)}</td>
+                      <td>
+                        {row.lastExitAt
+                          ? new Date(row.lastExitAt).toLocaleDateString("es-CO")
+                          : "Sin salidas"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="panel-intro">
+              No hay referencias con existencia o salidas para {periodLabel}.
+            </p>
+          )}
+          <p className="panel-intro">
+            Índice = unidades salidas en {periodLabel} ÷ existencia actual. Es un indicador
+            operativo; el sistema aún no guarda fotografías históricas de existencias para
+            calcular un costo de ventas contable.
+          </p>
+        </section>
+      )}
+      {report === "idle" && (
+        <section className="dashboard-panel report-table">
+          <PanelTitle eyebrow="Inmovilizado" title="Stock sin salidas en el periodo" />
+          {idleRows.length ? (
+            <div className="inventory-table-container">
+              <table className="inventory-data-table">
+                <thead>
+                  <tr>
+                    <th>Artículo</th>
+                    <th>Grupo</th>
+                    <th>Existencia</th>
+                    <th>Valor</th>
+                    <th>Última salida</th>
+                    <th>Días sin salida</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {idleRows.map((row) => (
+                    <tr key={row.productId}>
+                      <td>
+                        <strong>{row.name}</strong>
+                        <small>
+                          {row.sku} · {row.category}
+                        </small>
+                      </td>
+                      <td>{row.inventoryGroupName}</td>
+                      <td>
+                        {row.available} {row.unit}
+                      </td>
+                      <td>{cop.format(row.value)}</td>
+                      <td>
+                        {row.lastExitAt
+                          ? new Date(row.lastExitAt).toLocaleDateString("es-CO")
+                          : "Sin salidas registradas"}
+                      </td>
+                      <td>{row.daysIdle === null ? "—" : `${row.daysIdle} días`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="panel-intro">
+              No hay referencias inmovilizadas en {periodLabel} con los filtros actuales.
+            </p>
+          )}
+          <p className="panel-intro">
+            Valor inmovilizado: <strong>{cop.format(idleValue)}</strong>. Se consideran
+            referencias con existencia y sin salidas en {periodLabel}.
+          </p>
+        </section>
+      )}
+      {report === "valuation" && (
+        <section className="dashboard-panel report-table">
+          <PanelTitle eyebrow="Valoración" title="Inventario por grupo" />
+          {valuationRows.length ? (
+            <div className="inventory-table-container">
+              <table className="inventory-data-table">
+                <thead>
+                  <tr>
+                    <th>Grupo</th>
+                    <th>Referencias</th>
+                    <th>Unidades</th>
+                    <th>Valor</th>
+                    <th>% del total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {valuationRows.map((row) => (
+                    <tr key={row.group}>
+                      <td>
+                        <strong>{row.groupName}</strong>
+                      </td>
+                      <td>{row.references}</td>
+                      <td>{row.units}</td>
+                      <td>{cop.format(row.value)}</td>
+                      <td>
+                        {valuationTotal > 0
+                          ? `${((row.value / valuationTotal) * 100).toFixed(1)} %`
+                          : "0.0 %"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="panel-intro">No hay existencias valorizadas con los filtros actuales.</p>
+          )}
+          <p className="panel-intro">
+            Valor total: <strong>{cop.format(valuationTotal)}</strong>. La valoración usa
+            existencia × costo unitario persistido en la bodega.
+          </p>
         </section>
       )}
       {report === "kardex" && (
@@ -518,7 +876,7 @@ export function ReportsWorkspace({
           </div>
           {!apus.length && (
             <p className="panel-intro">
-              Aún no hay APU guardados en este dispositivo.
+              Aún no hay APU guardados en la base de datos.
             </p>
           )}
         </section>
@@ -531,28 +889,35 @@ export function ReportsWorkspace({
               <thead>
                 <tr>
                   <th>Consecutivo</th>
-                  <th>Equipo</th>
+                  <th>Equipos</th>
                   <th>Cliente</th>
                   <th>Estado</th>
-                  <th>Tarifa / garantía</th>
+                  <th>Renta / garantía</th>
+                  <th>Pendientes</th>
                 </tr>
               </thead>
               <tbody>
-                {rentals.map((rental) => (
-                  <tr key={rental.id}>
+                {rentals.map((order) => (
+                  <tr key={order.id}>
                     <td>
-                      <strong>{rental.code}</strong>
+                      <strong>{order.code}</strong>
                     </td>
-                    <td>{rental.equipmentName}</td>
                     <td>
-                      {rental.customerName}
-                      <small>{rental.customerPhone}</small>
+                      {order.lines.map((line) => line.equipmentName).join(" · ")}
+                      <small>{order.lines.length} línea(s)</small>
                     </td>
-                    <td>{rental.status}</td>
                     <td>
-                      {cop.format(rental.dailyRate)} /{" "}
-                      {cop.format(rental.deposit)}
+                      {order.customerName}
+                      <small>{order.customerPhone}</small>
                     </td>
+                    <td>
+                      {quickRentalStatusLabels[quickRentalDisplayStatus(order, now)]}
+                    </td>
+                    <td>
+                      {cop.format(quickRentalOrderRentTotal(order))} /{" "}
+                      {cop.format(quickRentalOrderDepositTotal(order))}
+                    </td>
+                    <td>{quickRentalOrderPendingQuantity(order)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -560,8 +925,8 @@ export function ReportsWorkspace({
           </div>
           {!rentals.length && (
             <p className="panel-intro">
-              Aún no hay alquileres rápidos registrados. Valor esperado
-              acumulado: {cop.format(rentalExpected)}.
+              Aún no hay alquileres rápidos registrados. Renta acumulada:{" "}
+              {cop.format(rentalExpected)}.
             </p>
           )}
         </section>

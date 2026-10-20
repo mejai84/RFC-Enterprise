@@ -38,3 +38,9 @@ Después de la carga inicial, el mismo módulo abre una **Nueva jornada**. La pe
 - Presentación y ubicación parten de un catálogo base y se complementan con los valores reales registrados.
 - Marcas, modelos y referencias sugieren valores ya usados. La normalización une solamente variantes inequívocas; por ejemplo, `uyustools`, `Uyustools N/A` y el error `ayustool` se consolidan como **UYUSTOOLS**. Los nombres que incluyen una referencia de modelo se conservan para revisión, sin asumir que sean la misma marca.
 - Si un valor no existe, el usuario lo escribe directamente en la ficha y lo guarda con el artículo. No se crean catálogos maestros vacíos: el dato nuevo queda disponible como sugerencia cuando ya existe una ficha real que lo respalda.
+
+## Jornada colaborativa de inventario inicial
+
+La jornada se abre una vez para toda la bodega y puede durar varios dias. Al abrir, Supabase crea una fotografia de los articulos y una linea pendiente por cada uno. Cada persona guarda su cantidad, ubicacion, costo opcional y notas; el dato queda persistido en borrador con responsable y fecha, pero no modifica el inventario oficial.
+
+Los articulos no encontrados se registran con cantidad `0`. Los articulos que no existen se agregan como hallazgos con SKU provisional, nombre, unidad, ubicacion, cantidad y costo opcional; solo se crean oficialmente al conciliar. El cierre exige todas las lineas de la fotografia registradas, genera movimientos auditables en una sola transaccion y conserva un informe CSV con responsable, fecha, saldo fotografiado y conteo fisico.

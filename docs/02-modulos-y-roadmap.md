@@ -317,3 +317,7 @@ Informes incorpora una vista de indicadores calculada sobre datos reales de `quo
 ## Dotacion por cargo, cotizacion y obra (2026-10-09)
 
 La matriz de dotacion ahora conserva por articulo la cantidad, el valor y la frecuencia de reposicion en dias fisicos. Al configurar la cuadrilla de una cotizacion, el valor de dotacion se calcula por cargo con los dias fisicos estimados y se guarda dentro de la instantanea que consume el APU. En Proyectos > Personal de obra aparece Entrega de dotacion: el encargado escoge trabajador, tipo de movimiento y uno o varios articulos, por ejemplo dos uniformes y un casco, en un solo comprobante.
+
+## Actualizacion 2026-10-20 - Conteo inicial colaborativo
+
+Inventarios incorpora una jornada inicial colaborativa: fotografia de saldos en Supabase, avance persistido por articulo, responsable y fecha, hallazgos de articulos nuevos en borrador y conciliacion atomica al completar toda la bodega.

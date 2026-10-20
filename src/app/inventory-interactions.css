@@ -669,7 +669,21 @@
 .counts-history li small, .counts-history p { color: var(--muted); font-size: 12px; margin: 0; }
 .counts-workspace .inventory-catalog-controls { grid-template-columns: minmax(220px, 1.6fr) minmax(160px, 0.8fr) 44px; }
 .count-sort-direction { align-items: center; align-self: end; box-sizing: border-box; display: inline-flex; font-size: 16px; justify-content: center; min-height: 42px; overflow: hidden; padding: 0; width: 42px; }
+.counts-progress-panel { display: grid; gap: 12px; }
+.counts-progress-heading, .counts-report-header, .counts-pagination { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
+.counts-progress-heading div { display: grid; gap: 3px; }
+.counts-progress-heading small, .counts-progress-heading span, .counts-table-summary span, .counts-reconciliation-grid span { color: var(--muted); font-size: 12px; }
+.counts-progress-track { background: #e9f0ec; border-radius: 999px; height: 10px; overflow: hidden; }
+.counts-progress-track span { background: var(--brand); border-radius: inherit; display: block; height: 100%; transition: width .2s ease; }
+.counts-status { background: #eef7f1; border-left: 3px solid var(--brand); color: var(--ink); font-size: 13px; margin: 0; padding: 10px 12px; }
+.counts-table-summary { align-self: end; display: grid; gap: 2px; padding-bottom: 5px; text-align: right; }
+.count-line-status { color: #966000; font-size: 12px; font-weight: 750; }.count-line-status.is-counted { color: #087443; }
+.counts-pagination { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }.counts-pagination span { color: var(--muted); font-size: 13px; }
+.counts-reconciliation-grid { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 6px 0 18px; }.counts-reconciliation-grid p { background: #f3f7f4; display: grid; gap: 4px; margin: 0; padding: 12px; }.counts-reconciliation-grid strong { color: var(--ink); font-size: 19px; }
+.counts-contributors { border-top: 1px solid var(--line); display: grid; gap: 8px; margin-top: 14px; padding-top: 14px; }.counts-contributors ul { margin: 0; padding-left: 18px; }
+.counts-confirmation { align-items: flex-start; display: flex; gap: 9px; margin-top: 18px; }
 @media (max-width: 640px) { .counts-heading-actions { justify-content: stretch; width: 100%; }.counts-heading-actions button { flex: 1; }.counts-history li { align-items: flex-start; flex-direction: column; gap: 3px; } }
+@media (max-width: 760px) { .counts-reconciliation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.counts-table-summary { align-self: auto; text-align: left; } }
 
 .btn-cancel {
   background: transparent;

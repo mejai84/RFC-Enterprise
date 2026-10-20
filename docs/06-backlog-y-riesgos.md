@@ -182,3 +182,7 @@ Riesgo abierto el 2026-10-14: los motivos de perdida se extraen de la nota con l
 ### COT-021 - Integracion pendiente de los paneles en la ficha
 
 Pendiente el 2026-10-14: `CommercialFileSection` y `RevisionComparator` estan listos y exportados, pero la ficha (`quotes-workspace.tsx`) no los monta todavia, por acuerdo explicito para evitar ediciones concurrentes. Hasta que se integren, las tres mejoras existen en codigo, migraciones y documentacion, pero no son visibles en la pantalla de Cotizaciones.
+
+## INV-027 - Movimientos durante jornada fisica abierta
+
+La conciliacion se detiene si una existencia cambio desde la fotografia de la jornada. Operacion debe pausar movimientos de bodega o reiniciar/revisar la jornada despues de una recepcion, despacho o ajuste.

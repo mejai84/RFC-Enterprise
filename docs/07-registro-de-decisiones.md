@@ -842,3 +842,9 @@ Los 2.699 registros quedaron en cero. En cero significa "todavia no se ha defini
 - El total de la fila proyecta la cantidad por precio repetida tantas veces al anno como indique la reposicion; con cero, una sola entrega. El total que se ve es el mismo que guarda el motor.
 - El ano de 240 dias se conserva solo para obtener el promedio diario que consume el APU. No decide cuantas compras hacen falta.
 - Los valores concretos los define el responsable. Hasta entonces la dotacion se subestima de forma conocida y visible, no de forma oculta.
+
+## ADR-164 - Conteo inicial colaborativo con fotografia y cierre atomico
+
+**Decision (2026-10-20):** `open_physical_count`, `save_physical_count_line`, `add_physical_count_new_item` y `approve_physical_count` son la unica frontera de escritura. Las tablas de jornadas y lineas solo entregan lectura a `authenticated`; cada RPC valida empresa, sede, rol, estado y relaciones de inventario.
+
+**Consecuencias:** cada linea se atribuye a la persona y fecha que la guarda; no se puede sobrescribir el registro de otra persona. La conciliacion exige cobertura completa, rechaza existencias que cambiaron desde la fotografia, crea los hallazgos oficialmente y aplica ajustes/movimientos/auditoria en una transaccion.

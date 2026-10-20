@@ -1,53 +1,819 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
-import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
-import { getInventoryItemKind, inventoryProducts } from "@/modules/inventory";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignatureCapture } from "@/shared/components/signature-capture";
-import { dataUrlToBlob } from "@/shared/utils/data-url";
+import {
+  createQuickRentalOrder,
+  getQuickRentalSignatureUrl,
+  loadRentalWorkspace,
+  returnQuickRentalLine,
+} from "../data/quick-rental-order-repository";
+import {
+  quickRentalDays,
+  quickRentalDisplayStatus,
+  quickRentalLineIsReturned,
+  quickRentalLinePending,
+  quickRentalLineSubtotal,
+  quickRentalOrderDepositTotal,
+  quickRentalOrderPendingQuantity,
+  quickRentalOrderRentTotal,
+  quickRentalStatusLabels,
+  type QuickRentalOrder,
+  type QuickRentalOrderLine,
+  type RentableEquipment,
+} from "../domain/quick-rental-order";
 
-type Line = { id: string; equipmentId: string; name: string; rate: number; deposit: number; returned: boolean; extra: number };
-type Order = { id: string; code: string; customer: string; phone: string; document: string; pickup: string; due: string; status: string; lines: Line[] };
-type Pending = { customer: string; phone: string; document: string; pickup: string; due: string; notes: string };
-const cop = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
-const client = () => isSupabaseConfigured && supabaseUrl && supabasePublishableKey ? createBrowserClient(supabaseUrl, supabasePublishableKey) : null;
-const initialDate = (days = 0) => { const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().slice(0, 16); };
-const days = (pickup: string, due: string) => Math.max(1, Math.ceil((new Date(due).getTime() - new Date(pickup).getTime()) / 86_400_000));
+type CartLine = {
+  key: string;
+  itemId: string;
+  name: string;
+  quantity: number;
+  dailyRate: number;
+  deposit: number;
+};
 
+type PendingDelivery = {
+  customerName: string;
+  customerPhone: string;
+  customerDocument: string;
+  pickupAt: string;
+  dueAt: string;
+  deliveryNotes: string;
+};
+
+type ReturningLine = {
+  order: QuickRentalOrder;
+  line: QuickRentalOrderLine;
+};
+
+const cop = new Intl.NumberFormat("es-CO", {
+  style: "currency",
+  currency: "COP",
+  maximumFractionDigits: 0,
+});
+
+function localDateTimeInput(daysFromNow = 0): string {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromNow);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function asNumber(value: string): number {
+  return Number(value.replace(/[^\d.-]/g, "")) || 0;
+}
+
+function dateTime(value: string): string {
+  return new Date(value).toLocaleString("es-CO", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
+
+/**
+ * Documento de alquiler rápido con varias líneas.
+ *
+ * El flujo activo no guarda equipos, tarifas ni firmas en localStorage: la
+ * disponibilidad se calcula contra inventory_stock y los documentos activos
+ * de Supabase. Una sola firma cubre la entrega y cada línea conserva su
+ * propia devolución parcial.
+ */
 export function MultiRentalOrderWorkspace() {
-  const [companyId, setCompanyId] = useState(""); const [branchId, setBranchId] = useState<string | null>(null);
-  const [cart, setCart] = useState<Line[]>([]); const [orders, setOrders] = useState<Order[]>([]); const [notice, setNotice] = useState("");
-  const [pending, setPending] = useState<Pending | null>(null); const [signature, setSignature] = useState(""); const [invoice, setInvoice] = useState<Order | null>(null);
-  const [equipmentId, setEquipmentId] = useState(""); const [rate, setRate] = useState(""); const [deposit, setDeposit] = useState("");
-  const available = useMemo(() => inventoryProducts.filter((item) => item.available > 0 && ["equipment", "tool"].includes(getInventoryItemKind(item))), []);
-  const cartTotal = cart.reduce((sum, line) => sum + line.rate + line.deposit, 0);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [companyId, setCompanyId] = useState("");
+  const [equipment, setEquipment] = useState<RentableEquipment[]>([]);
+  const [orders, setOrders] = useState<QuickRentalOrder[]>([]);
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [notice, setNotice] = useState("");
+  const [selectedItemId, setSelectedItemId] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [rate, setRate] = useState("");
+  const [deposit, setDeposit] = useState("");
+  const [pending, setPending] = useState<PendingDelivery | null>(null);
+  const [signature, setSignature] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [returning, setReturning] = useState<ReturningLine | null>(null);
+  const [returnQuantity, setReturnQuantity] = useState("1");
+  const [returnNotes, setReturnNotes] = useState("");
+  const [returnExtra, setReturnExtra] = useState("");
+  const [returnSaving, setReturnSaving] = useState(false);
+  const [invoice, setInvoice] = useState<QuickRentalOrder | null>(null);
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [now] = useState(() => Date.now());
+  const [defaults] = useState(() => ({
+    pickup: localDateTimeInput(0),
+    due: localDateTimeInput(1),
+  }));
+  const formRef = useRef<HTMLFormElement>(null);
+  const signatureRequest = useRef(0);
 
-  const load = useCallback(async () => {
-    const db = client(); if (!db) return;
-    const { data: auth } = await db.auth.getUser(); if (!auth.user) return;
-    const { data: member } = await db.from("user_roles").select("company_id, branch_id").eq("user_id", auth.user.id).maybeSingle();
-    if (!member?.company_id) { setNotice("No se encontró la empresa de tu sesión."); return; }
-    setCompanyId(member.company_id); setBranchId(member.branch_id ?? null);
-    const { data, error } = await db.from("quick_rental_orders").select("id, code, customer_name, customer_phone, customer_document, pickup_at, due_at, status, quick_rental_order_items(id, inventory_item_id, equipment_name, daily_rate, deposit, returned_quantity, extra_charge)").eq("company_id", member.company_id).order("created_at", { ascending: false });
-    if (error) { setNotice(error.message); return; }
-    setOrders(((data ?? []) as Array<Record<string, unknown>>).map((o) => ({ id: String(o.id), code: String(o.code), customer: String(o.customer_name), phone: String(o.customer_phone ?? ""), document: String(o.customer_document ?? ""), pickup: String(o.pickup_at), due: String(o.due_at), status: String(o.status), lines: ((o.quick_rental_order_items as Array<Record<string, unknown>>) ?? []).map((i) => ({ id: String(i.id), equipmentId: String(i.inventory_item_id ?? ""), name: String(i.equipment_name), rate: Number(i.daily_rate), deposit: Number(i.deposit), returned: Number(i.returned_quantity) > 0, extra: Number(i.extra_charge ?? 0) })) })));
+  const reload = useCallback(async () => {
+    const data = await loadRentalWorkspace();
+    if (!data) {
+      setCompanyId("");
+      setEquipment([]);
+      setOrders([]);
+      setLoadError("Inicia sesión en RFC Enterprise para consultar la bodega y los alquileres.");
+      return;
+    }
+    setCompanyId(data.companyId);
+    setEquipment(data.equipment);
+    setOrders(data.orders);
+    setLoadError("");
   }, []);
-  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
 
-  function addEquipment() { const item = available.find((entry) => entry.id === equipmentId); if (!item) { setNotice("Selecciona un equipo disponible."); return; } if (cart.some((line) => line.equipmentId === item.id)) { setNotice("Ese equipo ya está agregado."); return; } setCart((current) => [...current, { id: crypto.randomUUID(), equipmentId: item.id, name: item.name, rate: Number(rate) || 0, deposit: Number(deposit) || 0, returned: false, extra: 0 }]); setEquipmentId(""); setRate(""); setDeposit(""); }
-  function prepare(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const form = new FormData(event.currentTarget); if (!cart.length) { setNotice("Agrega uno o más equipos antes de continuar."); return; } const pickup = String(form.get("pickup")); const due = String(form.get("due")); if (new Date(due) <= new Date(pickup)) { setNotice("La devolución prevista debe ser posterior a la entrega."); return; } setPending({ customer: String(form.get("customer") ?? "").trim(), phone: String(form.get("phone") ?? "").trim(), document: String(form.get("document") ?? "").trim(), pickup, due, notes: String(form.get("notes") ?? "").trim() }); setSignature(""); }
-  async function save() { const db = client(); if (!db || !pending || !companyId || !signature) return; const code = `ALQ-RAP-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${String(Date.now()).slice(-5)}`;
-    const { data: header, error } = await db.from("quick_rental_orders").insert({ company_id: companyId, branch_id: branchId, code, customer_name: pending.customer, customer_phone: pending.phone || null, customer_document: pending.document || null, pickup_at: pending.pickup, due_at: pending.due, delivery_notes: pending.notes || null }).select("id").single();
-    if (error || !header) { setNotice(error?.message ?? "No fue posible crear el documento."); return; }
-    const { error: linesError } = await db.from("quick_rental_order_items").insert(cart.map((line) => ({ order_id: header.id, inventory_item_id: line.equipmentId, equipment_name: line.name, quantity: 1, daily_rate: line.rate, deposit: line.deposit })));
-    if (linesError) { await db.from("quick_rental_orders").delete().eq("id", header.id); setNotice(linesError.message); return; }
-    const path = `${header.id}/signature/${Date.now()}_firma-entrega.png`; const upload = await db.storage.from("rental-attachments").upload(path, dataUrlToBlob(signature), { contentType: "image/png" });
-    if (upload.error) { setNotice(`El alquiler se guardó, pero la firma no: ${upload.error.message}`); } else { const { error: signatureError } = await db.from("quick_rental_order_attachments").insert({ order_id: header.id, kind: "signature", storage_path: path, file_name: "firma-entrega.png", mime_type: "image/png" }); if (signatureError) setNotice(`El alquiler se guardó, pero no se pudo asociar la firma: ${signatureError.message}`); else setNotice(`${code} guardado con ${cart.length} equipo(s) y firma.`); }
-    setCart([]); setPending(null); setSignature(""); await load();
+  useEffect(() => {
+    let active = true;
+    loadRentalWorkspace()
+      .then((data) => {
+        if (!active) return;
+        if (!data) {
+          setLoadError("Inicia sesión en RFC Enterprise para consultar la bodega y los alquileres.");
+          return;
+        }
+        setCompanyId(data.companyId);
+        setEquipment(data.equipment);
+        setOrders(data.orders);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setLoadError(error instanceof Error ? error.message : "No fue posible cargar la bodega.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const selectedEquipment = useMemo(
+    () => equipment.find((item) => item.itemId === selectedItemId),
+    [equipment, selectedItemId],
+  );
+
+  const cartDeposits = useMemo(
+    () => cart.reduce((total, line) => total + line.deposit * line.quantity, 0),
+    [cart],
+  );
+
+  const cartUnits = useMemo(
+    () => cart.reduce((total, line) => total + line.quantity, 0),
+    [cart],
+  );
+
+  function addToCart() {
+    if (!selectedEquipment) {
+      setNotice("Selecciona un equipo de la bodega.");
+      return;
+    }
+    if (cart.some((line) => line.itemId === selectedEquipment.itemId)) {
+      setNotice("Ese equipo ya está en el documento. Ajusta su cantidad o quítalo antes de volver a agregarlo.");
+      return;
+    }
+    const requested = Math.max(1, Math.floor(asNumber(quantity)));
+    if (requested > selectedEquipment.available) {
+      setNotice(
+        `${selectedEquipment.name}: solo hay ${selectedEquipment.available} disponible(s) para entregar.`,
+      );
+      return;
+    }
+    setCart((current) => [
+      ...current,
+      {
+        key: crypto.randomUUID(),
+        itemId: selectedEquipment.itemId,
+        name: selectedEquipment.name,
+        quantity: requested,
+        dailyRate: Math.max(0, asNumber(rate)),
+        deposit: Math.max(0, asNumber(deposit)),
+      },
+    ]);
+    setSelectedItemId("");
+    setQuantity("1");
+    setRate("");
+    setDeposit("");
+    setNotice("");
   }
-  async function returnLine(order: Order, line: Line) { const db = client(); if (!db) return; const { error } = await db.from("quick_rental_order_items").update({ returned_quantity: 1, returned_at: new Date().toISOString(), return_notes: "Recibido desde el documento de alquiler." }).eq("id", line.id); if (error) { setNotice(error.message); return; } const allReturned = order.lines.every((item) => item.id === line.id || item.returned); const { error: orderError } = await db.from("quick_rental_orders").update({ status: allReturned ? "returned" : "partially_returned" }).eq("id", order.id); setNotice(orderError ? orderError.message : `${line.name} quedó recibido; el resto del documento continúa activo.`); await load(); }
-  const invoiceTotal = invoice ? invoice.lines.reduce((sum, line) => sum + days(invoice.pickup, invoice.due) * line.rate + line.extra, 0) : 0;
 
-  return <main className="dashboard-content rentals-workspace" id="main-content"><section className="dashboard-heading"><div><p>Custodia comercial · Alquiler rápido</p><h1>Documento de alquiler</h1><small>Una entrega puede incluir varios equipos, una sola firma y una factura consolidada.</small></div></section>{notice ? <p className="rental-notice" role="status">{notice}</p> : null}<section className="rentals-grid"><form className="dashboard-panel rental-form" onSubmit={prepare}><div className="panel-title"><div><p>Nueva entrega</p><h2>Cliente y periodo</h2></div><span>{cart.length} equipos</span></div><div className="rental-fields"><label>Cliente / responsable<input name="customer" required /></label><label>Teléfono<input name="phone" type="tel" /></label><label>Documento<input name="document" required /></label><label>Entrega<input name="pickup" required type="datetime-local" defaultValue={initialDate()} /></label><label>Devolución prevista<input name="due" required type="datetime-local" defaultValue={initialDate(1)} /></label><label className="rental-wide">Estado inicial y accesorios<textarea name="notes" rows={2} /></label></div><div className="panel-title"><div><p>Equipos</p><h2>Agregar al documento</h2></div></div><div className="rental-fields"><label>Equipo<select onChange={(e) => setEquipmentId(e.target.value)} value={equipmentId}><option value="">Selecciona equipo</option>{available.map((item) => <option key={item.id} value={item.id}>{item.name} · Disponible {item.available}</option>)}</select></label><label>Tarifa por día<input inputMode="numeric" onChange={(e) => setRate(e.target.value.replace(/\D/g, ""))} value={rate} /></label><label>Garantía<input inputMode="numeric" onChange={(e) => setDeposit(e.target.value.replace(/\D/g, ""))} value={deposit} /></label><button className="btn-cancel" onClick={addEquipment} type="button">Agregar equipo</button></div><ul className="rental-records">{cart.map((line) => <li className="rental-record" key={line.id}><strong>{line.name}</strong><span>Tarifa {cop.format(line.rate)} / día · Garantía {cop.format(line.deposit)}</span><button className="btn-cancel" onClick={() => setCart((current) => current.filter((item) => item.id !== line.id))} type="button">Quitar</button></li>)}</ul><p className="panel-intro">Garantías del documento: <strong>{cop.format(cartTotal)}</strong>. La tarifa se calcula por cada línea en la factura.</p><button className="inventory-action" type="submit">Continuar a firma única</button></form><section className="dashboard-panel rental-list"><div className="panel-title"><div><p>Documentos recientes</p><h2>{orders.length} alquileres</h2></div></div>{orders.map((order) => <article className="rental-record" key={order.id}><div className="rental-record-main"><div className="rental-details"><span className="rental-code">{order.code}</span><h3>{order.customer}</h3><p>{order.lines.length} equipo(s) · Estado: {order.status}</p><small>{new Date(order.pickup).toLocaleString("es-CO")} → {new Date(order.due).toLocaleString("es-CO")}</small></div><div className="rental-amount"><button className="btn-cancel" onClick={() => setInvoice(order)} type="button">Ver factura</button></div></div><ul className="rental-records">{order.lines.map((line) => <li className="rental-record" key={line.id}><span>{line.name}</span>{line.returned ? <strong>Devuelto</strong> : <button className="inventory-action" onClick={() => void returnLine(order, line)} type="button">Registrar devolución</button>}</li>)}</ul></article>)}</section></section>{pending ? <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="modal-card rental-signature-modal"><h3>Firma del cliente</h3><p>{pending.customer} recibe {cart.length} equipo(s) bajo un solo documento.</p><SignatureCapture label="Capturar firma" value={signature} onChange={setSignature} /><div className="modal-actions"><button className="btn-cancel" onClick={() => setPending(null)} type="button">Volver</button><button className="inventory-action" disabled={!signature} onClick={() => void save()} type="button">Firmar y registrar</button></div></div></div> : null}{invoice ? <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="modal-card rental-invoice-modal"><h3>Factura de alquiler · {invoice.code}</h3><p>{invoice.customer} · {invoice.document}</p><table className="attendance-table"><thead><tr><th>Equipo</th><th>Días</th><th>Tarifa</th><th>Subtotal</th></tr></thead><tbody>{invoice.lines.map((line) => <tr key={line.id}><td>{line.name}</td><td>{days(invoice.pickup, invoice.due)}</td><td>{cop.format(line.rate)}</td><td>{cop.format(days(invoice.pickup, invoice.due) * line.rate + line.extra)}</td></tr>)}</tbody></table><p><strong>Total: {cop.format(invoiceTotal)}</strong></p><div className="modal-actions"><button className="btn-cancel" onClick={() => setInvoice(null)} type="button">Cerrar</button><button className="inventory-action" onClick={() => window.print()} type="button">Imprimir factura</button></div></div></div> : null}</main>;
+  function updateCartQuantity(key: string, nextQuantity: number) {
+    setCart((current) =>
+      current.map((line) => {
+        if (line.key !== key) return line;
+        const available = equipment.find((item) => item.itemId === line.itemId)?.available ?? line.quantity;
+        return {
+          ...line,
+          quantity: Math.min(Math.max(1, Math.floor(nextQuantity)), Math.max(1, available)),
+        };
+      }),
+    );
+  }
+
+  function prepare(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const customerName = String(data.get("customer") ?? "").trim();
+    const customerDocument = String(data.get("document") ?? "").trim();
+    const pickupValue = String(data.get("pickup") ?? "");
+    const dueValue = String(data.get("due") ?? "");
+
+    if (customerName.length < 2) {
+      setNotice("Escribe el nombre del cliente.");
+      return;
+    }
+    if (!customerDocument) {
+      setNotice("El documento del cliente es obligatorio para la entrega.");
+      return;
+    }
+    if (!pickupValue || !dueValue) {
+      setNotice("Indica la fecha de entrega y la devolución prevista.");
+      return;
+    }
+    if (new Date(dueValue).getTime() <= new Date(pickupValue).getTime()) {
+      setNotice("La devolución prevista debe ser posterior a la entrega.");
+      return;
+    }
+    if (!cart.length) {
+      setNotice("Agrega al menos un equipo al documento.");
+      return;
+    }
+
+    setPending({
+      customerName,
+      customerPhone: String(data.get("phone") ?? "").trim(),
+      customerDocument,
+      pickupAt: new Date(pickupValue).toISOString(),
+      dueAt: new Date(dueValue).toISOString(),
+      deliveryNotes: String(data.get("notes") ?? "").trim(),
+    });
+    setSignature("");
+    setNotice("");
+  }
+
+  async function save() {
+    if (!pending || !signature || saving) return;
+    setSaving(true);
+    setNotice("");
+    try {
+      const result = await createQuickRentalOrder({
+        ...pending,
+        lines: cart.map((line) => ({
+          inventoryItemId: line.itemId,
+          equipmentName: line.name,
+          quantity: line.quantity,
+          dailyRate: line.dailyRate,
+          deposit: line.deposit,
+        })),
+        signatureDataUrl: signature,
+      });
+      setPending(null);
+      setSignature("");
+      setCart([]);
+      setSelectedItemId("");
+      setQuantity("1");
+      setRate("");
+      setDeposit("");
+      formRef.current?.reset();
+      // El documento ya quedó creado; si falla el refresco, no se debe mostrar
+      // como un fallo de la entrega.
+      await reload().catch(() => undefined);
+      setNotice(
+        result.signatureWarning
+          ? `${result.code} quedó registrado, pero la firma no se pudo guardar: ${result.signatureWarning}`
+          : `${result.code} registrado con una sola firma de entrega.`,
+      );
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "No fue posible registrar el alquiler.");
+      await reload().catch(() => undefined);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openReturn(order: QuickRentalOrder, line: QuickRentalOrderLine) {
+    setReturning({ order, line });
+    setReturnQuantity("1");
+    setReturnNotes("");
+    setReturnExtra("");
+    setNotice("");
+  }
+
+  async function submitReturn() {
+    if (!returning || returnSaving) return;
+    const pendingQuantity = quickRentalLinePending(returning.line);
+    const requestedQuantity = Math.floor(asNumber(returnQuantity));
+    if (requestedQuantity < 1) {
+      setNotice("Indica cuántas unidades se reciben.");
+      return;
+    }
+    if (requestedQuantity > pendingQuantity) {
+      setNotice(`Solo quedan ${pendingQuantity} unidad(es) pendientes de esa línea.`);
+      return;
+    }
+    if (returnNotes.trim().length < 3) {
+      setNotice("Describe el estado en que se recibe el equipo.");
+      return;
+    }
+
+    setReturnSaving(true);
+    try {
+      await returnQuickRentalLine({
+        orderId: returning.order.id,
+        lineId: returning.line.id,
+        quantity: requestedQuantity,
+        notes: returnNotes,
+        extraCharge: Math.max(0, asNumber(returnExtra)),
+      });
+      setReturning(null);
+      await reload().catch(() => undefined);
+      setNotice("Devolución registrada. El estado del documento se actualizó.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "No fue posible registrar la devolución.");
+    } finally {
+      setReturnSaving(false);
+    }
+  }
+
+  async function openInvoice(order: QuickRentalOrder) {
+    const request = signatureRequest.current + 1;
+    signatureRequest.current = request;
+    setInvoice(order);
+    setSignatureUrl(null);
+    if (!order.signaturePath) return;
+    try {
+      const url = await getQuickRentalSignatureUrl(order.signaturePath);
+      if (signatureRequest.current === request) setSignatureUrl(url);
+    } catch {
+      if (signatureRequest.current === request) setSignatureUrl(null);
+    }
+  }
+
+  const pendingDays = pending ? quickRentalDays(pending.pickupAt, pending.dueAt) : 1;
+  const pendingRent = pending
+    ? cart.reduce(
+        (total, line) => total + line.quantity * pendingDays * line.dailyRate,
+        0,
+      )
+    : 0;
+
+  return (
+    <main className="dashboard-content rentals-workspace" id="main-content">
+      <section className="dashboard-heading">
+        <div>
+          <p>Custodia comercial · Alquiler rápido</p>
+          <h1>Documento de alquiler</h1>
+          <small>
+            Varias líneas, una sola firma de entrega y devoluciones parciales por equipo.
+            La disponibilidad se consulta en la bodega persistida.
+          </small>
+        </div>
+      </section>
+
+      {notice ? (
+        <p className="rental-notice" role="status">
+          {notice}
+        </p>
+      ) : null}
+      {loadError ? (
+        <p className="rental-notice" role="alert" style={{ background: "#fdecec", borderColor: "#e7a6a6", color: "#8a1f1f" }}>
+          {loadError}
+        </p>
+      ) : null}
+
+      <section className="rentals-grid">
+        <form className="dashboard-panel rental-form" onSubmit={prepare} ref={formRef}>
+          <div className="panel-title">
+            <div>
+              <p>Nueva entrega</p>
+              <h2>Cliente y periodo</h2>
+            </div>
+            <span>{loading ? "Cargando bodega…" : `${equipment.length} referencias`}</span>
+          </div>
+
+          <div className="rental-fields">
+            <label>
+              Cliente / responsable
+              <input name="customer" required autoComplete="name" />
+            </label>
+            <label>
+              Teléfono
+              <input name="phone" type="tel" autoComplete="tel" />
+            </label>
+            <label>
+              Documento
+              <input name="document" required autoComplete="off" />
+            </label>
+            <label>
+              Entrega
+              <input name="pickup" required type="datetime-local" defaultValue={defaults.pickup} />
+            </label>
+            <label>
+              Devolución prevista
+              <input name="due" required type="datetime-local" defaultValue={defaults.due} />
+            </label>
+            <label className="rental-wide">
+              Estado inicial y accesorios
+              <textarea name="notes" rows={2} placeholder="Ej.: se entrega con maletín, cadena y batería al 80 %." />
+            </label>
+          </div>
+
+          <div className="panel-title">
+            <div>
+              <p>Equipos</p>
+              <h2>Agregar al documento</h2>
+            </div>
+            <span>{cartUnits} unidad(es) en {cart.length} línea(s)</span>
+          </div>
+
+          <div className="rental-fields">
+            <label className="rental-wide">
+              Equipo o herramienta disponible
+              <select
+                value={selectedItemId}
+                onChange={(event) => {
+                  setSelectedItemId(event.target.value);
+                  setQuantity("1");
+                }}
+              >
+                <option value="">Selecciona un equipo…</option>
+                {equipment.map((item) => (
+                  <option key={item.itemId} value={item.itemId} disabled={item.available <= 0}>
+                    {item.name} · {item.available} disponible(s) de {item.stock} · {item.inventoryGroupName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Cantidad
+              <input
+                min={1}
+                max={selectedEquipment?.available ?? undefined}
+                step={1}
+                type="number"
+                value={quantity}
+                onChange={(event) => setQuantity(event.target.value)}
+              />
+            </label>
+            <label>
+              Tarifa diaria (COP)
+              <input min={0} step={1} type="number" value={rate} onChange={(event) => setRate(event.target.value)} />
+            </label>
+            <label>
+              Garantía por unidad (COP)
+              <input min={0} step={1} type="number" value={deposit} onChange={(event) => setDeposit(event.target.value)} />
+            </label>
+            <div style={{ alignSelf: "end" }}>
+              <button className="inventory-action" onClick={addToCart} type="button">
+                Agregar equipo
+              </button>
+            </div>
+          </div>
+
+          {selectedEquipment ? (
+            <p className="panel-intro" style={{ marginBottom: 10 }}>
+              {selectedEquipment.category} · {selectedEquipment.stock} en bodega ·{" "}
+              {selectedEquipment.rented} fuera de bodega ·{" "}
+              <strong>{selectedEquipment.available} disponible(s)</strong>
+            </p>
+          ) : null}
+          {!loading && equipment.length === 0 ? (
+            <p className="panel-intro">
+              No hay equipos ni herramientas con existencia en la bodega. Revisa el
+              inventario o la clasificación de la categoría antes de crear una entrega.
+            </p>
+          ) : null}
+
+          <ul className="rental-records" aria-label="Equipos del documento">
+            {cart.length === 0 ? (
+              <li className="empty-state">Aún no has agregado equipos. La entrega puede tener varias líneas.</li>
+            ) : (
+              cart.map((line) => (
+                <li className="rental-record" key={line.key}>
+                  <div className="rental-record-main">
+                    <div className="rental-details">
+                      <strong>{line.name}</strong>
+                      <p>
+                        {cop.format(line.dailyRate)} / día · Garantía {cop.format(line.deposit)} por unidad
+                      </p>
+                    </div>
+                    <div className="rental-amount">
+                      <label style={{ alignItems: "center", display: "flex", gap: 6, fontSize: 12 }}>
+                        Cantidad
+                        <input
+                          aria-label={`Cantidad de ${line.name}`}
+                          max={equipment.find((item) => item.itemId === line.itemId)?.available ?? line.quantity}
+                          min={1}
+                          onChange={(event) => updateCartQuantity(line.key, asNumber(event.target.value))}
+                          style={{ maxWidth: 72, minHeight: 34, padding: "4px 6px" }}
+                          type="number"
+                          value={line.quantity}
+                        />
+                      </label>
+                      <button
+                        className="btn-cancel"
+                        onClick={() => setCart((current) => current.filter((item) => item.key !== line.key))}
+                        type="button"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+
+          <p className="panel-intro" style={{ margin: "12px 0" }}>
+            Garantías del documento: <strong>{cop.format(cartDeposits)}</strong>. La renta se calcula por
+            línea según los días del periodo.
+          </p>
+          <button className="inventory-action" disabled={!cart.length || loading} type="submit">
+            Continuar a firma única
+          </button>
+        </form>
+
+        <section className="dashboard-panel rental-list">
+          <div className="panel-title">
+            <div>
+              <p>Documentos recientes</p>
+              <h2>{orders.length} alquiler(es)</h2>
+            </div>
+            <span>{companyId ? "Datos de Supabase" : "Sin empresa activa"}</span>
+          </div>
+
+          {orders.length === 0 ? (
+            <p className="empty-state">No hay documentos de alquiler registrados.</p>
+          ) : (
+            <div className="rental-records">
+              {orders.map((order) => {
+                const status = quickRentalDisplayStatus(order, now);
+                const pendingUnits = quickRentalOrderPendingQuantity(order);
+                return (
+                  <article
+                    className={`rental-record${status === "returned" ? " status-returned" : ""}`}
+                    key={order.id}
+                  >
+                    <div className="rental-record-main">
+                      <div className="rental-details">
+                        <span className="rental-code">{order.code}</span>
+                        <h3>{order.customerName}</h3>
+                        <p>
+                          {order.lines.length} línea(s) · {pendingUnits} unidad(es) pendiente(s) ·{" "}
+                          <strong>{quickRentalStatusLabels[status]}</strong>
+                        </p>
+                        <small>
+                          {dateTime(order.pickupAt)} → {dateTime(order.dueAt)}
+                        </small>
+                      </div>
+                      <div className="rental-amount">
+                        <strong>{cop.format(quickRentalOrderRentTotal(order))}</strong>
+                        <small>Garantía {cop.format(quickRentalOrderDepositTotal(order))}</small>
+                        <button onClick={() => void openInvoice(order)} type="button">
+                          Ver factura
+                        </button>
+                      </div>
+                    </div>
+
+                    <ul className="rental-records" style={{ marginTop: 10 }}>
+                      {order.lines.map((line) => {
+                        const linePending = quickRentalLinePending(line);
+                        return (
+                          <li className="rental-record" key={line.id}>
+                            <div className="rental-record-main">
+                              <div className="rental-details">
+                                <strong>{line.equipmentName}</strong>
+                                <p>
+                                  {line.quantity} × {cop.format(line.dailyRate)} / día · Garantía{" "}
+                                  {cop.format(line.deposit)} / unidad
+                                </p>
+                                {line.returnedQuantity > 0 ? (
+                                  <p>
+                                    Devuelto {line.returnedQuantity}/{line.quantity}
+                                    {line.returnNotes ? ` · ${line.returnNotes}` : ""}
+                                  </p>
+                                ) : null}
+                              </div>
+                              <div className="rental-amount">
+                                {quickRentalLineIsReturned(line) ? (
+                                  <span className="rental-returned">Devuelto</span>
+                                ) : (
+                                  <button
+                                    className="inventory-action"
+                                    onClick={() => openReturn(order, line)}
+                                    type="button"
+                                  >
+                                    Devolver {linePending}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </section>
+
+      {pending ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Firma del cliente">
+          <div className="modal-card rental-signature-modal">
+            <h3>Firma del cliente</h3>
+            <div className="rental-signature-summary">
+              <span>Entrega consolidada</span>
+              <strong>{pending.customerName}</strong>
+              <p>
+                {cart.length} línea(s) · {cartUnits} unidad(es) · {pendingDays} día(s)
+              </p>
+              <p>
+                Renta estimada {cop.format(pendingRent)} · Garantías {cop.format(cartDeposits)}
+              </p>
+              <small>
+                {dateTime(pending.pickupAt)} → {dateTime(pending.dueAt)}
+              </small>
+            </div>
+            <SignatureCapture label="Capturar firma" value={signature} onChange={setSignature} />
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setPending(null)} type="button">
+                Volver
+              </button>
+              <button className="inventory-action" disabled={!signature || saving} onClick={() => void save()} type="button">
+                {saving ? "Guardando…" : "Firmar y registrar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {returning ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Registrar devolución">
+          <div className="modal-card rental-signature-modal">
+            <h3>Devolución parcial</h3>
+            <div className="rental-signature-summary">
+              <span>{returning.order.code}</span>
+              <strong>{returning.line.equipmentName}</strong>
+              <p>
+                Pendiente: {quickRentalLinePending(returning.line)} de {returning.line.quantity} unidad(es)
+              </p>
+            </div>
+            <div className="rental-fields">
+              <label>
+                Unidades que se reciben
+                <input
+                  min={1}
+                  max={quickRentalLinePending(returning.line)}
+                  onChange={(event) => setReturnQuantity(event.target.value)}
+                  step={1}
+                  type="number"
+                  value={returnQuantity}
+                />
+              </label>
+              <label>
+                Recargo por daño o demora (COP)
+                <input
+                  min={0}
+                  onChange={(event) => setReturnExtra(event.target.value)}
+                  step={1}
+                  type="number"
+                  value={returnExtra}
+                />
+              </label>
+              <label className="rental-wide">
+                Estado en que se recibe
+                <textarea
+                  onChange={(event) => setReturnNotes(event.target.value)}
+                  placeholder="Ej.: equipo completo, con desgaste normal; sin accesorios faltantes."
+                  required
+                  rows={3}
+                  value={returnNotes}
+                />
+              </label>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setReturning(null)} type="button">
+                Cancelar
+              </button>
+              <button className="inventory-action" disabled={returnSaving} onClick={() => void submitReturn()} type="button">
+                {returnSaving ? "Guardando…" : "Registrar devolución"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {invoice ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Factura de alquiler">
+          <div className="modal-card rental-invoice-modal">
+            <div className="modal-header">
+              <div>
+                <p>Factura de alquiler</p>
+                <h3>{invoice.code}</h3>
+              </div>
+            </div>
+            <p>
+              {invoice.customerName}
+              {invoice.customerDocument ? ` · ${invoice.customerDocument}` : ""}
+              {invoice.customerPhone ? ` · ${invoice.customerPhone}` : ""}
+            </p>
+            <p>
+              {dateTime(invoice.pickupAt)} → {dateTime(invoice.dueAt)} ·{" "}
+              {quickRentalDays(invoice.pickupAt, invoice.dueAt)} día(s)
+            </p>
+
+            <div style={{ marginTop: 12, overflowX: "auto" }}>
+              <table className="attendance-table">
+                <thead>
+                  <tr>
+                    <th>Equipo</th>
+                    <th>Cant.</th>
+                    <th>Días</th>
+                    <th>Tarifa</th>
+                    <th>Recargo</th>
+                    <th>Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoice.lines.map((line) => (
+                    <tr key={line.id}>
+                      <td>
+                        {line.equipmentName}
+                        {line.returnedQuantity > 0 ? (
+                          <small style={{ display: "block", color: "#64748b" }}>
+                            Devuelto {line.returnedQuantity}/{line.quantity}
+                          </small>
+                        ) : null}
+                      </td>
+                      <td>{line.quantity}</td>
+                      <td>{quickRentalDays(invoice.pickupAt, invoice.dueAt)}</td>
+                      <td>{cop.format(line.dailyRate)}</td>
+                      <td>{cop.format(line.extraCharge)}</td>
+                      <td>
+                        {cop.format(
+                          quickRentalLineSubtotal(
+                            line,
+                            quickRentalDays(invoice.pickupAt, invoice.dueAt),
+                          ),
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ display: "grid", gap: 4, marginTop: 14 }}>
+              <p>
+                <strong>Renta: {cop.format(quickRentalOrderRentTotal(invoice))}</strong>
+              </p>
+              <p>Garantía del documento: {cop.format(quickRentalOrderDepositTotal(invoice))}</p>
+              {invoice.deliveryNotes ? <p>Observaciones: {invoice.deliveryNotes}</p> : null}
+            </div>
+
+            <div className="rental-attachments">
+              <h4 style={{ marginBottom: "0.5rem", fontSize: 13, color: "#6b7280" }}>
+                Firma de entrega
+              </h4>
+              {signatureUrl ? (
+                // La firma vive en un bucket privado; se muestra con URL temporal.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt="Firma del cliente"
+                  src={signatureUrl}
+                  style={{ background: "#fff", border: "1px solid #ddd", borderRadius: 8, maxWidth: "100%" }}
+                />
+              ) : (
+                <p className="panel-intro">
+                  {invoice.signaturePath
+                    ? "No fue posible generar la vista temporal de la firma."
+                    : "Este documento no tiene firma adjunta."}
+                </p>
+              )}
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="btn-cancel"
+                onClick={() => {
+                  signatureRequest.current += 1;
+                  setSignatureUrl(null);
+                  setInvoice(null);
+                }}
+                type="button"
+              >
+                Cerrar
+              </button>
+              <button className="inventory-action" onClick={() => window.print()} type="button">
+                Imprimir factura
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </main>
+  );
 }

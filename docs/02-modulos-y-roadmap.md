@@ -1,10 +1,12 @@
 <!-- Registro 2026-10-19: el Resumen del dashboard explica cada indicador con un icono de ayuda contextual; presupuesto de obras, gasto real, saldo, alertas y contadores comerciales indican que miden y de donde salen. -->
+<!-- Registro 2026-10-20: Compras ya permite registrar recepción total o parcial de una orden, con factura/remisión, costo unitario y entrada transaccional a inventario. -->
+<!-- Registro 2026-10-20: Informes de inventario agrega consumo por obra, rotación, stock inmovilizado y valoración por grupo sobre datos persistidos. El alquiler rápido pasa a documento multi-línea con una sola firma y devolución parcial por ítem. El catálogo de transporte del APU deja de usar localStorage como fuente de verdad y migra sus códigos ausentes a Supabase. -->
 <!-- Registro 2026-10-19: la campana del portal carga las alertas operativas desde el shell compartido y las muestra en todos los modulos autorizados, con acceso directo al caso que requiere atencion. Resumen consume la misma regla para evitar conteos distintos. -->
 <!-- Registro 2026-10-13: cada version de APU conserva rendimiento diario de la cuadrilla y tamano de cuadrilla. La duracion tecnica se calcula como techo(cantidad de obra / rendimiento diario), en dias fisicos; no usa fechas comerciales ni crea dias remunerados o extras. -->
 ---
 estado: vigente
 propietario: Producto y Desarrollo RFC Enterprise
-ultima_actualizacion: 2026-10-19
+ultima_actualizacion: 2026-10-20
 audiencia: Dirección, Producto y Desarrollo
 ---
 
@@ -38,6 +40,14 @@ Proyecto es el concepto general y `Obra`, `Mantenimiento` o `Alquiler` son sus t
 Como vía alternativa para clientes particulares se incorpora `Alquiler rápido`: entrega sin cotización formal, con consecutivo `ALQ-RAP-AAAAMMDD-###`, identificación básica, equipo, periodo, tarifa, garantía, devolución y novedades.
 
 **Estado 2026-10-07 (ADR-106, ADR-107).** El proyecto de tipo `Alquiler` ya registra sus condiciones económicas en la propia ficha: tarifa diaria, cargo por día de extensión, mora por día de retraso y condiciones particulares. La entrega del equipo es la fecha de inicio, la devolución pactada es la fecha estimada de fin y la devolución real se captura al cerrar el proyecto; con esos tres datos el sistema calcula los días facturados, la extensión, la mora y el total a facturar. El presupuesto de materiales deja de ser obligatorio en este tipo porque un alquiler no despacha insumos. El `Alquiler rápido` quedó con persistencia real en Supabase —tablas `quick_rentals` y `quick_rental_attachments`, bucket privado `rental-attachments`, RLS por empresa—, con la firma del cliente almacenada como adjunto y sin reservas en `localStorage`.
+
+**Estado 2026-10-20 (ADR-160).** El alquiler rápido activo es un documento multi-línea: `quick_rental_orders` guarda una sola cabecera y una sola firma de entrega, y `quick_rental_order_items` conserva cantidad, tarifa, garantía unitaria, devolución parcial y recargo por equipo. La disponibilidad se calcula contra la bodega persistida (`inventory_stock` + `inventory_items`) menos las líneas pendientes de otros documentos activos; no se usa el catálogo semilla del navegador. La tabla histórica `quick_rentals` se conserva como archivo de la etapa anterior y no es fuente de verdad del flujo nuevo. Se retiró la pantalla unitaria sin ruta activa.
+
+## Informes de inventario y catálogo de transporte (2026-10-20)
+
+El Centro de informes incorpora cuatro lecturas operativas sobre datos persistidos: **consumo por obra** (salidas valorizadas por proyecto), **rotación** (unidades salidas ÷ existencia actual), **stock inmovilizado** (referencias con existencia y sin salidas en el periodo) y **valoración por grupo** (Bodega, Dotación y Trabajadores). El periodo se elige entre 30 días, 90 días, 12 meses o histórico completo. La rotación se declara como índice operativo, no como costo de ventas contable, porque aún no hay fotografías históricas de existencias (ADR-158, riesgo INF-001).
+
+El catálogo de transporte del APU deja de escribir en `rfc_apu_transport_items`. La primera carga con sesión importa a `apu_transport_items` solo los códigos que no existan en la empresa y elimina la clave local únicamente después de una importación exitosa; sin Supabase o sin sesión no se muestran datos locales como si fueran persistidos (ADR-159).
 
 ## Registro de jornada
 

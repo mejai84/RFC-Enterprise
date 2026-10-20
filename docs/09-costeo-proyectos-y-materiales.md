@@ -1,9 +1,11 @@
+<!-- Registro 2026-10-20: la recepción de compras registra la entrada de inventario por RPC en la misma transacción que actualiza la orden; admite recepción parcial, factura/remisión y costo unitario por línea. -->
+<!-- Registro 2026-10-20: Informes de inventario calcula consumo por obra, rotación, inmovilizado y valoración por grupo sobre existencias y movimientos persistidos. La rotación es un índice operativo (salidas / existencia actual), no un costo de ventas contable. El alquiler rápido valoriza días × tarifa × cantidad + recargos y garantía unitaria × cantidad. -->
 <!-- Registro 2026-10-19: las alertas de cotizaciones sin APU, stock bajo, requisiciones pendientes y presupuesto de obra al 80/100 % se consultan desde la campana global en cualquier modulo autorizado. -->
 <!-- Registro 2026-10-13: el APU calcula y presenta la duracion fisica de cada actividad con cantidad de obra y rendimiento diario de cuadrilla. Ambos datos se congelan al guardar su version, separados de dias remunerados, recargos y fechas comerciales. -->
 ---
 estado: vigente
 propietario: Producto y Operaciones RFC Enterprise
-ultima_actualizacion: 2026-10-19
+ultima_actualizacion: 2026-10-20
 audiencia: Dirección, Operaciones, Almacén, Contabilidad y Desarrollo
 ---
 
@@ -28,9 +30,18 @@ El APU de una cotización enviada, confirmada o en ejecución se conserva como l
 
 Para alquileres, el APU o tarifa cubre equipo, tiempo de uso, transporte, operador y otros conceptos pactados. El proyecto de tipo Alquiler deberá relacionar el equipo con su entrega/devolución y registrar días, horas, daños o extensiones como cargos facturables.
 
-El alquiler rápido usa una tarifa diaria y garantía sin crear proyecto ni cotización. La disponibilidad del activo se descuenta durante el alquiler y se repone únicamente al registrar devolución; los extras por daños, faltantes o tiempo adicional se dejan registrados para su cobro posterior.
+El alquiler rápido usa una tarifa diaria y garantía unitaria sin crear proyecto ni cotización. La disponibilidad del activo se calcula contra la bodega persistida y se descuenta durante el alquiler; se repone al registrar devolución total o parcial por línea. Los extras por daños, faltantes o tiempo adicional se dejan registrados en la línea para su cobro posterior. La factura consolida todas las líneas: `cantidad × días × tarifa + recargo`; la garantía del documento es `garantía unitaria × cantidad` por línea. Una sola firma cubre la entrega completa.
 
 Los informes financieros consolidan el costo de inventario, gasto por proyecto, APU y alquileres; los operativos muestran kardex, stock crítico y custodia. Esta separación permite revisar el costo estimado y la operación sin mezclar controles de naturaleza diferente.
+
+### Informes operativos de inventario (2026-10-20)
+
+- **Consumo por obra:** salidas del periodo agrupadas por `project_id`; suma unidades y `totalCost`. Las salidas sin obra se agrupan como `Sin obra / Bodega` para que el total no se pierda.
+- **Rotación:** `unidades salidas en el periodo ÷ existencia actual` por referencia. Es un índice operativo, no un costo de ventas contable: no hay snapshots históricos de existencias. Si la existencia es cero y hubo salidas, se muestra `—`.
+- **Stock inmovilizado:** referencias con existencia mayor que cero y sin salidas en el periodo; valoriza `existencia × costo unitario`. Si nunca tuvo salida, se muestra "sin salidas registradas".
+- **Valoración por grupo:** agrupa por `inventory_group` (Bodega, Dotación, Trabajadores) y suma referencias, unidades y valor. El porcentaje se calcula sobre el total valorizado.
+
+El periodo se elige entre 30, 90, 365 días o histórico completo y aplica a consumo, rotación e inmovilizado. El filtro de categoría aplica a los cuatro; el de proyecto aplica a consumo, ejecución por obra y kardex, no a rotación, inmovilizado ni valoración. La fuente es Supabase: `inventory_stock`, `inventory_items`, `inventory_movements` y `projects`. No se usan catálogos semilla ni `localStorage`.
 
 El flujo de alquiler rápido se accede dentro del mismo dashboard operativo para conservar los accesos a Inventarios, Proyectos, Informes y demás controles relacionados.
 

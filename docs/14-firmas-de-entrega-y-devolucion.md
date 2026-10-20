@@ -1,11 +1,11 @@
 ---
 estado: operativo-inicial
-ultima_actualizacion: 2026-10-05
+ultima_actualizacion: 2026-10-20
 ---
 
 ## Alquiler rápido
 
-Al confirmar una entrega rápida se abre primero un modal de firma. Solo después de que el cliente firme y se confirme el modal se registra el alquiler y se bloquea el equipo. La firma se guarda como adjunto `signature` en Supabase Storage; sin conexión se conserva junto al alquiler local.
+Al confirmar una entrega rápida se abre primero un modal de firma. Un solo documento puede incluir varios equipos y una sola firma cubre toda la entrega. Solo después de que el cliente firme y se confirme el modal se registra el alquiler. La firma se guarda como adjunto `signature` en el bucket privado `rental-attachments` y se enlaza a `quick_rental_order_attachments`; el flujo activo no conserva la entrega ni la firma en `localStorage`. Si la firma no se puede subir después de crear la cabecera y las líneas, la entrega queda registrada y la pantalla muestra el aviso; no se crea un registro local paralelo ni se oculta el fallo.
 
 # Firmas de entrega y devolución
 

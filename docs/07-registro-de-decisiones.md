@@ -806,6 +806,30 @@ El comparador es de **solo lectura**. No crea revisiones, no edita y no llama ni
 
 **Consecuencias:** las alertas permanecen disponibles al navegar por Cotizaciones, APU, Obras, Inventario y los demás módulos. En la campana, cada usuario ve solo alertas cuyo destino pertenece a sus módulos autorizados. La campana enlaza directamente al caso correspondiente, actualiza al cambiar de ruta, al recuperar el foco o al cambiar el conjunto de alertas en Resumen, y presenta un error explícito si Supabase no responde; un fallo de carga nunca se muestra como cero alertas. El Resumen deja de leer cotizaciones en crudo: usa el mapeo del módulo de Cotizaciones, de modo que `estimatedValue`, `updatedAt` e `history` llegan con el formato del dominio y el valor confirmado no queda en cero.
 
+## ADR-157 - La recepción de compras entra a inventario mediante la RPC autorizada
+
+**Decisión (2026-10-20):** la interfaz de Compras no escribe directamente en las tablas de órdenes, recepciones ni movimientos. Registra una recepción total o parcial mediante la RPC receive_purchase_order, incluyendo factura o remisión, observación, cantidad y costo unitario por línea.
+
+**Consecuencias:** la base bloquea cantidades que superen lo pedido, actualiza el estado de la orden a recepción parcial o recibida y crea el movimiento de entrada de inventario en la misma transacción. La interfaz solo ofrece la recepción a órdenes abiertas y vuelve a cargar su estado al terminar.
+
+## ADR-158 - Los informes de inventario se calculan sobre datos persistidos y declaran su fórmula
+
+**Decisión (2026-10-20):** el Centro de informes incorpora consumo por obra, rotación, stock inmovilizado y valoración por grupo. Los cálculos viven en funciones puras y tipadas del dominio de Inventarios. Las existencias y el costo salen de `inventory_stock` + `inventory_items`; los movimientos y proyectos salen de Supabase. Las cotizaciones se leen con `loadQuotesWorkspaceData()` y los alquileres con `listQuickRentalOrders()`; no se leen filas en crudo ni se usan catálogos semilla del navegador.
+
+**Consecuencias:** el informe de consumo agrupa salidas por proyecto y conserva las salidas sin obra como "Sin obra / Bodega". La rotación se define como unidades salidas en el periodo ÷ existencia actual; no es un costo de ventas contable porque no existen snapshots históricos de existencias (riesgo INF-001). El inmovilizado considera referencias con existencia y sin salidas en el periodo seleccionado. La valoración agrupa por `inventory_group` y usa existencia × costo unitario. El periodo se elige entre 30, 90, 365 días o histórico. Los cuatro informes se exportan a CSV.
+
+## ADR-159 - El catálogo de transporte del APU deja de usar localStorage como fuente de verdad
+
+**Decisión (2026-10-20):** `apu_transport_items` en Supabase es la única fuente de verdad del catálogo de transporte. La clave `rfc_apu_transport_items` se lee una sola vez para importar los códigos que no existan en la empresa; la importación usa `upsert` con `ignoreDuplicates` sobre `(company_id, code)` y nunca sobrescribe un ítem existente. La clave se elimina únicamente después de una importación sin errores. Sin Supabase o sin sesión no se devuelve el catálogo local como si fuera persistido: se informa un catálogo vacío con aviso.
+
+**Consecuencias:** las altas y ediciones ya no simulan un guardado local cuando Supabase falla; el error se propaga a la pantalla. Un ítem con id legado que no sea UUID se resuelve por la clave única (empresa, código) para no enviar identificadores inválidos. Los APU históricos conservan su `transport_item_id`; el borrado sigue siendo lógico (`is_active = false`). No se modificaron migraciones, RLS ni autenticación.
+
+## ADR-160 - El alquiler rápido es un documento multi-línea con disponibilidad persistida y devolución por línea
+
+**Decisión (2026-10-20):** el flujo activo de alquiler rápido usa `quick_rental_orders` como cabecera y `quick_rental_order_items` como líneas. Una entrega puede incluir varios equipos, una sola firma de cliente y una factura consolidada. La disponibilidad se calcula contra `inventory_stock` + `inventory_items`, restando las cantidades pendientes de documentos activos, parcialmente devueltos o vencidos. Antes de insertar, el repositorio vuelve a consultar la disponibilidad. Cada línea conserva cantidad, tarifa diaria, garantía unitaria, cantidad devuelta, notas y recargo. La firma se guarda en `quick_rental_order_attachments` y el bucket privado `rental-attachments`.
+
+**Consecuencias:** se retiró la pantalla unitaria sin ruta activa. La tabla histórica `quick_rentals` no se migra ni se modifica; queda como archivo de la etapa anterior y no es fuente de verdad. El estado del documento se recalcula tras cada devolución (`active`, `partially_returned`, `returned`) y el vencimiento se deriva de `due_at` para la interfaz. La validación y la escritura no son una sola transacción: dos entregas simultáneas podrían competir en la misma ventana; cerrarlo requiere una RPC transaccional (riesgo ALQ-005). No se modificaron migraciones, RLS, `DashboardShell` ni inventario general.
+
 ## ADR-150 - La reposicion de dotacion nace en cero
 
 **Decision (2026-10-13):** los dias de reposicion de cada concepto de dotacion no se heredan de la tabla del cliente. La tabla esta construida sobre 240 dias, y ese numero se habia quedado como valor por defecto de las 2.699 filas de la matriz, como si todo se repone cada 240 dias. No es un dato del documento: es un supuesto.

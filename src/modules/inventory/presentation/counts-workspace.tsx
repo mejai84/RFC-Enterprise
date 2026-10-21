@@ -614,6 +614,7 @@ export function CountsWorkspace() {
                 <tbody>
                   {pagedLines.map((line) => {
                     const item = line.inventory_stock?.inventory_items;
+                    const itemName = item?.name ?? "Artículo sin ficha";
                     const saved = line.counted_quantity !== null;
                     return (
                       <tr key={line.id}>
@@ -622,10 +623,10 @@ export function CountsWorkspace() {
                             className="table-link-button"
                             type="button"
                             onClick={() => editLine(line)}
+                            title={itemName}
+                            aria-label={`Registrar conteo de ${itemName}`}
                           >
-                            <strong>
-                              {item?.name ?? "Artículo sin ficha"}
-                            </strong>
+                            <strong>{itemName}</strong>
                             <small>
                               {item?.sku ?? "Sin SKU"} |{" "}
                               {item?.unit ?? "unidad"}

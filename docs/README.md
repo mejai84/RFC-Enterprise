@@ -21,6 +21,7 @@ Estos documentos son la fuente de verdad operativa del proyecto. Deben actualiza
 | [07 · Registro de decisiones](07-registro-de-decisiones.md) | Conservar el porqué de decisiones relevantes | Equipo |
 | [08 · Importación inicial de Inventarios](08-importacion-inventario-inicial.md) | Trazabilidad del Excel y plan de migración | Desarrollo + Operación |
 | [09 · Costeo de Proyectos y Materiales](09-costeo-proyectos-y-materiales.md) | Especificación técnica y funcional de costos de obra | Producto + Operaciones |
+| [19 · Invitaciones, contacto e importación](19-invitacion-empleados-contacto-e-importacion.md) | Decisiones operativas, variables de entorno y límites de las tres entregas | Desarrollo + Operación |
 | [Plantilla de informe semanal](templates/informe-semanal.md) | Informar cada corte de seguimiento | Líder de proyecto |
 
 ## Regla de vigencia

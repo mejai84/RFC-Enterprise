@@ -1,4 +1,4 @@
-export type MovementType = "entry" | "exit" | "adjustment" | "return";
+export type MovementType = "entry" | "exit" | "adjustment" | "return" | "transfer";
 
 export type InventoryMovement = {
   id: string;
@@ -16,4 +16,7 @@ export type InventoryMovement = {
   responsible?: string;
   notes?: string;
   signatureDataUrl?: string;
+  operationKind?: string;
+  quantityBefore?: number | null;
+  quantityAfter?: number | null;
 };

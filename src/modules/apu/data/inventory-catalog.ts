@@ -4,6 +4,7 @@ import {
   supabasePublishableKey,
   supabaseUrl,
 } from "@/lib/supabase/config";
+import { loadAllPages } from "@/shared/supabase/load-all";
 import type { InventoryGroup, StockProduct } from "@/modules/inventory";
 
 const groupNames: Record<string, string> = {
@@ -65,18 +66,23 @@ export async function loadApuInventoryCatalog(): Promise<{
     return { products: [], error: "Supabase no está configurado." };
   }
   const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
-  const { data, error } = await supabase
-    .from("inventory_stock")
-    .select(
-      "id, inventory_group, location, quantity, minimum_quantity, unit_cost, inventory_items(id, sku, name, category, brand, unit, notes, technical_reference, model, serial_number, purchase_unit, units_per_purchase, purchase_unit_cost)",
-    )
-    .limit(2000);
+  const { data, error } = await loadAllPages((from, to) =>
+    supabase
+      .from("inventory_stock")
+      .select(
+        "id, inventory_group, location, quantity, minimum_quantity, unit_cost, inventory_items(id, sku, name, category, brand, unit, notes, technical_reference, model, serial_number, purchase_unit, units_per_purchase, purchase_unit_cost)",
+      )
+      .order("inventory_group")
+      .order("created_at")
+      .order("id")
+      .range(from, to),
+  );
 
   if (error) {
     return { products: [], error: error.message };
   }
 
-  const products = (data ?? []).flatMap((row) => {
+  const products = data.flatMap((row) => {
     const stock = row as StockRow;
     const item = Array.isArray(stock.inventory_items)
       ? stock.inventory_items[0]

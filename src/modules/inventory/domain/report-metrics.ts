@@ -13,7 +13,7 @@ export type ReportPeriodDays = 30 | 90 | 365 | 0;
 
 export type ReportMovement = {
   productId: string;
-  type: "entry" | "exit" | "adjustment" | "return";
+  type: "entry" | "exit" | "adjustment" | "return" | "transfer";
   quantity: number;
   totalCost: number;
   occurredAt: string;

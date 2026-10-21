@@ -1,5 +1,5 @@
 /** Punto de entrada público del módulo Inventarios & Costos de Obra. */
-export const inventoryModule = { code: "inventory", version: "0.3.0" } as const;
+export const inventoryModule = { code: "inventory", version: "0.6.0" } as const;
 
 export {
   inventoryMovements,
@@ -27,3 +27,9 @@ export type { MaterialRequisition, RequisitionItem, RequisitionStatus } from "./
 export type { ToolLoan, ToolLoanStatus } from "./domain/tool-loan";
 export { buildOperationalAlerts, type OperationalAlert, type OperationalAlertSeverity } from "./domain/operational-alert";
 export { listOperationalAlerts } from "./data/operational-alert-repository";
+export type {
+  InventoryImportGroup,
+  InventoryImportPreview,
+  InventoryImportRawRow,
+  InventoryImportValidatedRow,
+} from "./domain/inventory-import";

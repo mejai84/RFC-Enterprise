@@ -2586,6 +2586,20 @@
 .employee-row strong { font-size:13px; }.employee-row small,.permission-groups small { color:var(--muted); display:block; font-size:11px; font-weight:500; margin-top:2px; }.employee-row i { color:#a74a32; font-size:11px; font-style:normal; font-weight:700; }.employee-row i.is-active { color:var(--brand); }
 .employee-form { display:grid; gap:16px; grid-template-columns:1fr 1fr; }.employee-form label { display:grid; font-size:12px; font-weight:700; gap:7px; }.employee-form input,.employee-form select { border:1px solid var(--line); border-radius:6px; min-height:42px; padding:9px; }.employee-form button { grid-column:1/-1; justify-self:start; }
 .permission-groups { display:grid; gap:14px; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:22px; }.permission-groups fieldset { border:1px solid var(--line); padding:14px; }.permission-groups legend { color:var(--brand-dark); font-size:12px; font-weight:800; padding:0 5px; text-transform:capitalize; }.permission-groups label { align-items:start; display:flex; font-size:12px; gap:9px; line-height:1.35; margin:12px 0; }.permission-groups input { accent-color:var(--brand); margin-top:2px; }.employee-message { background:var(--brand-soft); color:var(--brand-dark); font-size:13px; font-weight:700; margin-top:18px; padding:12px; }
+.employee-access-card { background:var(--canvas); border:1px solid var(--line); border-radius:12px; display:grid; gap:10px; margin:14px 0 18px; padding:16px; }
+.employee-access-head { align-items:flex-start; display:flex; gap:12px; justify-content:space-between; }
+.employee-access-head p { color:var(--brand); font-size:10px; font-weight:850; letter-spacing:.08em; margin:0 0 3px; text-transform:uppercase; }
+.employee-access-head h3 { font-size:16px; margin:0; }
+.employee-access-badge { background:#eef2f1; border-radius:999px; color:var(--ink-secondary); font-size:11px; font-weight:800; padding:5px 10px; white-space:nowrap; }
+.employee-access-badge[data-status="active"] { background:#e8f6ee; color:#137a46; }
+.employee-access-badge[data-status="invited"] { background:#fff7e6; color:#946200; }
+.employee-access-badge[data-status="disabled"],.employee-access-badge[data-status="orphaned"] { background:#fef2f2; color:#991b1b; }
+.employee-access-meta { color:var(--ink-secondary); font-size:12px; line-height:1.65; margin:0; }
+.employee-access-meta strong { color:var(--ink); }
+.employee-access-hint { color:var(--muted); font-size:11px; line-height:1.5; margin:0; }
+.employee-access-actions { align-items:center; display:flex; flex-wrap:wrap; gap:8px; }
+.employee-access-message { color:var(--brand-dark); font-size:12px; font-weight:700; margin:0; }
+@media (max-width:560px) { .employee-access-head { flex-direction:column; } }
 @media (max-width:900px) { .employees-layout { grid-template-columns:1fr; } }
 @media (max-width:900px) { .settings-grid,.settings-columns { grid-template-columns:1fr; } }
 @media (max-width:560px) { .employee-form,.permission-groups { grid-template-columns:1fr; } }

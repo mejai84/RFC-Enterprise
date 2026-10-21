@@ -16,7 +16,7 @@ export type OperationalAlertInput = {
   linkedApuQuoteIds?: string[];
   products: Array<{ id: string; name: string; available: number; minimum: number | null; unit: string }>;
   projects: Array<{ id: string; code: string; budget: number }>;
-  movements: Array<{ projectId?: string; type: "entry" | "exit" | "adjustment" | "return"; totalCost: number }>;
+  movements: Array<{ projectId?: string; type: "entry" | "exit" | "adjustment" | "return" | "transfer"; totalCost: number }>;
   requisitions: Array<{ id: string; code: string; status: string; projectName: string }>;
 };
 

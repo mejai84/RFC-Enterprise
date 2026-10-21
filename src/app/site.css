@@ -84,6 +84,8 @@
 .site-form-button { background: var(--brand-dark); border: 0; color: white; font-size: 14px; font-weight: 750; margin-top: 26px; min-height: 50px; padding: 0 20px; width: 100%; }
 .site-form-button:disabled { background: #89978e; cursor: not-allowed; }
 .site-form-note { color: var(--ink-secondary); font-size: 12px; line-height: 1.5; margin-top: 14px; }
+.site-form-note[data-status="success"] { color: #137a46; font-weight: 700; }
+.site-form-note[data-status="error"] { color: #991b1b; font-weight: 700; }
 .site-footer { align-items: center; background: #0a1b14; color: white; display: flex; gap: 30px; justify-content: space-between; padding: 35px clamp(24px, 5.5vw, 88px); }
 .site-footer p, .site-footer > a { color: rgba(255,255,255,.62); font-size: 12px; }
 .site-footer > a { border-bottom: 1px solid rgba(255,255,255,.45); padding-bottom: 3px; }

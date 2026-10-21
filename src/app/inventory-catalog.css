@@ -623,9 +623,25 @@
   color: #936814;
 }
 
+.mov-badge.return {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.mov-badge.transfer {
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
 .mov-badge.adjustment {
   background: #f1f5f9;
   color: #475569;
+}
+
+.pending-cost {
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .qty-indicator.pos {

@@ -33,6 +33,7 @@ import {
   supabasePublishableKey,
   supabaseUrl,
 } from "@/lib/supabase/config";
+import { loadAllPages } from "@/shared/supabase/load-all";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -134,18 +135,20 @@ export function DashboardExecutiveWorkspace({
   ) => {
     const { data } = await db
       .from("inventory_stock")
-      .select("quantity")
+      .select("quantity,unit_cost")
       .eq("id", stockId)
       .maybeSingle();
     if (!data) return;
     const disponible = Number(data.quantity);
+    const unitCost = Number(data.unit_cost);
     setProducts((prev) =>
-      prev.map((item) => (item.id === stockId ? { ...item, available: disponible } : item)),
+      prev.map((item) => (item.id === stockId ? { ...item, available: disponible, unitCost } : item)),
     );
   };
 
 
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [isSavingMovement, setIsSavingMovement] = useState(false);
 
   const [projects, setProjects] = useState<Project[]>([]);
 
@@ -192,7 +195,14 @@ export function DashboardExecutiveWorkspace({
         // camelCase, con historial) para que el valor confirmado y la
         // antigüedad se calculen con los campos reales del dominio.
         loadQuotesWorkspaceData().catch(() => null),
-        supabase.from("inventory_movements").select("id,stock_id,movement_type,quantity,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inner(inventory_items!inner(name,unit)),projects(name)").order("occurred_at", { ascending: false }),
+        loadAllPages((from, to) =>
+          supabase
+            .from("inventory_movements")
+            .select("id,stock_id,movement_type,operation_kind,quantity,quantity_before,quantity_after,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inner(inventory_items!inner(name,unit)),projects(name)")
+            .order("occurred_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to),
+        ),
         supabase.from("inventory_tool_loans").select("id,code,stock_id,worker_name,project_id,status,notes,created_at,expected_return_date,returned_at,delivery_signature_data,return_signature_data,inventory_stock!inner(inventory_items!inner(name)),projects(name)").order("created_at", { ascending: false }).limit(50),
         // Los APU se leen mapeados desde el módulo (snake_case → camelCase) para
         // no perder quoteId y poder contar los vinculados a cotizaciones.
@@ -247,7 +257,7 @@ export function DashboardExecutiveWorkspace({
       }
       if (quoteResult?.quotes) setQuotes(quoteResult.quotes);
       setApus(remoteApus);
-      if (!movementResult.error && movementResult.data) setMovements(movementResult.data.map((movement) => { const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock; const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items); const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects; return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: movement.occurred_at, reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined }; }));
+      if (!movementResult.error && movementResult.data) setMovements(movementResult.data.map((movement) => { const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock; const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items); const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects; return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? ((movement as { operation_kind?: string | null }).operation_kind === "return" ? "return" : "entry") : movement.movement_type === "exit" ? "exit" : movement.movement_type === "transfer" ? "transfer" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: movement.occurred_at, reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined }; }));
       // Los prestamos se leen de la base. Antes esta lista solo se llenaba al
       // prestar desde esta pantalla, de modo que al recargar aparecia vacia y
       // nadie veia los prestamos que si existian.
@@ -568,6 +578,7 @@ export function DashboardExecutiveWorkspace({
   // Handle New Dispatch (Salida a Obra)
   const handleDispatchSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (isSavingMovement) return;
     const qty = parseFloat(quantityInput);
     if (!selectedProduct)
       return alert("Selecciona un material de la lista antes de continuar.");
@@ -580,45 +591,70 @@ export function DashboardExecutiveWorkspace({
       );
 
     const prj = projects.find((p) => p.id === selectedProjectId);
-    const unitCost = selectedProduct.unitCost || 25000;
-    const totalCost = qty * unitCost;
-
     const db = inventoryClient();
     if (!db || !scope || !prj) return alert("No fue posible validar la empresa y la obra del despacho.");
     const reference = `VALE-${new Date().getFullYear()}-${String(movements.length + 1).padStart(3, "0")}`;
-    const { data: savedMovement, error } = await db.from("inventory_movements").insert({ stock_id: selectedProduct.id, company_id: scope.companyId, branch_id: scope.branchId, movement_type: "exit", quantity: qty, unit_cost: unitCost, reference, notes: notesInput || null, occurred_at: new Date().toISOString(), project_id: prj.id }).select("id").single();
-    if (error || !savedMovement) return alert(error?.message ?? "No fue posible guardar el vale en la base de datos.");
-    const newMovement: InventoryMovement = {
-      id: savedMovement.id,
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      type: "exit",
-      quantity: qty,
-      unit: selectedProduct.unit,
-      unitCost,
-      totalCost,
-      occurredAt: formatDateTime(),
-      reference,
-      projectId: prj?.id,
-      projectName: prj?.name,
-      responsible: responsibleInput,
-      notes: notesInput,
-      signatureDataUrl: dispatchSignature,
-    };
+    const knownCost = (selectedProduct.unitCost ?? 0) > 0 ? selectedProduct.unitCost : null;
 
-    await refreshStockQuantity(db, selectedProduct.id);
-    setMovements((prev) => [newMovement, ...prev]);
+    setIsSavingMovement(true);
+    try {
+      const { data, error } = await db.rpc("register_inventory_movement", {
+        p_stock_id: selectedProduct.id,
+        p_movement_type: "exit",
+        p_quantity: qty,
+        p_unit_cost: knownCost,
+        p_reference: reference,
+        p_project_id: prj.id,
+        p_responsible_name: responsibleInput || null,
+        p_notes: notesInput || null,
+        p_operation_kind: "exit",
+        p_client_request_id: crypto.randomUUID(),
+      });
+      if (error) return alert(error.message);
+      const saved = (Array.isArray(data) ? data[0] : data) as
+        | { movement_id: string; unit_cost: number; occurred_at: string; quantity_before: number | null; quantity_after: number | null }
+        | null;
+      if (!saved) return alert("La base de datos no confirmó el vale. Recarga antes de reintentar.");
 
-    setSelectedVoucherMovement(newMovement);
-    setActiveModal(null);
-    setQuantityInput("");
-    setNotesInput("");
-    setDispatchSignature("");
+      const savedUnitCost = Number(saved.unit_cost);
+      const newMovement: InventoryMovement = {
+        id: saved.movement_id,
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        type: "exit",
+        quantity: qty,
+        unit: selectedProduct.unit,
+        unitCost: savedUnitCost,
+        totalCost: qty * savedUnitCost,
+        occurredAt: formatDateTime(saved.occurred_at),
+        reference,
+        projectId: prj.id,
+        projectName: prj.name,
+        responsible: responsibleInput,
+        notes: notesInput,
+        signatureDataUrl: dispatchSignature,
+        operationKind: "exit",
+        quantityBefore: saved.quantity_before === null ? null : Number(saved.quantity_before),
+        quantityAfter: saved.quantity_after === null ? null : Number(saved.quantity_after),
+      };
+
+      await refreshStockQuantity(db, selectedProduct.id);
+      setMovements((prev) => [newMovement, ...prev]);
+
+      setSelectedVoucherMovement(newMovement);
+      setActiveModal(null);
+      setQuantityInput("");
+      setNotesInput("");
+      setDispatchSignature("");
+    } finally {
+      setIsSavingMovement(false);
+    }
   };
 
   // Handle Devolución de Sobrante
   const handleReturnSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (isSavingMovement) return;
     const qty = parseFloat(quantityInput);
     if (!selectedProduct)
       return alert("Selecciona un material de la lista antes de continuar.");
@@ -627,43 +663,67 @@ export function DashboardExecutiveWorkspace({
       return alert("Captura la firma de quien devuelve el material.");
 
     const prj = projects.find((p) => p.id === selectedProjectId);
-    const unitCost = selectedProduct.unitCost || 25000;
-    const totalCost = qty * unitCost;
-
     const db = inventoryClient();
     if (!db || !scope) return alert("No fue posible validar la empresa para la devolución.");
     const reference = `DEV-${new Date().getFullYear()}-${String(movements.length + 1).padStart(3, "0")}`;
-    const { data: savedMovement, error } = await db.from("inventory_movements").insert({ stock_id: selectedProduct.id, company_id: scope.companyId, branch_id: scope.branchId, movement_type: "entry", quantity: qty, unit_cost: unitCost, reference, notes: `Devolución sobrante de obra: ${notesInput}`, occurred_at: new Date().toISOString(), project_id: prj?.id ?? null }).select("id").single();
-    if (error || !savedMovement) return alert(error?.message ?? "No fue posible guardar la devolución en la base de datos.");
-    const newMovement: InventoryMovement = {
-      id: savedMovement.id,
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      type: "return",
-      quantity: qty,
-      unit: selectedProduct.unit,
-      unitCost,
-      totalCost,
-      occurredAt: formatDateTime(),
-      reference,
-      projectId: prj?.id,
-      projectName: prj?.name,
-      responsible: responsibleInput,
-      notes: `Devolución sobrante de obra: ${notesInput}`,
-      signatureDataUrl: returnSignature,
-    };
+    const knownCost = (selectedProduct.unitCost ?? 0) > 0 ? selectedProduct.unitCost : null;
 
-    await refreshStockQuantity(db, selectedProduct.id);
-    setMovements((prev) => [newMovement, ...prev]);
+    setIsSavingMovement(true);
+    try {
+      const { data, error } = await db.rpc("register_inventory_movement", {
+        p_stock_id: selectedProduct.id,
+        p_movement_type: "entry",
+        p_quantity: qty,
+        p_unit_cost: knownCost,
+        p_reference: reference,
+        p_project_id: prj?.id ?? null,
+        p_responsible_name: responsibleInput || null,
+        p_notes: `Devolución sobrante de obra: ${notesInput}`,
+        p_operation_kind: "return",
+        p_client_request_id: crypto.randomUUID(),
+      });
+      if (error) return alert(error.message);
+      const saved = (Array.isArray(data) ? data[0] : data) as
+        | { movement_id: string; unit_cost: number; occurred_at: string; quantity_before: number | null; quantity_after: number | null }
+        | null;
+      if (!saved) return alert("La base de datos no confirmó la devolución. Recarga antes de reintentar.");
 
-    setActiveModal(null);
-    setQuantityInput("");
-    setNotesInput("");
-    setReturnSignature("");
-    showToast(
-      "Devolución registrada. Se incrementó el stock y se descontó el costo de la obra.",
-      "success",
-    );
+      const savedUnitCost = Number(saved.unit_cost);
+      const newMovement: InventoryMovement = {
+        id: saved.movement_id,
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        type: "return",
+        quantity: qty,
+        unit: selectedProduct.unit,
+        unitCost: savedUnitCost,
+        totalCost: qty * savedUnitCost,
+        occurredAt: formatDateTime(saved.occurred_at),
+        reference,
+        projectId: prj?.id,
+        projectName: prj?.name,
+        responsible: responsibleInput,
+        notes: `Devolución sobrante de obra: ${notesInput}`,
+        signatureDataUrl: returnSignature,
+        operationKind: "return",
+        quantityBefore: saved.quantity_before === null ? null : Number(saved.quantity_before),
+        quantityAfter: saved.quantity_after === null ? null : Number(saved.quantity_after),
+      };
+
+      await refreshStockQuantity(db, selectedProduct.id);
+      setMovements((prev) => [newMovement, ...prev]);
+
+      setActiveModal(null);
+      setQuantityInput("");
+      setNotesInput("");
+      setReturnSignature("");
+      showToast(
+        "Devolución registrada. Se incrementó el stock y se descontó el costo de la obra.",
+        "success",
+      );
+    } finally {
+      setIsSavingMovement(false);
+    }
   };
 
   // Handle Nueva Requisición
@@ -693,7 +753,7 @@ export function DashboardExecutiveWorkspace({
           productName: selectedProduct.name,
           quantity,
           unit: selectedProduct.unit,
-          unitCost: selectedProduct.unitCost || 25000,
+          unitCost: selectedProduct.unitCost ?? 0,
         },
       ],
     };
@@ -1696,7 +1756,7 @@ export function DashboardExecutiveWorkspace({
                   value={selectedProductId}
                   onChange={setSelectedProductId}
                   formatDetail={(product) =>
-                    `${product.sku} · ${currencyFormatter.format(product.unitCost || 25000)}`
+                    `${product.sku} · ${(product.unitCost ?? 0) > 0 ? currencyFormatter.format(product.unitCost ?? 0) : "Costo pendiente"}`
                   }
                 />
               </div>
@@ -1754,7 +1814,7 @@ export function DashboardExecutiveWorkspace({
                   <strong>
                     {currencyFormatter.format(
                       (parseFloat(quantityInput) || 0) *
-                        (selectedProduct?.unitCost || 25000),
+                        (selectedProduct?.unitCost ?? 0),
                     )}
                   </strong>
                 </div>
@@ -1771,11 +1831,12 @@ export function DashboardExecutiveWorkspace({
                   type="button"
                   className="btn-cancel"
                   onClick={() => setActiveModal(null)}
+                  disabled={isSavingMovement}
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-submit">
-                  Confirmar Despacho e Imprimir Remisión
+                <button type="submit" className="btn-submit" disabled={isSavingMovement}>
+                  {isSavingMovement ? "Registrando…" : "Confirmar Despacho e Imprimir Remisión"}
                 </button>
               </div>
             </form>
@@ -1849,11 +1910,12 @@ export function DashboardExecutiveWorkspace({
                   type="button"
                   className="btn-cancel"
                   onClick={() => setActiveModal(null)}
+                  disabled={isSavingMovement}
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-submit">
-                  Reintegrar a Bodega y Descontar de Obra
+                <button type="submit" className="btn-submit" disabled={isSavingMovement}>
+                  {isSavingMovement ? "Registrando…" : "Reintegrar a Bodega y Descontar de Obra"}
                 </button>
               </div>
             </form>

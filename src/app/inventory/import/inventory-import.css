@@ -1,0 +1,233 @@
+.inventory-import-page {
+  display: grid;
+  gap: 20px;
+}
+
+.inventory-import-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.inventory-import-panel,
+.inventory-import-preview,
+.inventory-import-result {
+  align-content: start;
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+}
+
+.inventory-import-scope {
+  background: var(--brand-soft);
+  border-radius: 999px;
+  color: var(--brand-dark);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 11px;
+  white-space: nowrap;
+}
+
+.inventory-import-drop {
+  background: var(--canvas);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+  display: grid;
+  gap: 5px;
+  padding: 18px;
+}
+
+.inventory-import-drop > span {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.inventory-import-drop small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.inventory-import-drop input {
+  margin-top: 8px;
+}
+
+.inventory-import-file {
+  font-size: 12px;
+  margin: 0;
+}
+
+.inventory-import-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.inventory-import-page .inventory-action {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.inventory-import-alert {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.5;
+  padding: 11px 13px;
+}
+
+.inventory-import-hint {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.inventory-import-summary {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.inventory-import-summary > div {
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+}
+
+.inventory-import-summary span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.inventory-import-summary strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.inventory-import-summary .inventory-import-batch {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.inventory-import-table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  max-height: 480px;
+  overflow: auto;
+}
+
+.inventory-import-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 900px;
+  width: 100%;
+}
+
+.inventory-import-table th {
+  background: var(--canvas);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 10px;
+  position: sticky;
+  text-align: left;
+  text-transform: uppercase;
+  top: 0;
+  z-index: 1;
+}
+
+.inventory-import-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 9px 10px;
+  vertical-align: top;
+}
+
+.inventory-import-table tr.is-error td {
+  background: #fff7f7;
+}
+
+.inventory-import-row-error {
+  color: #991b1b;
+  display: block;
+  font-weight: 600;
+  line-height: 1.4;
+  max-width: 280px;
+}
+
+.inventory-import-ok {
+  color: #137a46;
+  font-weight: 750;
+}
+
+.inventory-import-confirm {
+  align-items: center;
+  background: var(--brand-soft);
+  border-radius: 8px;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.inventory-import-confirm label {
+  align-items: flex-start;
+  display: flex;
+  font-size: 12px;
+  gap: 9px;
+  line-height: 1.45;
+}
+
+.inventory-import-confirm input {
+  accent-color: var(--brand);
+  margin-top: 2px;
+}
+
+.inventory-import-errors {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.inventory-import-errors h3 {
+  font-size: 13px;
+  margin: 0;
+}
+
+.inventory-import-errors ul {
+  margin: 0;
+  max-height: 200px;
+  overflow: auto;
+  padding-left: 18px;
+}
+
+@media (max-width: 900px) {
+  .inventory-import-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .inventory-import-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inventory-import-confirm {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

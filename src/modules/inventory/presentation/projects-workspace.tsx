@@ -35,6 +35,7 @@ import {
   supabasePublishableKey,
   supabaseUrl,
 } from "@/lib/supabase/config";
+import { loadAllPages } from "@/shared/supabase/load-all";
 import {
   getEffectiveQuoteCode,
   initialQuotes,
@@ -152,6 +153,7 @@ export function ProjectsWorkspace({
   const [products, setProducts] = useState<StockProduct[]>(initialProducts);
 
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [isSavingMovement, setIsSavingMovement] = useState(false);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [scope, setScope] = useState<{ companyId: string; branchId: string } | null>(null);
@@ -181,7 +183,15 @@ export function ProjectsWorkspace({
       setScope({ companyId: membership.company_id, branchId: membership.branch_id });
       const [{ data: remoteProjects }, { data: remoteMovements }, { data: remoteLoans }, { data: remoteReqs }, { data: remoteAssignments }, { data: remoteAdjustments }] = await Promise.all([
         supabase.from("projects").select("id, code, name, client, location, material_budget, status, start_date, estimated_end_date, actual_end_date, created_at, rental_daily_rate, rental_extension_rate, rental_late_fee_per_day, rental_notes").eq("company_id", membership.company_id).order("created_at", { ascending: false }),
-        supabase.from("inventory_movements").select("id, stock_id, movement_type, quantity, unit_cost, reference, notes, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)").eq("company_id", membership.company_id).order("occurred_at", { ascending: false }),
+        loadAllPages((from, to) =>
+          supabase
+            .from("inventory_movements")
+            .select("id, stock_id, movement_type, operation_kind, quantity, unit_cost, reference, notes, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)")
+            .eq("company_id", membership.company_id)
+            .order("occurred_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to),
+        ),
         supabase.from("inventory_tool_loans").select("id,code,stock_id,worker_name,project_id,status,notes,created_at,expected_return_date,returned_at,inventory_stock!inner(inventory_items!inner(name)),projects(name)").eq("company_id",membership.company_id).order("created_at",{ascending:false}),
         supabase.from("inventory_requisitions").select("id,code,project_id,requested_by_name,status,created_at,notes,projects(name),lines:inventory_requisition_lines(stock_id,item_name_snapshot,requested_quantity,unit_snapshot,unit_cost_snapshot)").eq("company_id",membership.company_id).order("created_at",{ascending:false}),
         supabase.from("project_employees").select("project_id,employee:employees(id,full_name,job_title)").eq("company_id", membership.company_id),
@@ -202,7 +212,7 @@ export function ProjectsWorkspace({
         const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock;
         const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items);
         const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects;
-        return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: formatDateTime(new Date(movement.occurred_at)), reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined };
+        return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? ((movement as { operation_kind?: string | null }).operation_kind === "return" ? "return" : "entry") : movement.movement_type === "exit" ? "exit" : movement.movement_type === "transfer" ? "transfer" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: formatDateTime(new Date(movement.occurred_at)), reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined };
       }));
       if (remoteLoans) setToolLoans(remoteLoans.map((loan) => { const stock=Array.isArray(loan.inventory_stock)?loan.inventory_stock[0]:loan.inventory_stock; const item=stock && (Array.isArray(stock.inventory_items)?stock.inventory_items[0]:stock.inventory_items); const project=Array.isArray(loan.projects)?loan.projects[0]:loan.projects; return {id:loan.id,code:loan.code,toolId:loan.stock_id,toolName:item?.name??"Herramienta",workerName:loan.worker_name,projectId:loan.project_id??"",projectName:project?.name??"Sin obra",loanDate:loan.created_at,expectedReturnDate:loan.expected_return_date??undefined,actualReturnDate:loan.returned_at??undefined,status:loan.status as ToolLoan["status"],notes:loan.notes??undefined}; }));
       if (remoteReqs) setRequisitions(remoteReqs.map((row) => { const project=Array.isArray(row.projects)?row.projects[0]:row.projects; return {id:row.id,code:row.code,projectId:row.project_id,projectName:project?.name??"Obra",requestedBy:row.requested_by_name,status:row.status === "submitted" ? "pending" : row.status as MaterialRequisition["status"],createdAt:row.created_at,notes:row.notes??undefined,items:(row.lines ?? []).map((line) => ({ productId: line.stock_id, productName: line.item_name_snapshot, quantity: Number(line.requested_quantity), unit: line.unit_snapshot, unitCost: Number(line.unit_cost_snapshot) }))}; }));
@@ -549,6 +559,7 @@ export function ProjectsWorkspace({
   // Handle Dispatch Form Submit
   const handleDispatchSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (isSavingMovement) return;
     if (!selectedProject)
       return alert("Seleccione una obra antes de registrar un despacho.");
     const qty = parseFloat(quantityInput);
@@ -558,47 +569,74 @@ export function ProjectsWorkspace({
         `Stock insuficiente. Disponible: ${selectedProduct.available}`,
       );
 
-    const unitCost = selectedProduct.unitCost || 25000;
-    const totalCost = qty * unitCost;
-
     if (!supabase || !scope) return alert("No fue posible validar la empresa del usuario. Vuelve a iniciar sesión.");
     const reference = `VALE-${new Date().getFullYear()}-${String(movements.length + 1).padStart(3, "0")}`;
-    const { data: savedMovement, error } = await supabase.from("inventory_movements").insert({
-      stock_id: selectedProduct.id, company_id: scope.companyId, branch_id: scope.branchId,
-      movement_type: "exit", quantity: qty, unit_cost: unitCost, reference, notes: notesInput || null,
-      occurred_at: new Date().toISOString(), project_id: selectedProject.id,
-    }).select("id").single();
-    if (error || !savedMovement) return alert(error?.message ?? "No fue posible registrar el despacho en la base de datos.");
-    const newMov: InventoryMovement = {
-      id: savedMovement.id,
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      type: "exit",
-      quantity: qty,
-      unit: selectedProduct.unit,
-      unitCost,
-      totalCost,
-      occurredAt: formatDateTime(),
-      reference,
-      projectId: selectedProject.id,
-      projectName: selectedProject.name,
-      responsible: responsibleInput,
-      notes: notesInput,
-    };
+    const knownCost = (selectedProduct.unitCost ?? 0) > 0 ? selectedProduct.unitCost : null;
 
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === selectedProduct.id
-          ? { ...p, available: p.available - qty }
-          : p,
-      ),
-    );
-    setMovements((prev) => [newMov, ...prev]);
+    setIsSavingMovement(true);
+    try {
+      const { data, error } = await supabase.rpc("register_inventory_movement", {
+        p_stock_id: selectedProduct.id,
+        p_movement_type: "exit",
+        p_quantity: qty,
+        p_unit_cost: knownCost,
+        p_reference: reference,
+        p_project_id: selectedProject.id,
+        p_responsible_name: responsibleInput || null,
+        p_notes: notesInput || null,
+        p_operation_kind: "exit",
+        p_client_request_id: crypto.randomUUID(),
+      });
+      if (error) return alert(error.message);
+      const saved = (Array.isArray(data) ? data[0] : data) as
+        | { movement_id: string; unit_cost: number; occurred_at: string; quantity_before: number | null; quantity_after: number | null }
+        | null;
+      if (!saved) return alert("La base de datos no confirmó el despacho. Recarga antes de reintentar.");
 
-    setSelectedVoucherMovement(newMov);
-    setIsDispatchModalOpen(false);
-    setQuantityInput("");
-    setNotesInput("");
+      const savedUnitCost = Number(saved.unit_cost);
+      const newMov: InventoryMovement = {
+        id: saved.movement_id,
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        type: "exit",
+        quantity: qty,
+        unit: selectedProduct.unit,
+        unitCost: savedUnitCost,
+        totalCost: qty * savedUnitCost,
+        occurredAt: formatDateTime(new Date(saved.occurred_at)),
+        reference,
+        projectId: selectedProject.id,
+        projectName: selectedProject.name,
+        responsible: responsibleInput,
+        notes: notesInput,
+        operationKind: "exit",
+        quantityBefore: saved.quantity_before === null ? null : Number(saved.quantity_before),
+        quantityAfter: saved.quantity_after === null ? null : Number(saved.quantity_after),
+      };
+
+      const { data: stockRow } = await supabase
+        .from("inventory_stock")
+        .select("quantity,unit_cost")
+        .eq("id", selectedProduct.id)
+        .maybeSingle();
+      if (stockRow) {
+        setProducts((prev) =>
+          prev.map((p) =>
+            p.id === selectedProduct.id
+              ? { ...p, available: Number(stockRow.quantity), unitCost: Number(stockRow.unit_cost) }
+              : p,
+          ),
+        );
+      }
+      setMovements((prev) => [newMov, ...prev]);
+
+      setSelectedVoucherMovement(newMov);
+      setIsDispatchModalOpen(false);
+      setQuantityInput("");
+      setNotesInput("");
+    } finally {
+      setIsSavingMovement(false);
+    }
   };
 
   // Vista previa del valor del alquiler mientras se captura (ALQ-001).
@@ -1616,7 +1654,7 @@ export function ProjectsWorkspace({
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} (Disp: {p.available} {p.unit}) -{" "}
-                      {currencyFormatter.format(p.unitCost || 25000)}
+                      {(p.unitCost ?? 0) > 0 ? currencyFormatter.format(p.unitCost ?? 0) : "Costo pendiente"}
                     </option>
                   ))}
                 </select>
@@ -1660,11 +1698,12 @@ export function ProjectsWorkspace({
                   type="button"
                   className="btn-cancel"
                   onClick={() => setIsDispatchModalOpen(false)}
+                  disabled={isSavingMovement}
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-submit">
-                  Confirmar Despacho e Imprimir Remisión
+                <button type="submit" className="btn-submit" disabled={isSavingMovement}>
+                  {isSavingMovement ? "Registrando…" : "Confirmar Despacho e Imprimir Remisión"}
                 </button>
               </div>
             </form>

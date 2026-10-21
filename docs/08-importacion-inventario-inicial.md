@@ -1,11 +1,13 @@
 ---
 estado: vigente
 propietario: Desarrollo RFC Enterprise
-ultima_actualizacion: 2026-09-16
+ultima_actualizacion: 2026-10-21
 audiencia: Producto, Desarrollo y Operación
 ---
 
 # Importación inicial de Inventarios
+
+> **Estado real al 2026-10-21:** la base vinculada tiene 1.191 artículos/existencias y 1.182 movimientos. Las 1.191 existencias están en cero tras la auditoría; los 1.182 movimientos son `adjustment_out` históricos, con costo cero, mismo instante y sin actor. La tabla de la sección siguiente describe la carga inicial de referencia, **no el saldo actual**. El conteo físico abierto debe cerrarse antes de despachar.
 
 ## Fuente
 
@@ -20,7 +22,7 @@ El catálogo inicial procede de `Inventario_Basico.xlsx`. El archivo original no
 | Herramientas de trabajadores | 98 | 139 | 98 |
 | **Total** | **1.191** | **12.495** | **822** |
 
-La pantalla actual utiliza el catálogo y el stock actual. Los movimientos históricos no se muestran todavía como operaciones del portal: se reservaron para una migración controlada a base de datos.
+La pantalla actual lee el catálogo, el stock y los movimientos persistidos en Supabase. Los movimientos históricos ya se muestran en el Kardex, pero conservan la limitación de origen descrita arriba (sin actor ni saldo antes/después).
 
 ## Correspondencia de datos
 
@@ -58,4 +60,8 @@ La pantalla actual utiliza el catálogo y el stock actual. Los movimientos hist�
 4. Cargar movimientos por fecha y validar que el saldo resultante coincida con cada artículo.
 5. Resolver la cola de duplicados, campos incompletos y referencias no encontradas.
 6. Aprobar la conciliación antes de habilitar movimientos reales en el portal.
+
+## Relación con la importación masiva del portal (2026-10-20)
+
+La pantalla `/inventory/import` implementa una carga **create-only** con SKU único en aplicación. No es el mecanismo de la migración inicial: la fuente histórica tiene 7 claves repetidas en Bodega y 1 en Dotación, y la pantalla actual las marca todas como error para que Operación decida cuál conservar. Una recarga del inventario inicial debe hacerse con un script de migración controlado o después de conciliar esos códigos; no debe forzarse por la importación masiva. Ver [19 · Invitaciones, contacto e importación](19-invitacion-empleados-contacto-e-importacion.md) e INV-026 en [06 · Backlog y riesgos](06-backlog-y-riesgos.md).
 

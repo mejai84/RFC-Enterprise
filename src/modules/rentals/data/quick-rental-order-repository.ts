@@ -12,6 +12,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { dataUrlToBlob } from "@/shared/utils/data-url";
 import { getInventoryItemKind, type InventoryGroup } from "@/modules/inventory";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import { loadAllPages } from "@/shared/supabase/load-all";
 import {
   type CreateQuickRentalOrderInput,
   type CreateQuickRentalOrderResult,
@@ -113,16 +114,20 @@ export async function listQuickRentalOrders(companyId?: string): Promise<QuickRe
   const context = companyId ? { companyId } : await resolveContext(db);
   if (!context) return [];
 
-  const { data, error } = await db
-    .from("quick_rental_orders")
-    .select(
-      "id,code,customer_name,customer_phone,customer_document,pickup_at,due_at,status,delivery_notes,created_at,quick_rental_order_items(id,inventory_item_id,equipment_name,quantity,daily_rate,deposit,returned_quantity,returned_at,return_notes,extra_charge),quick_rental_order_attachments(kind,storage_path,file_name,mime_type,uploaded_at)",
-    )
-    .eq("company_id", context.companyId)
-    .order("created_at", { ascending: false });
+  const { data, error } = await loadAllPages((from, to) =>
+    db
+      .from("quick_rental_orders")
+      .select(
+        "id,code,customer_name,customer_phone,customer_document,pickup_at,due_at,status,delivery_notes,created_at,quick_rental_order_items(id,inventory_item_id,equipment_name,quantity,daily_rate,deposit,returned_quantity,returned_at,return_notes,extra_charge),quick_rental_order_attachments(kind,storage_path,file_name,mime_type,uploaded_at)",
+      )
+      .eq("company_id", context.companyId)
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, to),
+  );
 
   if (error) throw new Error(`No fue posible cargar los alquileres: ${error.message}`);
-  return (data ?? []).map((row) => mapOrder(row as Record<string, unknown>));
+  return data.map((row) => mapOrder(row as Record<string, unknown>));
 }
 
 /**
@@ -133,10 +138,14 @@ export async function listRentableEquipment(companyId: string): Promise<Rentable
   const db = client();
   if (!db) return [];
 
-  const { data: stockRows, error: stockError } = await db
-    .from("inventory_stock")
-    .select("id,quantity,inventory_group,inventory_items!inner(id,name,category,unit)")
-    .eq("company_id", companyId);
+  const { data: stockRows, error: stockError } = await loadAllPages((from, to) =>
+    db
+      .from("inventory_stock")
+      .select("id,quantity,inventory_group,inventory_items!inner(id,name,category,unit)")
+      .eq("company_id", companyId)
+      .order("id")
+      .range(from, to),
+  );
   if (stockError) throw new Error(`No fue posible consultar la bodega: ${stockError.message}`);
 
   const { data: activeOrders, error: ordersError } = await db
@@ -165,7 +174,7 @@ export async function listRentableEquipment(companyId: string): Promise<Rentable
   }
 
   const byItem = new Map<string, RentableEquipment>();
-  for (const stock of stockRows ?? []) {
+  for (const stock of stockRows) {
     const item = Array.isArray(stock.inventory_items)
       ? stock.inventory_items[0]
       : stock.inventory_items;

@@ -7,6 +7,7 @@ import {
   supabasePublishableKey,
   supabaseUrl,
 } from "@/lib/supabase/config";
+import { loadAllPages } from "@/shared/supabase/load-all";
 
 type Branch = { branch_id: string; branch_name: string; company_id: string };
 type CountSession = {
@@ -146,34 +147,39 @@ export function CountsWorkspace() {
     const supabase = client();
     const active = target ?? session;
     if (!supabase || !active) return;
-    const [
-      { data: lineData, error: lineError },
-      { data: newItemData, error: newItemError },
-    ] = await Promise.all([
-      supabase
-        .from("physical_count_lines")
-        .select(
-          "id,stock_id,system_quantity,counted_quantity,counted_location,unit_cost,notes,counted_by,counted_by_name,counted_at,inventory_stock(location,inventory_items(sku,name,category,unit))",
-        )
-        .eq("count_id", active.id)
-        .order("counted_at", { ascending: true, nullsFirst: true }),
-      supabase
-        .from("physical_count_new_items")
-        .select(
-          "id,sku,name,category,brand,unit,location,counted_quantity,unit_cost,notes,status,counted_by_name,counted_at",
-        )
-        .eq("count_id", active.id)
-        .order("created_at"),
+    const [lineResult, newItemResult] = await Promise.all([
+      loadAllPages((from, to) =>
+        supabase
+          .from("physical_count_lines")
+          .select(
+            "id,stock_id,system_quantity,counted_quantity,counted_location,unit_cost,notes,counted_by,counted_by_name,counted_at,inventory_stock(location,inventory_items(sku,name,category,unit))",
+          )
+          .eq("count_id", active.id)
+          .order("counted_at", { ascending: true, nullsFirst: true })
+          .order("id")
+          .range(from, to),
+      ),
+      loadAllPages((from, to) =>
+        supabase
+          .from("physical_count_new_items")
+          .select(
+            "id,sku,name,category,brand,unit,location,counted_quantity,unit_cost,notes,status,counted_by_name,counted_at",
+          )
+          .eq("count_id", active.id)
+          .order("created_at")
+          .order("id")
+          .range(from, to),
+      ),
     ]);
-    if (lineError || newItemError) {
+    if (lineResult.error || newItemResult.error) {
       setStatus(
-        lineError?.message ??
-          newItemError?.message ??
+        lineResult.error?.message ??
+          newItemResult.error?.message ??
           "No fue posible cargar la jornada.",
       );
       return;
     }
-    const normalizedLines = (lineData ?? []).map((row) => {
+    const normalizedLines = lineResult.data.map((row) => {
       const stock = Array.isArray(row.inventory_stock)
         ? (row.inventory_stock[0] ?? null)
         : row.inventory_stock;
@@ -188,7 +194,7 @@ export function CountsWorkspace() {
       };
     });
     setLines(normalizedLines as CountLine[]);
-    setNewItems((newItemData ?? []) as NewItem[]);
+    setNewItems(newItemResult.data as NewItem[]);
   }
 
   async function loadWorkspace() {

@@ -45,20 +45,14 @@ export function getInventoryItemKind(product: Pick<StockProduct, "inventoryGroup
   return "material";
 }
 
-// Estimación de costo base realista para los artículos que no lo traigan especificado
+/**
+ * Costo unitario conocido. Un artículo sin costo se queda en cero para que la
+ * interfaz lo muestre como pendiente; no se estima un valor comercial ficticio.
+ */
 export function getProductUnitCost(product: { category?: string; name?: string; unitCost?: number }): number {
-  if (product.unitCost && product.unitCost > 0) return product.unitCost;
-  const name = (product.name || "").toLowerCase();
-  const category = (product.category || "").toLowerCase();
-
-  if (category.includes("cemento") || name.includes("cemento")) return 32000;
-  if (category.includes("acero") || name.includes("varilla") || name.includes("perfil") || name.includes("tubo")) return 68000;
-  if (category.includes("herramienta") || name.includes("taladro") || name.includes("pulidora")) return 280000;
-  if (category.includes("pintura") || name.includes("esmalte") || name.includes("anticorrosivo")) return 95000;
-  if (category.includes("electr") || name.includes("cable") || name.includes("breaker")) return 42000;
-  if (category.includes("seguridad") || name.includes("casco") || name.includes("bota") || name.includes("guante")) return 35000;
-  if (name.includes("disco") || name.includes("electrodo") || name.includes("tornillo")) return 14500;
-  return 25000;
+  return Number.isFinite(product.unitCost) && (product.unitCost ?? 0) > 0
+    ? Number(product.unitCost)
+    : 0;
 }
 
 /** Catálogo inicial normalizado desde Inventario_Basico.xlsx con costo estimado */

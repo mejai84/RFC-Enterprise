@@ -16,6 +16,7 @@ import {
 } from "@/modules/rentals";
 import type { InventoryMovement, Project, StockProduct } from "../index";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import { loadAllPages } from "@/shared/supabase/load-all";
 import {
   buildConsumptionByProject,
   buildIdleStockReport,
@@ -155,7 +156,14 @@ export function ReportsWorkspace({
         rentalOrders,
       ] = await Promise.all([
         supabase.from("projects").select("id,code,name,client,location,material_budget,status,start_date,estimated_end_date,actual_end_date,created_at").order("created_at", { ascending: false }),
-        supabase.from("inventory_movements").select("id,stock_id,movement_type,quantity,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inner(inventory_items!inner(name,unit)),projects(name)").order("occurred_at", { ascending: false }),
+        loadAllPages((from, to) =>
+          supabase
+            .from("inventory_movements")
+            .select("id,stock_id,movement_type,operation_kind,quantity,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inner(inventory_items!inner(name,unit)),projects(name)")
+            .order("occurred_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to),
+        ),
         // Las cotizaciones se leen con el repositorio del módulo para conservar
         // client, estimatedValue y el resto del contrato (no un cast de filas).
         loadQuotesWorkspaceData().catch(() => null),
@@ -165,7 +173,7 @@ export function ReportsWorkspace({
         listQuickRentalOrders().catch(() => [] as QuickRentalOrder[]),
       ]);
       if (remoteProjects) setProjects(remoteProjects.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], type: project.code.startsWith("MANT-") ? "mantenimiento" : "obra", createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date })));
-      if (remoteMovements) setMovements(remoteMovements.map((movement) => { const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock; const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items); const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects; return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: movement.occurred_at, reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined }; }));
+      if (remoteMovements) setMovements(remoteMovements.map((movement) => { const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock; const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items); const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects; return { id: movement.id, productId: movement.stock_id, productName: item?.name, type: movement.movement_type === "entry" ? ((movement as { operation_kind?: string | null }).operation_kind === "return" ? "return" : "entry") : movement.movement_type === "exit" ? "exit" : movement.movement_type === "transfer" ? "transfer" : "adjustment", quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: movement.occurred_at, reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, notes: movement.notes ?? undefined }; }));
       if (quoteWorkspace) setQuotes(quoteWorkspace.quotes);
       setApus(remoteApus);
       setRentals(rentalOrders);

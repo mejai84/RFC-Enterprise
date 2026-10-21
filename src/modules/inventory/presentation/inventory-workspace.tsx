@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   getInventoryItemKind,
@@ -15,6 +16,7 @@ import {
 import { InlineCatalogCombobox } from "./inline-catalog-combobox";
 import { WriteoffsPanel } from "./writeoffs-panel";
 import { CurrencyInput } from "@/shared/components/currency-input";
+import { loadAllPages } from "@/shared/supabase/load-all";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
@@ -30,7 +32,8 @@ const movementLabels: Record<MovementType, string> = {
   entry: "Entrada a Bodega",
   exit: "Salida para Obra",
   adjustment: "Ajuste de Inventario",
-  return: "DevoluciÓn a Bodega",
+  return: "Devolución a Bodega",
+  transfer: "Traslado de Ubicación",
 };
 
 type TabKey = "catalog" | "movements" | "projects" | "low-stock" | "writeoffs" | "settings";
@@ -43,6 +46,19 @@ function formatDateTime() {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+/**
+ * Evita inyección de fórmulas al abrir el CSV en Excel y escapa comillas,
+ * separadores y saltos de línea. Los valores numéricos se escriben sin
+ * prefijo para no convertirlos en texto.
+ */
+function csvCell(value: string | number | null | undefined, numeric = false) {
+  if (value === null || value === undefined) return '""';
+  if (numeric) return String(value);
+  let text = String(value);
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
 }
 
 function stockState(product: StockProduct) {
@@ -80,22 +96,40 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       const { data: membership } = await supabase.from("user_roles").select("company_id, branch_id").eq("user_id", auth.user.id).limit(1).maybeSingle();
       if (!membership?.company_id || !membership.branch_id) return;
       setScope({ companyId: membership.company_id, branchId: membership.branch_id });
-      const [{ data: remoteProjects }, { data: remoteMovements }, { data: remoteCategories }, { data: remoteLocations }] = await Promise.all([
+      const [projectResult, movementResult, categoryResult, locationResult] = await Promise.all([
         supabase.from("projects").select("id, code, name, client, location, material_budget, status, start_date, estimated_end_date, actual_end_date, created_at").eq("company_id", membership.company_id).order("created_at", { ascending: false }),
-        supabase.from("inventory_movements").select("id, stock_id, movement_type, quantity, unit_cost, reference, notes, responsible_name, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)").eq("company_id", membership.company_id).order("occurred_at", { ascending: false }),
+        loadAllPages((from, to) =>
+          supabase
+            .from("inventory_movements")
+            .select("id, stock_id, movement_type, operation_kind, quantity, quantity_before, quantity_after, unit_cost, reference, notes, responsible_name, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)")
+            .eq("company_id", membership.company_id)
+            .order("occurred_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to),
+        ),
         supabase.from("inventory_categories").select("name").eq("company_id", membership.company_id).eq("is_active", true).order("name"),
         supabase.from("inventory_locations").select("warehouse, aisle, shelf, level, bin").eq("company_id", membership.company_id).eq("branch_id", membership.branch_id).eq("is_active", true).order("warehouse"),
       ]);
-      if (remoteProjects) setProjects(remoteProjects.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date, type: project.code.startsWith("MANT-") ? "mantenimiento" : project.code.startsWith("OBRA-") ? "obra" : "otro" })));
-      if (remoteMovements) setMovements(remoteMovements.map((movement) => {
-        const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock;
-        const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items);
-        const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects;
-        const type: MovementType = movement.movement_type === "entry" ? "entry" : movement.movement_type === "exit" ? "exit" : movement.movement_type === "adjustment_in" || movement.movement_type === "adjustment_out" ? "adjustment" : "return";
-        return { id: movement.id, productId: movement.stock_id, productName: item?.name, type, quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(movement.occurred_at)), reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, responsible: movement.responsible_name ?? undefined, notes: movement.notes ?? undefined };
-      }));
-      if (remoteCategories) setCustomCategories(remoteCategories.map((category) => category.name));
-      if (remoteLocations) setCustomLocations(remoteLocations.map((location) => [location.warehouse, location.aisle, location.shelf, location.level, location.bin].filter(Boolean).join(" · ")));
+      if (projectResult.data) setProjects(projectResult.data.map((project) => ({ id: project.id, code: project.code, name: project.name, client: project.client, location: project.location ?? "Sin ubicación", budget: Number(project.material_budget), status: project.status as Project["status"], createdAt: project.created_at, startDate: project.start_date, estimatedEndDate: project.estimated_end_date, actualEndDate: project.actual_end_date, type: project.code.startsWith("MANT-") ? "mantenimiento" : project.code.startsWith("OBRA-") ? "obra" : "otro" })));
+      if (movementResult.error) {
+        showToast("No fue posible cargar todos los movimientos del kardex.", "error");
+      } else {
+        setMovements(movementResult.data.map((movement) => {
+          const stock = Array.isArray(movement.inventory_stock) ? movement.inventory_stock[0] : movement.inventory_stock;
+          const item = stock && (Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items);
+          const project = Array.isArray(movement.projects) ? movement.projects[0] : movement.projects;
+          const type: MovementType = movement.movement_type === "entry"
+            ? (movement.operation_kind === "return" ? "return" : "entry")
+            : movement.movement_type === "exit"
+              ? "exit"
+              : movement.movement_type === "transfer"
+                ? "transfer"
+                : "adjustment";
+          return { id: movement.id, productId: movement.stock_id, productName: item?.name, type, quantity: Number(movement.quantity), unit: item?.unit, unitCost: Number(movement.unit_cost), totalCost: Number(movement.quantity) * Number(movement.unit_cost), occurredAt: new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(movement.occurred_at)), reference: movement.reference, projectId: movement.project_id ?? undefined, projectName: project?.name, responsible: movement.responsible_name ?? undefined, notes: movement.notes ?? undefined, operationKind: movement.operation_kind ?? undefined, quantityBefore: movement.quantity_before === null ? null : Number(movement.quantity_before), quantityAfter: movement.quantity_after === null ? null : Number(movement.quantity_after) };
+        }));
+      }
+      if (categoryResult.data) setCustomCategories(categoryResult.data.map((category) => category.name));
+      if (locationResult.data) setCustomLocations(locationResult.data.map((location) => [location.warehouse, location.aisle, location.shelf, location.level, location.bin].filter(Boolean).join(" · ")));
     })();
   }, [supabase]);
 
@@ -111,6 +145,9 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   const [movementProjectFilter, setMovementProjectFilter] = useState("all");
   const [pageSize, setPageSize] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
+  const [movementPage, setMovementPage] = useState(1);
+  const movementPageSize = 50;
+  const [isSavingMovement, setIsSavingMovement] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [customUnits, setCustomUnits] = useState<string[]>([]);
   const [customBrands, setCustomBrands] = useState<string[]>([]);
@@ -155,7 +192,8 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   // Cálculos consolidados de KPIs
   const totalUnits = useMemo(() => products.reduce((sum, p) => sum + p.available, 0), [products]);
   const totalValuation = useMemo(
-    () => products.reduce((sum, p) => sum + p.available * (p.unitCost || 25000), 0),
+    // Un costo cero o pendiente no se reemplaza por un valor inventado.
+    () => products.reduce((sum, p) => sum + p.available * (p.unitCost ?? 0), 0),
     [products]
   );
   const totalProjectExpenses = useMemo(
@@ -208,6 +246,12 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       return true;
     });
   }, [movements, movementTypeFilter, movementProjectFilter]);
+
+  const movementTotalPages = Math.max(1, Math.ceil(filteredMovements.length / movementPageSize));
+  const paginatedMovements = useMemo(() => {
+    const start = (movementPage - 1) * movementPageSize;
+    return filteredMovements.slice(start, start + movementPageSize);
+  }, [filteredMovements, movementPage, movementPageSize]);
 
   // Resumen de gasto por proyecto
   const projectExpenses = useMemo(() => {
@@ -264,7 +308,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     if (target) {
       setSelectedProductId(target.id);
       setModalSearch(target.name);
-      setUnitCostInput(String(target.unitCost || 25000));
+      setUnitCostInput((target.unitCost ?? 0) > 0 ? String(target.unitCost) : "");
     } else {
       // Una entrada iniciada desde el encabezado debe obligar a elegir el artículo.
       // No se permite registrar por accidente sobre el primer elemento del catálogo.
@@ -287,17 +331,18 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   function handleSelectProductInModal(p: StockProduct) {
     setSelectedProductId(p.id);
     setModalSearch(p.name);
-    setUnitCostInput(String(p.unitCost || 25000));
+    setUnitCostInput((p.unitCost ?? 0) > 0 ? String(p.unitCost) : "");
     setShowAutocomplete(false);
   }
 
   // Ejecutar registro de movimiento con validaciones
   async function handleSaveMovement(e: FormEvent) {
     e.preventDefault();
+    if (isSavingMovement) return;
     setFormError(null);
 
     const qty = Number(quantityInput);
-    const unitCost = Number(unitCostInput) || (selectedProduct?.unitCost || 25000);
+    const typedCost = unitCostInput.trim() === "" ? null : Number(unitCostInput);
     const ref = referenceInput.trim();
 
     if (!selectedProduct) {
@@ -306,6 +351,10 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     }
     if (!qty || qty <= 0 || !Number.isFinite(qty)) {
       setFormError("La cantidad debe ser un número positivo mayor a cero.");
+      return;
+    }
+    if (typedCost !== null && (!Number.isFinite(typedCost) || typedCost < 0)) {
+      setFormError("El costo unitario debe ser un número mayor o igual a cero, o quedar vacío si aún no se conoce.");
       return;
     }
     if (!ref) {
@@ -318,7 +367,6 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       return;
     }
     const decreasesStock = movementType === "exit" || (movementType === "adjustment" && adjustmentDirection === "decrease");
-    const delta = decreasesStock ? -qty : qty;
     if (decreasesStock && selectedProduct.available - qty < 0) {
       setFormError(
         `No hay existencias suficientes. Stock actual: ${selectedProduct.available} ${selectedProduct.unit}, intentas retirar: ${qty} ${selectedProduct.unit}.`
@@ -331,57 +379,105 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       setFormError("Selecciona una obra activa. No se pueden despachar materiales a obras finalizadas, pendientes o en pausa.");
       return;
     }
-    const totalCost = Math.abs(qty * unitCost);
 
-    const dbMovementType = movementType === "entry" || movementType === "return" ? "entry" : movementType === "exit" ? "exit" : adjustmentDirection === "increase" ? "adjustment_in" : "adjustment_out";
-    const { data: savedMovement, error } = await supabase
-      .from("inventory_movements")
-      .insert({ stock_id: selectedProduct.id, company_id: scope.companyId, branch_id: scope.branchId, movement_type: dbMovementType, quantity: qty, unit_cost: unitCost, reference: ref, notes: notesInput.trim() || null, responsible_name: responsibleInput.trim() || null, occurred_at: new Date().toISOString(), project_id: movementType === "exit" ? project?.id ?? null : null })
-      .select("id")
-      .single();
-    if (error || !savedMovement) {
-      setFormError(error?.message ?? "No fue posible guardar el movimiento en la base de datos.");
-      return;
+    const dbMovementType = movementType === "entry" || movementType === "return"
+      ? "entry"
+      : movementType === "exit"
+        ? "exit"
+        : adjustmentDirection === "increase"
+          ? "adjustment_in"
+          : "adjustment_out";
+    const operationKind = movementType === "return"
+      ? "return"
+      : movementType === "entry"
+        ? "entry"
+        : movementType === "exit"
+          ? "exit"
+          : "adjustment";
+
+    setIsSavingMovement(true);
+    try {
+      const { data, error } = await supabase.rpc("register_inventory_movement", {
+        p_stock_id: selectedProduct.id,
+        p_movement_type: dbMovementType,
+        p_quantity: qty,
+        p_unit_cost: typedCost,
+        p_reference: ref,
+        p_project_id: movementType === "exit" || movementType === "return" ? project?.id ?? null : null,
+        p_responsible_name: responsibleInput.trim() || null,
+        p_notes: notesInput.trim() || null,
+        p_operation_kind: operationKind,
+        p_client_request_id: crypto.randomUUID(),
+      });
+      if (error) {
+        setFormError(error.message);
+        return;
+      }
+
+      const saved = (Array.isArray(data) ? data[0] : data) as
+        | { movement_id: string; quantity_before: number | null; quantity_after: number | null; unit_cost: number; occurred_at: string; operation_kind: string }
+        | null;
+      if (!saved) {
+        setFormError("La base de datos no confirmó el movimiento. Recarga antes de reintentar.");
+        return;
+      }
+
+      // La base calcula el costo promedio y el saldo. Se relee para que la
+      // pantalla no muestre un costo distinto al que quedó registrado.
+      const { data: stockRow } = await supabase
+        .from("inventory_stock")
+        .select("quantity,unit_cost")
+        .eq("id", selectedProduct.id)
+        .maybeSingle();
+      const savedUnitCost = Number(saved.unit_cost);
+      const totalCost = qty * savedUnitCost;
+      const updatedQuantity = stockRow ? Number(stockRow.quantity) : Math.max(0, selectedProduct.available + (decreasesStock ? -qty : qty));
+      const updatedCost = stockRow ? Number(stockRow.unit_cost) : selectedProduct.unitCost;
+
+      const newMovement: InventoryMovement = {
+        id: saved.movement_id,
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        type: movementType,
+        quantity: qty,
+        unit: selectedProduct.unit,
+        unitCost: savedUnitCost,
+        totalCost,
+        occurredAt: new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(saved.occurred_at)),
+        reference: ref,
+        projectId: movementType === "exit" || movementType === "return" ? project?.id : undefined,
+        projectName: movementType === "exit" || movementType === "return" ? project?.name : undefined,
+        responsible: responsibleInput.trim() || undefined,
+        notes: notesInput.trim() || undefined,
+        operationKind: saved.operation_kind,
+        quantityBefore: saved.quantity_before === null ? null : Number(saved.quantity_before),
+        quantityAfter: saved.quantity_after === null ? null : Number(saved.quantity_after),
+      };
+
+      setProducts((current) =>
+        current.map((p) =>
+          p.id === selectedProduct.id
+            ? { ...p, available: updatedQuantity, unitCost: updatedCost }
+            : p
+        )
+      );
+      setMovements((current) => [newMovement, ...current]);
+      setMovementPage(1);
+      setIsMovementModalOpen(false);
+
+      const msg =
+        movementType === "exit"
+          ? `Salida de ${qty} ${selectedProduct.unit} de "${selectedProduct.name}" registrada para ${project ? project.name : "obra"}. Costo: ${currencyFormatter.format(totalCost)}.`
+          : movementType === "return"
+            ? `Devolución de ${qty} ${selectedProduct.unit} de "${selectedProduct.name}" registrada.`
+            : movementType === "entry"
+              ? `Entrada de ${qty} ${selectedProduct.unit} agregada a bodega exitosamente.`
+              : `Ajuste de inventario aplicado a "${selectedProduct.name}".`;
+
+      showToast(msg, "success");
+    } finally {
+      setIsSavingMovement(false);
     }
-
-    const newMovement: InventoryMovement = {
-      id: savedMovement.id,
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      type: movementType,
-      quantity: qty,
-      unit: selectedProduct.unit,
-      unitCost,
-      totalCost,
-      occurredAt: formatDateTime(),
-      reference: ref,
-      projectId: movementType === "exit" ? project?.id : undefined,
-      projectName: movementType === "exit" ? project?.name : undefined,
-      responsible: responsibleInput.trim() || undefined,
-      notes: notesInput.trim() || undefined,
-    };
-
-    // Actualizar producto en inventario
-    setProducts((current) =>
-      current.map((p) =>
-        p.id === selectedProduct.id
-          ? { ...p, available: Math.max(0, p.available + delta), unitCost }
-          : p
-      )
-    );
-
-    // Agregar movimiento al inicio
-    setMovements((current) => [newMovement, ...current]);
-    setIsMovementModalOpen(false);
-
-    const msg =
-      movementType === "exit"
-        ? `Salida de ${qty} ${selectedProduct.unit} de "${selectedProduct.name}" registrada para ${project ? project.name : "obra"}. Costo: ${currencyFormatter.format(totalCost)}.`
-        : movementType === "entry"
-        ? `Entrada de ${qty} ${selectedProduct.unit} agregada a bodega exitosamente.`
-        : `Ajuste de inventario aplicado a "${selectedProduct.name}".`;
-
-    showToast(msg, "success");
   }
 
   // Crear nuevo proyecto / obra
@@ -441,7 +537,10 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       showToast("No fue posible conectar con la base de datos.", "error");
       return;
     }
-    const { error } = await supabase.from("inventory_stock").update({ minimum_quantity: parsedMin }).eq("id", editingMinimumProduct.id);
+    const { error } = await supabase.rpc("update_inventory_minimum", {
+      p_stock_id: editingMinimumProduct.id,
+      p_minimum_quantity: parsedMin,
+    });
     if (error) {
       showToast(error.message, "error");
       return;
@@ -495,10 +594,14 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     const responsible = window.prompt("Responsable del traslado:", "")?.trim();
     if (!supabase || !scope) { showToast("No fue posible conectar con la base de datos.", "error"); return; }
     const reference = `TRASLADO-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-    const notes = `${reason}. Origen: ${product.location}. Destino: ${destination.trim()}. Responsable: ${responsible || "No indicado"}.`;
-    const { error: movementError } = await supabase.from("inventory_movements").insert({ stock_id: product.id, company_id: scope.companyId, branch_id: scope.branchId, movement_type: "transfer", quantity: 0, unit_cost: product.unitCost || 0, reference, notes, occurred_at: new Date().toISOString() });
-    if (movementError) { showToast(movementError.message, "error"); return; }
-    const { error } = await supabase.from("inventory_stock").update({ location: destination.trim() }).eq("id", product.id);
+    const { error } = await supabase.rpc("relocate_inventory_stock", {
+      p_stock_id: product.id,
+      p_destination: destination.trim(),
+      p_reference: reference,
+      p_reason: reason,
+      p_responsible_name: responsible || null,
+      p_client_request_id: crypto.randomUUID(),
+    });
     if (error) { showToast(error.message, "error"); return; }
     setProducts(current => current.map(p => p.id === product.id ? { ...p, location: destination.trim() } : p));
     showToast(`Ubicación de "${product.name}" actualizada a ${destination.trim()}.`);
@@ -527,21 +630,21 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     ];
 
     const rows = movements.map((m) => [
-      `"${m.id}"`,
-      `"${m.occurredAt}"`,
-      `"${movementLabels[m.type]}"`,
-      `"${m.reference}"`,
-      `"${m.productName || ""}"`,
-      m.quantity,
-      `"${m.unit || ""}"`,
-      m.unitCost,
-      m.totalCost,
-      `"${m.projectName || "Almacén Central"}"`,
-      `"${m.responsible || ""}"`,
-      `"${m.notes || ""}"`,
+      csvCell(m.id),
+      csvCell(m.occurredAt),
+      csvCell(movementLabels[m.type]),
+      csvCell(m.reference),
+      csvCell(m.productName),
+      csvCell(m.quantity, true),
+      csvCell(m.unit),
+      csvCell(m.unitCost, true),
+      csvCell(m.totalCost, true),
+      csvCell(m.projectName || "Almacén Central"),
+      csvCell(m.responsible),
+      csvCell(m.notes),
     ]);
 
-    const csvContent = "\uFEFF" + [headers.join(";"), ...rows.map((r) => r.join(";"))].join("\n");
+    const csvContent = "\uFEFF" + [headers.map((header) => csvCell(header)).join(";"), ...rows.map((r) => r.join(";"))].join("\r\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -578,6 +681,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
             <button className="inventory-action" onClick={() => openMovementModal()} type="button">+ Registrar movimiento</button>
           ) : (
             <>
+              <Link className="inventory-action secondary" href="/inventory/import">Importar CSV/XLSX</Link>
               <button className="inventory-action secondary" onClick={() => setIsNewItemModalOpen(true)} type="button">+ Nuevo artículo</button>
               <button className="inventory-action btn-secondary-action" onClick={() => openMovementModal(undefined, "entry")} type="button">+ Registrar entrada</button>
               <button className="inventory-action" onClick={() => openMovementModal(undefined, "exit")} type="button">+ Registrar salida</button>
@@ -808,7 +912,6 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                 ) : (
                   paginatedProducts.map((p) => {
                     const st = stockState(p);
-                    const cost = p.unitCost || 25000;
                     return (
                       <tr key={p.id}>
                         <td>
@@ -826,7 +929,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                           <small>{getInventoryItemKind(p) === "material" ? "Material / insumo" : getInventoryItemKind(p) === "tool" ? "Herramienta" : getInventoryItemKind(p) === "equipment" ? "Equipo" : "Dotación / EPP"}</small>
                         </td>
                         <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                          {currencyFormatter.format(cost)}
+                          {(p.unitCost ?? 0) > 0 ? currencyFormatter.format(p.unitCost ?? 0) : <span className="pending-cost">Pendiente</span>}
                         </td>
                         <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                           <b className="stock-quantity">
@@ -1036,17 +1139,19 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
           <div className="inventory-catalog-controls" style={{ gridTemplateColumns: "1fr 1fr auto" }}>
             <label>
               Tipo de movimiento
-              <select onChange={(e) => setMovementTypeFilter(e.target.value)} value={movementTypeFilter}>
+              <select onChange={(e) => { setMovementTypeFilter(e.target.value); setMovementPage(1); }} value={movementTypeFilter}>
                 <option value="all">Todos los movimientos</option>
                 <option value="exit">Salidas a Obra / Proyectos</option>
                 <option value="entry">Entradas de Compra / Proveedores</option>
+                <option value="return">Devoluciones a Bodega</option>
                 <option value="adjustment">Ajustes de Inventario</option>
+                <option value="transfer">Traslados de Ubicación</option>
               </select>
             </label>
 
             <label>
               Filtrar por obra / proyecto
-              <select onChange={(e) => setMovementProjectFilter(e.target.value)} value={movementProjectFilter}>
+              <select onChange={(e) => { setMovementProjectFilter(e.target.value); setMovementPage(1); }} value={movementProjectFilter}>
                 <option value="all">Todas las obras / Almacén</option>
                 {[...projects].sort((a, b) => spanishCollator.compare(`${a.code} ${a.name}`, `${b.code} ${b.name}`)).map((p) => (
                   <option key={p.id} value={p.id}>
@@ -1087,8 +1192,9 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                     </td>
                   </tr>
                 ) : (
-                  filteredMovements.map((m) => {
-                    const isExit = m.type === "exit";
+                  paginatedMovements.map((m) => {
+                    const isExit = m.type === "exit" || (m.type === "adjustment" && m.quantityBefore != null && m.quantityAfter != null && m.quantityAfter < m.quantityBefore);
+                    const isTransfer = m.type === "transfer";
                     return (
                       <tr key={m.id}>
                         <td>
@@ -1096,11 +1202,12 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                         </td>
                         <td>
                           <span className={`mov-badge ${m.type}`}>
-                            {m.type === "entry" ? "↓ Entrada" : m.type === "exit" ? "↑ Salida" : "⚖ Ajuste"}
+                            {m.type === "entry" ? "↓ Entrada" : m.type === "exit" ? "↑ Salida" : m.type === "return" ? "↩ Devolución" : m.type === "transfer" ? "↔ Traslado" : "⚖ Ajuste"}
                           </span>
                         </td>
                         <td>
                           <strong>{m.reference}</strong>
+                          {m.operationKind && <small className="mov-notes">Origen: {m.operationKind}</small>}
                         </td>
                         <td>
                           <b>{m.productName || "Artículo"}</b>
@@ -1108,8 +1215,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                         </td>
                         <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                           <span className={`qty-indicator ${isExit ? "neg" : "pos"}`}>
-                            {isExit ? "-" : "+"}
-                            {m.quantity} {m.unit}
+                            {isTransfer ? "—" : `${isExit ? "-" : "+"}${m.quantity}`} {isTransfer ? "" : m.unit}
                           </span>
                         </td>
                         <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
@@ -1137,6 +1243,29 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
               </tbody>
             </table>
           </div>
+          {movementTotalPages > 1 && (
+            <div className="pagination-bar">
+              <button
+                className="btn-page"
+                disabled={movementPage === 1}
+                onClick={() => setMovementPage((page) => Math.max(1, page - 1))}
+                type="button"
+              >
+                ← Anterior
+              </button>
+              <span>
+                Página <b>{movementPage}</b> de <b>{movementTotalPages}</b> · {numberFormatter.format(filteredMovements.length)} movimientos
+              </span>
+              <button
+                className="btn-page"
+                disabled={movementPage === movementTotalPages}
+                onClick={() => setMovementPage((page) => Math.min(movementTotalPages, page + 1))}
+                type="button"
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
         </section>
       )}
 
@@ -1278,6 +1407,15 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                 </button>
                 <button
                   type="button"
+                  className={`type-option return ${movementType === "return" ? "selected" : ""}`}
+                  onClick={() => setMovementType("return")}
+                >
+                  <span className="type-icon">↩️</span>
+                  <strong>Devolución a Bodega</strong>
+                  <small>Reintegra sobrantes de obra sin perder su origen</small>
+                </button>
+                <button
+                  type="button"
                   className={`type-option adjustment ${movementType === "adjustment" ? "selected" : ""}`}
                   onClick={() => setMovementType("adjustment")}
                 >
@@ -1346,17 +1484,17 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
               </div>
 
               {/* Si es salida, seleccionar Obra / Proyecto de destino */}
-              {movementType === "exit" && (
+              {(movementType === "exit" || movementType === "return") && (
                 <div className="form-group">
                   <label>
-                    Obra / Proyecto de Destino (Centro de Costos) <span className="req">*</span>
+                    {movementType === "return" ? "Obra de origen (opcional)" : "Obra / Proyecto de Destino (Centro de Costos)"} {movementType === "exit" && <span className="req">*</span>}
                   </label>
                   <select
                     value={selectedProjectId}
                     onChange={(e) => setSelectedProjectId(e.target.value)}
-                    required
+                    required={movementType === "exit"}
                   >
-                    <option value="">Selecciona una obra activa</option>
+                    <option value="">{movementType === "return" ? "Sin obra asociada" : "Selecciona una obra activa"}</option>
                     {[...projects].sort((a, b) => spanishCollator.compare(`${a.code} ${a.name}`, `${b.code} ${b.name}`)).map((prj) => (
                       <option key={prj.id} value={prj.id} disabled={prj.status !== "active"}>
                         {prj.code} - {prj.name} ({prj.status === "active" ? "Activa" : prj.status === "completed" ? "Finalizada" : "No disponible"})
@@ -1384,14 +1522,14 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
 
                 <div className="form-group">
                   <label>
-                  Costo Unitario ($ COP) <span className="req">*</span>
+                    Costo Unitario ($ COP)
                   </label>
                   <CurrencyInput
                     value={unitCostInput}
                     onValueChange={setUnitCostInput}
-                    placeholder="25000"
-                    required
+                    placeholder="Vacío si aún no se conoce"
                   />
+                  <small>Si se deja vacío, la base conserva el costo actual o lo deja pendiente; no inventa un valor.</small>
                 </div>
               </div>
 
@@ -1399,7 +1537,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
               <div className="total-cost-banner">
                 <span>{movementType === "exit" ? "Costo total del despacho:" : "Valor total del movimiento:"}</span>
                 <strong>
-                  {currencyFormatter.format((Number(quantityInput) || 0) * (Number(unitCostInput) || 0))} COP
+                  {currencyFormatter.format((Number(quantityInput) || 0) * (unitCostInput.trim() === "" ? (selectedProduct?.unitCost ?? 0) : (Number(unitCostInput) || 0)))} COP
                 </strong>
               </div>
 
@@ -1439,11 +1577,11 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
               {formError && <p className="modal-form-error">{formError}</p>}
 
               <div className="modal-actions">
-                <button className="btn-cancel" onClick={() => setIsMovementModalOpen(false)} type="button">
+                <button className="btn-cancel" onClick={() => setIsMovementModalOpen(false)} type="button" disabled={isSavingMovement}>
                   Cancelar
                 </button>
-                <button className="inventory-action" type="submit">
-                  Confirmar y Registrar Movimiento
+                <button className="inventory-action" type="submit" disabled={isSavingMovement}>
+                  {isSavingMovement ? "Registrando…" : "Confirmar y Registrar Movimiento"}
                 </button>
               </div>
             </form>

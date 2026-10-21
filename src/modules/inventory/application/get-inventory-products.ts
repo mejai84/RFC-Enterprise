@@ -1,6 +1,7 @@
 import type { StockProduct } from "../fixtures";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { loadAllPages } from "@/shared/supabase/load-all";
 
 const groupNames: Record<string, string> = { bodega: "Bodega", dotacion: "Dotación", trabajadores: "Trabajadores" };
 
@@ -13,15 +14,19 @@ export async function getInventoryProducts(): Promise<InventoryLoadResult> {
 
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("inventory_stock")
-      .select("id, inventory_group, location, quantity, minimum_quantity, unit_cost, valuation_status, initial_value_source, inventory_items(id, sku, name, category, brand, unit, notes, technical_reference, model, serial_number, acquired_at, warranty_until, asset_condition, purchase_unit, units_per_purchase, purchase_unit_cost)")
-      .order("inventory_group")
-      .order("created_at");
+    const { data, error } = await loadAllPages((from, to) =>
+      supabase
+        .from("inventory_stock")
+        .select("id, inventory_group, location, quantity, minimum_quantity, unit_cost, valuation_status, initial_value_source, inventory_items(id, sku, name, category, brand, unit, notes, technical_reference, model, serial_number, acquired_at, warranty_until, asset_condition, purchase_unit, units_per_purchase, purchase_unit_cost)")
+        .order("inventory_group")
+        .order("created_at")
+        .order("id")
+        .range(from, to),
+    );
 
     if (error) return { source: "database", products: [], error: "No fue posible cargar el inventario asignado a tu cuenta." };
 
-    const products = (data ?? []).flatMap((stock) => {
+    const products = data.flatMap((stock) => {
       const item = Array.isArray(stock.inventory_items) ? stock.inventory_items[0] : stock.inventory_items;
       if (!item) return [];
       return [{
@@ -55,6 +60,12 @@ export async function getInventoryProducts(): Promise<InventoryLoadResult> {
 
     return { source: "database", products };
   } catch {
-    return { source: "demo", products: undefined };
+    // Un fallo de conexión no debe convertir el inventario real en datos demo:
+    // eso ocultaba el problema y mostraba un catálogo que no existe.
+    return {
+      source: "database",
+      products: [],
+      error: "No fue posible conectar con la base de datos del inventario.",
+    };
   }
 }

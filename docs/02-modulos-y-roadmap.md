@@ -1,12 +1,13 @@
 <!-- Registro 2026-10-19: el Resumen del dashboard explica cada indicador con un icono de ayuda contextual; presupuesto de obras, gasto real, saldo, alertas y contadores comerciales indican que miden y de donde salen. -->
 <!-- Registro 2026-10-20: Compras ya permite registrar recepción total o parcial de una orden, con factura/remisión, costo unitario y entrada transaccional a inventario. -->
 <!-- Registro 2026-10-20: Informes de inventario agrega consumo por obra, rotación, stock inmovilizado y valoración por grupo sobre datos persistidos. El alquiler rápido pasa a documento multi-línea con una sola firma y devolución parcial por ítem. El catálogo de transporte del APU deja de usar localStorage como fuente de verdad y migra sus códigos ausentes a Supabase. -->
+<!-- Registro 2026-10-21: el Kardex de inventario pasa a ser un libro mayor transaccional con RPCs, idempotencia, saldo antes/después, auditoría y escrituras directas revocadas. Las lecturas recorren todas las páginas de PostgREST y los préstamos de herramientas generan movimiento. -->
 <!-- Registro 2026-10-19: la campana del portal carga las alertas operativas desde el shell compartido y las muestra en todos los modulos autorizados, con acceso directo al caso que requiere atencion. Resumen consume la misma regla para evitar conteos distintos. -->
 <!-- Registro 2026-10-13: cada version de APU conserva rendimiento diario de la cuadrilla y tamano de cuadrilla. La duracion tecnica se calcula como techo(cantidad de obra / rendimiento diario), en dias fisicos; no usa fechas comerciales ni crea dias remunerados o extras. -->
 ---
 estado: vigente
 propietario: Producto y Desarrollo RFC Enterprise
-ultima_actualizacion: 2026-10-20
+ultima_actualizacion: 2026-10-21
 audiencia: Dirección, Producto y Desarrollo
 ---
 
@@ -84,10 +85,10 @@ Todo módulo interno, incluido Alquiler rápido, se compone dentro de `Dashboard
 | Código | Módulo | Estado | Alcance actual |
 | --- | --- | --- | --- |
 | `core` | Administración | Operativo v0.4 | Directorio persistente de empleados, roles, permisos individuales, activación, auditoría, empresas, sedes, sesión y cierre de sesión |
-| `site` | Sitio institucional | Operativo v0.4 | Portada corporativa ampliada, capacidades, enfoque de trabajo, imágenes sectoriales, acceso superior al portal de empleados y formulario que prepara el correo para el canal corporativo |
+| `site` | Sitio institucional | Operativo v0.5 | Portada corporativa ampliada, capacidades, enfoque de trabajo, imágenes sectoriales, acceso superior al portal de empleados y formulario que envía la solicitud a una Edge Function con validación, antispam y proveedor transaccional |
 | `dashboard` | Dashboard Ejecutivo | Operativo v0.4 | Panel principal e informes funcionales con filtros, KPIs, gráficos SVG accesibles, exportación CSV, impresión y análisis de inventario, Kardex, stock crítico y obras |
 | `quotes` | Cotizaciones & Pipeline | Operativo v0.3 | Tablero Kanban y lista, consecutivo `COT-###-AAAA-EMPRESA-OBRA`, pre-costeo por 3 rubros (Materiales, Cuadrillas, Equipos), control de revisiones (R1/R2), comparador de revisiones de solo lectura, expediente comercial privado (solicitud, planos, correos, orden de servicio, aprobación), inspección técnica en campo, procedimiento de trabajo y matriz de riesgos privados/versionados, semáforo de vigencia comercial, conversión 1-click a obra y propuesta membretada imprimible en PDF |
-| `inventory` | Inventarios & Kardex | Operativo v0.5 | Catálogo, kardex, conteos, alta de artículos, ubicaciones, custodia y despachos. Se inicia la persistencia empresarial del ciclo requisición de obra → despacho/remisión firmada → devolución. |
+| `inventory` | Inventarios & Kardex | Operativo v0.6 | Catálogo, kardex, conteos, alta de artículos, ubicaciones, custodia, despachos e importación masiva CSV/XLSX con vista previa y auditoría. Se inicia la persistencia empresarial del ciclo requisición de obra → despacho/remisión firmada → devolución. |
 | `projects` | Costeo de Proyectos | Operativo v0.4 | Centro de costos, tipo de proyecto, código consecutivo automático, asignación de empleados, calendario de inicio/entrega estimada, estado de obra, presupuestos y control de sobrecostos |
 | `attendance` | Registro de Jornada | Operativo v0.3 | Jornada con entrada, salida y tramos consecutivos de trabajo, desplazamiento o pausa; las actividades se encadenan sin cerrar la jornada. Ubicación declarada de forma opcional y solo por acción del empleado. Consulta gerencial por día, semana o mes, habilitada por el permiso `attendance.team.view` |
 | `equipment` | Equipos & Custodia | Operativo v0.1 | Préstamo y seguimiento de herramientas a cuadrillas y trabajadores por obra |
@@ -143,7 +144,7 @@ La evolución se ejecutará en este orden para que cada fase entregue control op
   - Gráficos y tablas con scroll suave y contenedores `overflow-x: auto` sin romper el ancho de pantalla.
   - Botones y elementos interactivos con área táctil óptima de 44px para uso en obra con smartphones y tablets.
 - Catálogo completo con 1,191 artículos, Kardex valorizado y exportación CSV.
-- Persistencia híbrida local e integración con identidad Supabase.
+- Persistencia en Supabase e integración con identidad Supabase. El navegador solo conserva preferencias de interfaz, no confirmaciones de negocio.
 
 ## Entrega acordada: Operaciones de inventario v0.4
 
@@ -151,9 +152,9 @@ La evolución se ejecutará en este orden para que cada fase entregue control op
 - Inventario permite dar de alta un artículo nuevo y registra su existencia inicial como entrada de Kardex.
 - El alta de artículos permite buscar o crear, sin abandonar el formulario, categorías, marcas, unidades y ubicaciones; la opción elegida queda aplicada al artículo creado.
 - Cada artículo nuevo define unidad de consumo, presentación de compra y equivalencia. El stock inicial y el costo unitario se calculan en la unidad de consumo.
-- `/movements` presenta únicamente el Kardex, sin mezclar catálogo, costos por obra ni alertas.
+- `/movements` presenta únicamente el Kardex, sin mezclar catálogo, costos por obra ni alertas. El Kardex es un libro mayor: toda entrada, salida, devolución, ajuste o traslado pasa por una RPC transaccional y conserva saldo antes/después, actor, fecha y auditoría.
 - Todo comprobante, remisión, informe imprimible o documento exportable debe usar el activo oficial `public/rfc-logo.svg` como membrete; no se emplean siglas tipográficas como sustituto.
-- Pendiente del sitio institucional: sustituir el enlace `mailto:` por envío directo desde una Edge Function de Supabase con proveedor transaccional, validación y protección antispam.
+- El sitio institucional ya envía las solicitudes a la Edge Function `contact-form`; falta configurar los secretos del proveedor, desplegarla y validar una entrega real (R-006/SITE-002).
 - Las salidas se limitan a obras activas. El modelo de datos incorpora compras/recepciones, conteos físicos, ubicaciones detalladas, puntos de reorden, ajustes de presupuesto y auditoría.
 - Una requisición se crea desde la obra por maestro o residente; pasa a la bandeja de despachos del almacén, donde se valida disponibilidad, se despacha y se genera el movimiento de Kardex asociado a la obra.
 - Al crear un proyecto se selecciona su tipo (Obra, Mantenimiento u Otro). El sistema asigna un código ineditable con prefijo y consecutivo independientes por tipo y fecha de inicio: `OBRA-AAAAMMDD-##`, `MANT-AAAAMMDD-##` u `OTRO-AAAAMMDD-##`.
@@ -317,6 +318,14 @@ Informes incorpora una vista de indicadores calculada sobre datos reales de `quo
 ## Dotacion por cargo, cotizacion y obra (2026-10-09)
 
 La matriz de dotacion ahora conserva por articulo la cantidad, el valor y la frecuencia de reposicion en dias fisicos. Al configurar la cuadrilla de una cotizacion, el valor de dotacion se calcula por cargo con los dias fisicos estimados y se guarda dentro de la instantanea que consume el APU. En Proyectos > Personal de obra aparece Entrega de dotacion: el encargado escoge trabajador, tipo de movimiento y uno o varios articulos, por ejemplo dos uniformes y un casco, en un solo comprobante.
+
+## Invitaciones, contacto e importación de inventario (2026-10-20)
+
+**Empleados (R-007).** La ficha de Empleados incorpora una tarjeta de acceso al portal con el estado de la identidad de Supabase Auth. El administrador puede invitar por correo, vincular una cuenta existente y enviar un enlace de recuperación, sincronizar el rol base y la sede en `user_roles`, y actualizar el estado sin crear columnas nuevas. El detalle operativo y las variables de entorno están en [19 · Invitaciones, contacto e importación](19-invitacion-empleados-contacto-e-importacion.md).
+
+**Portada (R-006).** El formulario de contacto ya no abre `mailto:`. Envía la solicitud a la Edge Function pública `contact-form`, que valida, aplica honeypot, trampa de tiempo, CORS y rate limit, y entrega por Resend al buzón corporativo. No persiste datos personales ni usa `localStorage`. Queda pendiente configurar los secretos, desplegar y probar una entrega real.
+
+**Inventario (INV-011).** La ruta `/inventory/import` acepta CSV/XLSX de hasta 500 filas, muestra vista previa, resumen de errores y confirmación explícita. Cada fila válida crea un artículo nuevo con existencia de apertura usando la RPC existente y el JWT del usuario; el lote se registra en `audit_logs`. Es una operación de altas: no actualiza artículos existentes. La unicidad durable de SKU queda como riesgo INV-026 porque la base no tiene restricción única.
 
 ## Actualizacion 2026-10-20 - Conteo inicial colaborativo
 

@@ -292,7 +292,7 @@
 .movement-type-selector {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   margin-bottom: 20px;
 }
 
@@ -339,6 +339,12 @@
   background: #f2faf5;
   border-color: #0b7a47;
   box-shadow: 0 0 0 2px rgba(11, 122, 71, 0.2);
+}
+
+.type-option.selected.return {
+  background: #f2f7ff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
 }
 
 .type-option.selected.adjustment {

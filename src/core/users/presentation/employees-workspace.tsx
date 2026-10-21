@@ -7,11 +7,48 @@ import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib
 
 type DatabaseRole = { id: string; code: string; name: string };
 type DatabasePermission = { id: string; code: string; description: string };
-type Employee = { id: string; name: string; email: string; title: string; roleId: string; active: boolean; permissions: string[] };
+type Employee = { id: string; name: string; email: string; title: string; roleId: string; active: boolean; profileId: string | null; permissions: string[] };
 type Override = { employee_id: string; permission_id: string; mode: "grant" | "revoke" };
+type InvitationStatus =
+  | "not_invited"
+  | "invited"
+  | "active"
+  | "disabled"
+  | "orphaned"
+  | "linked";
+type InvitationStatusResponse = {
+  status: InvitationStatus;
+  email: string;
+  profileId: string | null;
+  invitedAt: string | null;
+  confirmedAt: string | null;
+  lastSignInAt: string | null;
+  emailSent?: boolean;
+  alreadyLinked?: boolean;
+  warning?: string;
+};
+
+const invitationStatusLabels: Record<InvitationStatus, string> = {
+  not_invited: "Sin invitar",
+  invited: "Invitación enviada",
+  active: "Cuenta activa",
+  disabled: "Cuenta deshabilitada",
+  orphaned: "Cuenta no encontrada",
+  linked: "Cuenta vinculada",
+};
 
 function getErrorMessage(error: { message?: string } | null, fallback: string) {
   return error?.message || fallback;
+}
+
+function formatInvitationDate(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("es-CO", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 export function EmployeesWorkspace() {
@@ -27,6 +64,10 @@ export function EmployeesWorkspace() {
   const [isSaving, setIsSaving] = useState(false);
   const [temporaryPassword, setTemporaryPassword] = useState("");
   const [temporaryPasswordConfirmation, setTemporaryPasswordConfirmation] = useState("");
+  const [invitationStatus, setInvitationStatus] = useState<InvitationStatusResponse | null>(null);
+  const [invitationMessage, setInvitationMessage] = useState("");
+  const [isInvitationLoading, setIsInvitationLoading] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
 
   const groupedPermissions = useMemo(() => Object.entries(corePermissions.reduce<Record<string, (typeof corePermissions)[number][]>>((groups, permission) => {
     (groups[permission.module] ??= []).push(permission);
@@ -39,6 +80,7 @@ export function EmployeesWorkspace() {
   }, []);
 
   const loadEmployees = useCallback(async () => {
+    await Promise.resolve();
     if (!supabase) {
       setMessage("Supabase no está configurado para esta aplicación.");
       setIsLoading(false);
@@ -68,7 +110,7 @@ export function EmployeesWorkspace() {
       supabase.from("roles").select("id, code, name"),
       supabase.from("permissions").select("id, code, description"),
       supabase.from("role_permissions").select("role_id, permission_id"),
-      supabase.from("employees").select("id, full_name, email, job_title, is_active").eq("company_id", currentCompanyId).order("full_name"),
+      supabase.from("employees").select("id, full_name, email, job_title, is_active, profile_id").eq("company_id", currentCompanyId).order("full_name"),
     ]);
     const loadError = rolesError || permissionsError || rolePermissionsError || employeesError;
     if (loadError) {
@@ -92,7 +134,6 @@ export function EmployeesWorkspace() {
       return;
     }
 
-    const roleById = new Map(roleRows.map((role) => [role.id, role]));
     const permissionCodeById = new Map(permissions.map((permission) => [permission.id, permission.code]));
     const basePermissionsByRole = new Map<string, Set<string>>();
     for (const item of rolePermissionRows ?? []) {
@@ -118,7 +159,7 @@ export function EmployeesWorkspace() {
         if (override.mode === "grant") effectivePermissions.add(code);
         else effectivePermissions.delete(code);
       }
-      return { id: employee.id, name: employee.full_name, email: employee.email, title: employee.job_title, roleId, active: employee.is_active, permissions: [...effectivePermissions] };
+      return { id: employee.id, name: employee.full_name, email: employee.email, title: employee.job_title, roleId, active: employee.is_active, profileId: employee.profile_id, permissions: [...effectivePermissions] };
     });
 
     const administratorRoleIds = new Set(roleRows.filter((role) => role.code === "administrator").map((role) => role.id));
@@ -133,7 +174,50 @@ export function EmployeesWorkspace() {
     setIsLoading(false);
   }, [supabase]);
 
+  const loadInvitationStatus = useCallback(async (employeeId: string) => {
+    await Promise.resolve();
+    if (!supabase || !canManage) return;
+    setIsInvitationLoading(true);
+    setInvitationStatus(null);
+    setInvitationMessage("");
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        setInvitationMessage("Tu sesión expiró. Inicia sesión nuevamente.");
+        return;
+      }
+      const response = await fetch(
+        `/api/employees/invitation-status?employeeId=${encodeURIComponent(employeeId)}`,
+        { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+      );
+      const result = (await response.json().catch(() => ({}))) as
+        | (InvitationStatusResponse & { error?: string })
+        | { error?: string };
+      if (!response.ok) {
+        setInvitationMessage(
+          String(result.error || "No fue posible consultar el estado de invitación."),
+        );
+        return;
+      }
+      setInvitationStatus(result as InvitationStatusResponse);
+    } catch {
+      setInvitationMessage("No fue posible consultar el estado de invitación.");
+    } finally {
+      setIsInvitationLoading(false);
+    }
+  }, [supabase, canManage]);
+
+  // Sincronización externa con Supabase. Los setState ocurren dentro de las
+  // promesas de carga, no durante el render; se desactiva la regla para este
+  // efecto de datos.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void loadEmployees(); }, [loadEmployees]);
+  useEffect(() => {
+    if (!canManage || !selected?.id) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadInvitationStatus(selected.id);
+  }, [canManage, selected?.id, loadInvitationStatus]);
 
   async function createEmployee(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -227,6 +311,69 @@ export function EmployeesWorkspace() {
     setIsSaving(false);
   }
 
+  async function inviteEmployee() {
+    if (!supabase || !selected || !canManage || isInviting) return;
+    setIsInviting(true);
+    setInvitationMessage("");
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        setInvitationMessage("Tu sesión expiró. Inicia sesión nuevamente.");
+        return;
+      }
+      const response = await fetch("/api/employees/invite", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ employeeId: selected.id }),
+      });
+      const result = (await response.json().catch(() => ({}))) as
+        | (InvitationStatusResponse & {
+            error?: string;
+            emailSent?: boolean;
+            alreadyLinked?: boolean;
+            existingAccount?: boolean;
+            warning?: string;
+          })
+        | { error?: string };
+      if (!response.ok) {
+        setInvitationMessage(
+          String(result.error || "No fue posible enviar la invitación."),
+        );
+        return;
+      }
+
+      const inviteResult = result as InvitationStatusResponse & {
+        emailSent?: boolean;
+        alreadyLinked?: boolean;
+        existingAccount?: boolean;
+        warning?: string;
+      };
+      setInvitationStatus(inviteResult);
+      const baseMessage = inviteResult.alreadyLinked
+        ? "La ficha ya tiene una cuenta vinculada. Se sincronizó su membresía."
+        : inviteResult.existingAccount
+          ? "La cuenta existente se vinculó. Se envió un enlace para establecer la contraseña."
+          : inviteResult.emailSent
+            ? `Invitación enviada a ${selected.email}.`
+            : "La cuenta se vinculó, pero el correo no se pudo enviar.";
+      setInvitationMessage(
+        [baseMessage, inviteResult.warning].filter(Boolean).join(" "),
+      );
+      await loadEmployees();
+      setMessage(
+        [baseMessage, inviteResult.warning].filter(Boolean).join(" "),
+      );
+    } catch {
+      setInvitationMessage("Error de red al enviar la invitación.");
+    } finally {
+      setIsInviting(false);
+    }
+  }
+
   async function setEmployeePassword() {
     if (!supabase || !selected || !canManage) return;
     if (temporaryPassword.length < 8) { setMessage("La contraseña debe tener al menos 8 caracteres."); return; }
@@ -305,7 +452,7 @@ export function EmployeesWorkspace() {
       } else {
         window.alert(String(result.error || "No fue posible guardar la contraseña."));
       }
-    } catch (error) {
+    } catch {
       window.alert("Error de red o conexión al intentar comunicarse con el servidor.");
     } finally {
       setModalSaving(false);
@@ -335,6 +482,25 @@ export function EmployeesWorkspace() {
     setModalSaving(false);
   }
 
+  const invitationBadgeStatus =
+    invitationStatus?.status ?? (selected?.profileId ? "linked" : "not_invited");
+  const invitationLabel = isInvitationLoading
+    ? "Consultando…"
+    : invitationStatusLabels[invitationBadgeStatus];
+  const canInviteSelected = Boolean(
+    canManage &&
+      selected?.active &&
+      selected.roleId &&
+      (!selected.profileId || invitationStatus?.status === "orphaned"),
+  );
+  const canSyncSelected = Boolean(
+    canManage &&
+      selected?.active &&
+      selected.roleId &&
+      selected.profileId &&
+      invitationStatus?.status !== "orphaned",
+  );
+
   return (
     <main className="dashboard-content employees-page" id="main-content">
       <section className="dashboard-heading">
@@ -348,7 +514,7 @@ export function EmployeesWorkspace() {
           {isLoading ? <p className="panel-intro">Cargando directorio…</p> : employees.map((employee) => (
             <button className={`employee-row ${employee.id === selected?.id ? "is-selected" : ""}`} key={employee.id} onClick={() => { setSelectedId(employee.id); setMessage(""); }} type="button">
               <span>{employee.name.split(" ").map((word) => word[0]).slice(0, 2).join("")}</span>
-              <strong>{employee.name}<small>{employee.title}</small></strong>
+              <strong>{employee.name}<small>{employee.title} · {employee.profileId ? "Con cuenta" : "Sin invitar"}</small></strong>
               {!employee.roleId ? (
                 <i style={{ color: "#b91c1c", fontWeight: 700 }}>⚠ Sin rol</i>
               ) : (
@@ -364,7 +530,7 @@ export function EmployeesWorkspace() {
           {selected ? (
             <section className="dashboard-panel employee-permissions">
               <div className="panel-title">
-                <div><p>Acceso de {selected.name}</p><h2>{selected.active ? "Cuenta activa" : "Cuenta desactivada"}</h2></div>
+                <div><p>Acceso de {selected.name}</p><h2>{selected.active ? "Ficha activa" : "Ficha desactivada"}</h2></div>
                 <button className="emp-btn emp-btn--outline" disabled={!canManage || isSaving} onClick={toggleActive} type="button">{selected.active ? "Desactivar" : "Activar"}</button>
               </div>
 
@@ -374,6 +540,45 @@ export function EmployeesWorkspace() {
                 <button className="emp-btn emp-btn--secondary" onClick={() => { setModalPassword(""); setModalPasswordConfirm(""); setShowPasswordModal(true); }} disabled={!canManage || isSaving} type="button">🔑 Cambiar contraseña</button>
                 <button className="emp-btn emp-btn--outline" onClick={() => void sendPasswordReset()} disabled={!canManage || isSaving} type="button">📧 Enviar recuperación</button>
               </div>
+
+              <section className="employee-access-card" aria-label="Estado de invitación al portal">
+                <div className="employee-access-head">
+                  <div>
+                    <p>Acceso al portal</p>
+                    <h3>Invitación y estado de la cuenta</h3>
+                  </div>
+                  <span className="employee-access-badge" data-status={invitationBadgeStatus}>{invitationLabel}</span>
+                </div>
+                <p className="employee-access-meta">
+                  Correo de invitación: <strong>{selected.email}</strong>
+                  {invitationStatus?.invitedAt ? <><br />Invitación enviada: <strong>{formatInvitationDate(invitationStatus.invitedAt)}</strong></> : null}
+                  {invitationStatus?.confirmedAt ? <><br />Correo confirmado: <strong>{formatInvitationDate(invitationStatus.confirmedAt)}</strong></> : null}
+                  {invitationStatus?.lastSignInAt ? <><br />Último ingreso: <strong>{formatInvitationDate(invitationStatus.lastSignInAt)}</strong></> : null}
+                  {!isInvitationLoading && invitationStatus && !invitationStatus.invitedAt && !invitationStatus.confirmedAt && !invitationStatus.lastSignInAt ? <><br />{invitationStatus.profileId ? "La cuenta está vinculada, pero aún no registra ingreso." : "La ficha aún no tiene una identidad de acceso vinculada."}</> : null}
+                </p>
+                {invitationStatus?.status === "invited" ? <p className="employee-access-hint">La invitación está pendiente. Si el correo no llegó, usa “Enviar recuperación” para generar un nuevo enlace.</p> : null}
+                {invitationStatus?.status === "orphaned" ? <p className="employee-access-hint">La cuenta vinculada ya no existe en Supabase Auth. Puedes volver a invitarla para reparar el acceso.</p> : null}
+                {!selected.active ? <p className="employee-access-hint">La ficha está desactivada. Actívala antes de invitar o reenviar un acceso.</p> : null}
+                <div className="employee-access-actions">
+                  {canInviteSelected ? (
+                    <button className="emp-btn emp-btn--primary" onClick={() => void inviteEmployee()} disabled={!canManage || isInviting || isInvitationLoading} type="button">
+                      {isInviting ? "Enviando invitación…" : selected.profileId ? "Volver a invitar" : "Invitar por correo"}
+                    </button>
+                  ) : null}
+                  {canSyncSelected ? (
+                    <button className="emp-btn emp-btn--secondary" onClick={() => void inviteEmployee()} disabled={!canManage || isInviting || isInvitationLoading} type="button">
+                      {isInviting ? "Sincronizando…" : "Sincronizar membresía"}
+                    </button>
+                  ) : null}
+                  {canManage && selected.profileId && invitationStatus?.status !== "orphaned" ? (
+                    <button className="emp-btn emp-btn--outline" onClick={() => void loadInvitationStatus(selected.id)} disabled={!canManage || isInvitationLoading || isInviting} type="button">
+                      {isInvitationLoading ? "Consultando…" : "Actualizar estado"}
+                    </button>
+                  ) : null}
+                  {!selected.roleId ? <span className="employee-access-hint">Asigna un rol base para habilitar la invitación.</span> : null}
+                </div>
+                {invitationMessage ? <p className="employee-access-message" role="status" aria-live="polite">{invitationMessage}</p> : null}
+              </section>
 
               {!selected.roleId && (
                 <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#991b1b", padding: "12px 16px", borderRadius: "8px", marginBottom: "12px", fontWeight: 600 }}>⚠ Este empleado no tiene rol asignado. Selecciona uno a continuación para habilitarlo en el sistema.</div>

@@ -1,5 +1,27 @@
 import type { NextConfig } from "next";
 
+// Si la función de contacto se publica en un dominio propio, su origen debe
+// entrar al CSP. Se toma del entorno público en tiempo de build para no tener
+// que editar la cabecera a mano en cada despliegue.
+const contactFunctionOrigin = (() => {
+  const value = process.env.NEXT_PUBLIC_CONTACT_FUNCTION_URL?.trim();
+  if (!value) return "";
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "";
+  }
+})();
+
+const connectSrc = [
+  "'self'",
+  "https://*.supabase.co",
+  "wss://*.supabase.co",
+  contactFunctionOrigin,
+]
+  .filter(Boolean)
+  .join(" ");
+
 const securityHeaders = [
   {
     key: "X-DNS-Prefetch-Control",
@@ -36,7 +58,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      `connect-src ${connectSrc}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

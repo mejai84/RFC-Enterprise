@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import { loadAllPages } from "@/shared/supabase/load-all";
 
 type Employee = { id: string; name: string; title?: string };
 type Stock = { id: string; name: string; unit: string; available: number };
@@ -30,15 +31,24 @@ export function DotacionDeliveryPanel({ companyId, projectId, employees }: { com
   const load = useCallback(async () => {
     if (!supabaseUrl || !supabasePublishableKey) return;
     const db = createBrowserClient(supabaseUrl, supabasePublishableKey);
-    const [{ data: stockRows, error: stockError }, { data: deliveryRows, error: deliveryError }] = await Promise.all([
-      db.from("inventory_stock").select("id,quantity,inventory_items!inner(name,unit)").eq("company_id", companyId).eq("inventory_group", "dotacion").order("updated_at", { ascending: false }),
+    const [stockResult, { data: deliveryRows, error: deliveryError }] = await Promise.all([
+      loadAllPages((from, to) =>
+        db
+          .from("inventory_stock")
+          .select("id,quantity,inventory_items!inner(name,unit)")
+          .eq("company_id", companyId)
+          .eq("inventory_group", "dotacion")
+          .order("updated_at", { ascending: false })
+          .order("id")
+          .range(from, to),
+      ),
       db.from("employee_dotacion_deliveries").select("id,reference,delivery_type,delivered_at,employee:employees(full_name),lines:employee_dotacion_delivery_lines(item_name_snapshot,quantity)").eq("company_id", companyId).eq("project_id", projectId).order("delivered_at", { ascending: false }).limit(12),
     ]);
-    if (stockError || deliveryError) {
-      setError(stockError?.message ?? deliveryError?.message ?? "No fue posible cargar la dotaci\u00f3n.");
+    if (stockResult.error || deliveryError) {
+      setError(stockResult.error?.message ?? deliveryError?.message ?? "No fue posible cargar la dotaci\u00f3n.");
       return;
     }
-    setStocks((stockRows ?? []).map((row) => {
+    setStocks(stockResult.data.map((row) => {
       const item = Array.isArray(row.inventory_items) ? row.inventory_items[0] : row.inventory_items;
       return { id: row.id, name: item?.name ?? "Art\u00edculo", unit: item?.unit ?? "unidad", available: Number(row.quantity) };
     }));

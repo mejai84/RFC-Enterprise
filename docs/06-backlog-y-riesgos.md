@@ -188,6 +188,10 @@ Riesgo abierto el 2026-10-14: los motivos de perdida se extraen de la nota con l
 
 Pendiente el 2026-10-14: `CommercialFileSection` y `RevisionComparator` estan listos y exportados, pero la ficha (`quotes-workspace.tsx`) no los monta todavia, por acuerdo explicito para evitar ediciones concurrentes. Hasta que se integren, las tres mejoras existen en codigo, migraciones y documentacion, pero no son visibles en la pantalla de Cotizaciones.
 
+
+## INV-029 - Validacion operativa posterior al despliegue de Inventario y Kardex
+
+Pendiente de validacion con una sesion real y sin crear movimientos: confirmar que Escape cierra el modal de movimiento, que el foco no sale del dialogo con Tab y que vuelve al disparador al cerrar; confirmar tambien que pestana, filtros, busqueda y pagina sobreviven recarga, atras/adelante y enlaces copiados. La aprobacion final requiere revisar con usuarios autorizados y datos productivos reales antes de declarar el flujo listo para operacion.
 ## INV-027 - Movimientos durante jornada fisica abierta
 
 La conciliacion se detiene si una existencia cambio desde la fotografia de la jornada. Operacion debe pausar movimientos de bodega o reiniciar/revisar la jornada despues de una recepcion, despacho o ajuste.

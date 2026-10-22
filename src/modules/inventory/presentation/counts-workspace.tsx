@@ -645,6 +645,11 @@ export function CountsWorkspace() {
                 Participantes: {contributors.length} ({contributors.map(([name]) => name).join(", ")})
               </small>
             ) : null}
+            {differences.length ? (
+              <small className="panel-intro">
+                Diferencias encontradas: {differences.length}
+              </small>
+            ) : null}
           </>
         ) : (
           <p className="panel-intro">

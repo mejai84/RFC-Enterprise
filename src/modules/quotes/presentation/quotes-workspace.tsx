@@ -388,6 +388,26 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       .reduce((sum, q) => sum + (q.commercialValue ?? q.estimatedValue ?? 0), 0);
   }, [quotes]);
 
+  /* Estados de chip consistentes con el sistema RFC */
+  const chipStatusClass = (status: QuoteStatus): string => {
+    const base = "quotes-chip";
+    const colorMap: Record<QuoteStatus, string> = {
+      received: "quotes-chip--received",
+      in_review: "quotes-chip--review",
+      estimating: "quotes-chip--estimating",
+      sent: "quotes-chip--sent",
+      awaiting_response: "quotes-chip--waiting",
+      revision_requested: "quotes-chip--pending",
+      confirmed: "quotes-chip--confirmed",
+      in_execution: "quotes-chip--execution",
+      work_completed: "quotes-chip--completed",
+      billing_pending: "quotes-chip--billing",
+      closed: "quotes-chip--closed",
+      lost: "quotes-chip--lost",
+    };
+    return `${base} ${colorMap[status] ?? ""}`;
+  };
+
   /* ── Filtrado ───────────────────────────────────────────── */
   const filtered = useMemo(() => {
     let result = quotes;
@@ -974,6 +994,9 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="quotes-search-input"
         />
+        <span className="quotes-search-empty" style={{ display: searchTerm ? 'none' : 'block' }}>
+          Ningún término de búsqueda
+        </span>
         {searchTerm && (
           <button
             className="quotes-clear-filter"
@@ -1077,7 +1100,11 @@ function KanbanView({
 
             <div className="kanban-column-body">
               {colQuotes.length === 0 ? (
-                <div className="kanban-empty">Sin solicitudes</div>
+                <div className="kanban-empty">
+                  <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l7 7l5-5"></path><path d="M19 3l-7 7l5 5"></path><path d="M3 21l7-7l5 5"></path><path d="M21 21l-7-7l5 5"></path></svg>
+                  <span>No hay solicitudes en este estado</span>
+                  <small>Sé el primero en crear una cotización</small>
+                </div>
               ) : (
                 colQuotes.map((quote) => (
                   <KanbanCard

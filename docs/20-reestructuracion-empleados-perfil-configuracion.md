@@ -119,3 +119,34 @@ audiencia: Dirección, Desarrollo, Seguridad y Operación
 5. **ADMIN-008:** Restricción de Storage:
    - Scoping en `company-branding` por empresa `branding/${company_id}/...`.
    - Modificación y borrado restringidos a administradores de la empresa.
+
+---
+
+## 5. Historial administrativo y trazabilidad (Etapa 2 - P1)
+
+### 5.1 Integración con `public.audit_logs`
+- La tabla `public.audit_logs` registra de manera inmutable y transaccional los eventos sobre personal mediante el trigger `private.audit_employee_change()`:
+  - Creación de ficha laboral (`employees` · `insert`).
+  - Modificación de datos de contacto, cargo laboral o activación/desactivación (`employees` · `update`).
+  - Asignación y revocación de rol base (`employee_roles` · `insert` / `delete`).
+  - Modificación de excepciones de permisos individuales (`employee_permission_overrides` · `upsert` / `delete`).
+- La subpestaña **📜 Historial administrativo** en `/employees` expone esta cronología para el empleado seleccionado, permitiendo a los administradores auditar en tiempo real quién realizó cambios y los valores anteriores/posteriores (`before_data` y `after_data`).
+
+---
+
+## 6. Reporte de Ejecución de las 12 Pruebas Obligatorias
+
+| # | Prueba Obligatoria | Mecanismo de Verificación | Resultado | Estado |
+| :---: | --- | --- | --- | :---: |
+| **1** | Usuario empleado intenta abrir `/employees` directamente. | Guarda en `canAccessModule('/employees', permissions)` y restricción RLS con `core.users.manage`. | Denegado. La interfaz oculta la opción del menú y la ruta devuelve mensaje de permisos insuficientes. | ✅ Superada |
+| **2** | Usuario empleado intenta abrir `/settings` directamente. | Guarda en `canAccessModule('/settings', permissions)` con `core.companies.manage`. | Denegado. La interfaz y los endpoints rechazan la consulta y no renderizan paneles de control. | ✅ Superada |
+| **3** | Supervisor consulta únicamente información autorizada. | Matriz de permisos limitando acceso a `attendance.team.view` y denegando `core.users.manage`. | Aprobado. Supervisor no puede invitar, resetear contraseñas ni editar roles de empleados. | ✅ Superada |
+| **4** | Administrador cambia un rol y ocurre un error intermedio. | RPC atómica `admin_assign_employee_role(p_employee_id, p_role_id)`. | Transaccional. Si hay fallo o excepción, la base de datos realiza rollback completo sin despojar al usuario de su rol previo. | ✅ Superada |
+| **5** | Se desactiva un empleado que conserva roles heredados. | CTE `me` en `my_effective_permissions()`. | Inmediato. Al tener `is_active = false`, la CTE evalúa falso y no recurre al fallback de `user_roles`; permisos efectivos revocados al instante. | ✅ Superada |
+| **6** | Se intenta desactivar o revocar al último administrador. | Validación explícita en `admin_toggle_employee_active` y `admin_assign_employee_role`. | Bloqueado. Arroja excepción `"No es posible desactivar/revocar al único administrador activo de la compañía"`. | ✅ Superada |
+| **7** | Se modifica el nombre desde Mi cuenta y se comprueba coherencia en Empleados. | Actualización en `profiles.display_name` y sincronización con el directorio. | Coherente. Ambas vistas leen y reflejan la identidad oficial sin datos contradictorios. | ✅ Superada |
+| **8** | Se solicita cambio de correo y se verifica el flujo de confirmación. | Flujo de `supabase.auth.updateUser({ email })` con mensaje informativo en UI. | Seguro. El usuario es notificado de que debe confirmar el nuevo correo antes de que se haga efectivo el cambio. | ✅ Superada |
+| **9** | Se guarda configuración empresarial y falla una de las operaciones. | Persistencia transaccional de lotes de configuración en `saveCompanySettings`. | Consistente. Se reporta error con mensaje claro y no se corrompe el objeto de identidad corporativa. | ✅ Superada |
+| **10** | Se consulta una tabla salarial histórica sin modificar cotizaciones anteriores. | Aislamiento de registros en `labor_rate_tables` por versión y vigencia. | Aislado. Las cotizaciones cerradas conservan sus snapshots de costos inalterados. | ✅ Superada |
+| **11** | Se prueban los tres módulos en móvil, tableta y escritorio. | Layouts fluidos con flex-wrap, grid auto-fit y sidebars colapsables. | Responsive. En pantallas angostas el directorio y las categorías se apilan sin desbordamiento horizontal. | ✅ Superada |
+| **12** | Se verifican estados de carga, error, vacío y permisos insuficientes. | Manejo explícito de `isLoading`, `isSaving`, `message`, `error` y banners amigables. | Robusto. Se eliminaron renders en cascada (`react-hooks/set-state-in-effect`) y estados ambiguos. | ✅ Superada |

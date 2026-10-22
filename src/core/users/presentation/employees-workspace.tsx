@@ -61,7 +61,17 @@ function formatInvitationDate(value: string | null | undefined) {
   }).format(date);
 }
 
-type DetailTab = "ficha" | "cuenta" | "permisos";
+type AuditLogEntry = {
+  id: string;
+  action: string;
+  entity_type: string;
+  before_data: Record<string, unknown> | null;
+  after_data: Record<string, unknown> | null;
+  created_at: string;
+  actor_id: string | null;
+};
+
+type DetailTab = "ficha" | "cuenta" | "permisos" | "historial";
 type FilterMode = "all" | "active" | "inactive" | "uninvited";
 
 export function EmployeesWorkspace() {
@@ -86,6 +96,10 @@ export function EmployeesWorkspace() {
   const [invitationMessage, setInvitationMessage] = useState("");
   const [isInvitationLoading, setIsInvitationLoading] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
+
+  // Historial administrativo
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [isAuditLoading, setIsAuditLoading] = useState(false);
 
   // Modales React
   const [showEditModal, setShowEditModal] = useState(false);
@@ -175,12 +189,12 @@ export function EmployeesWorkspace() {
     const [{ data: employeeRoleRows, error: employeeRolesError }, { data: overrideRows, error: overridesError }] =
       employeeIds.length
         ? await Promise.all([
-            supabase.from("employee_roles").select("employee_id, role_id").in("employee_id", employeeIds),
-            supabase
-              .from("employee_permission_overrides")
-              .select("employee_id, permission_id, mode")
-              .in("employee_id", employeeIds),
-          ])
+          supabase.from("employee_roles").select("employee_id, role_id").in("employee_id", employeeIds),
+          supabase
+            .from("employee_permission_overrides")
+            .select("employee_id, permission_id, mode")
+            .in("employee_id", employeeIds),
+        ])
         : [{ data: [], error: null }, { data: [], error: null }];
 
     if (employeeRolesError || overridesError) {
@@ -277,6 +291,29 @@ export function EmployeesWorkspace() {
     [supabase, canManage]
   );
 
+  const loadAuditLogs = useCallback(
+    async (employeeId: string) => {
+      if (!supabase) return;
+      setIsAuditLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("audit_logs")
+          .select("id, action, entity_type, before_data, after_data, created_at, actor_id")
+          .eq("entity_id", employeeId)
+          .order("created_at", { ascending: false })
+          .limit(30);
+        if (!error && data) {
+          setAuditLogs(data as AuditLogEntry[]);
+        }
+      } catch {
+        // En caso de error de red o permisos, se preserva el estado actual
+      } finally {
+        setIsAuditLoading(false);
+      }
+    },
+    [supabase]
+  );
+
   useEffect(() => {
     void Promise.resolve().then(loadEmployees);
   }, [loadEmployees]);
@@ -284,8 +321,11 @@ export function EmployeesWorkspace() {
   useEffect(() => {
     if (!canManage || !selected?.id) return;
     const employeeId = selected.id;
-    void Promise.resolve().then(() => loadInvitationStatus(employeeId));
-  }, [canManage, selected?.id, loadInvitationStatus]);
+    void Promise.resolve().then(() => {
+      void loadInvitationStatus(employeeId);
+      void loadAuditLogs(employeeId);
+    });
+  }, [canManage, selected?.id, loadInvitationStatus, loadAuditLogs]);
 
   // Filtrado y conteo de personal
   const filteredEmployees = useMemo(() => {
@@ -471,10 +511,10 @@ export function EmployeesWorkspace() {
       const baseMessage = result.alreadyLinked
         ? "La ficha ya tiene una cuenta vinculada. Se sincronizó su membresía."
         : result.existingAccount
-        ? "La cuenta existente se vinculó. Se envió un enlace para establecer la contraseña."
-        : result.emailSent
-        ? `Invitación enviada al buzón ${selected.email}.`
-        : "La cuenta se vinculó, pero el correo no se pudo despachar.";
+          ? "La cuenta existente se vinculó. Se envió un enlace para establecer la contraseña."
+          : result.emailSent
+            ? `Invitación enviada al buzón ${selected.email}.`
+            : "La cuenta se vinculó, pero el correo no se pudo despachar.";
       setInvitationMessage([baseMessage, result.warning].filter(Boolean).join(" "));
       await loadEmployees();
       setMessage([baseMessage, result.warning].filter(Boolean).join(" "));
@@ -836,6 +876,18 @@ export function EmployeesWorkspace() {
                 >
                   🛡️ Roles y permisos ({selected.permissions.length})
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailTab("historial")}
+                  className={`btn-cancel ${detailTab === "historial" ? "is-selected" : ""}`}
+                  style={{
+                    fontWeight: detailTab === "historial" ? 700 : 500,
+                    background: detailTab === "historial" ? "var(--color-primary, #0f172a)" : "transparent",
+                    color: detailTab === "historial" ? "#ffffff" : "inherit",
+                  }}
+                >
+                  📜 Historial administrativo ({auditLogs.length})
+                </button>
               </div>
 
               {/* ── Subpestaña 1: Ficha del empleado ── */}
@@ -927,10 +979,10 @@ export function EmployeesWorkspace() {
                         </>
                       ) : null}
                       {!isInvitationLoading &&
-                      invitationStatus &&
-                      !invitationStatus.invitedAt &&
-                      !invitationStatus.confirmedAt &&
-                      !invitationStatus.lastSignInAt ? (
+                        invitationStatus &&
+                        !invitationStatus.invitedAt &&
+                        !invitationStatus.confirmedAt &&
+                        !invitationStatus.lastSignInAt ? (
                         <>
                           <br />
                           {invitationStatus.profileId
@@ -962,8 +1014,8 @@ export function EmployeesWorkspace() {
                           {isInviting
                             ? "Enviando invitación…"
                             : selected.profileId
-                            ? "Volver a invitar"
-                            : "Invitar por correo"}
+                              ? "Volver a invitar"
+                              : "Invitar por correo"}
                         </button>
                       ) : null}
                       {canSyncSelected ? (
@@ -1089,6 +1141,130 @@ export function EmployeesWorkspace() {
                       </fieldset>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* ── Subpestaña 4: Historial administrativo ── */}
+              {detailTab === "historial" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+                    <div>
+                      <h3 style={{ fontSize: "1rem", margin: 0, fontWeight: 700 }}>
+                        📜 Trazabilidad e historial administrativo
+                      </h3>
+                      <p className="panel-intro" style={{ margin: "4px 0 0 0" }}>
+                        Registro inmutable de auditoría para <strong>{selected.name}</strong>. Muestra eventos laborales, cambios de rol y excepciones de seguridad.
+                      </p>
+                    </div>
+                    <button
+                      className="emp-btn emp-btn--outline"
+                      type="button"
+                      disabled={isAuditLoading}
+                      onClick={() => void loadAuditLogs(selected.id)}
+                      style={{ fontSize: "0.8125rem", padding: "6px 12px" }}
+                    >
+                      {isAuditLoading ? "Actualizando…" : "🔄 Refrescar"}
+                    </button>
+                  </div>
+
+                  {isAuditLoading && auditLogs.length === 0 ? (
+                    <p className="panel-intro">Consultando registros de auditoría…</p>
+                  ) : auditLogs.length === 0 ? (
+                    <div style={{ background: "var(--color-bg-subtle, #f8fafc)", padding: "20px", borderRadius: "8px", border: "1px dashed var(--color-border, #cbd5e1)", textAlign: "center" }}>
+                      <p style={{ margin: 0, color: "var(--color-text-muted, #64748b)", fontSize: "0.875rem" }}>
+                        No hay eventos previos de auditoría registrados para esta ficha en la base de datos.
+                      </p>
+                      <small style={{ display: "block", marginTop: "4px", color: "var(--color-text-muted, #94a3b8)" }}>
+                        Cualquier modificación posterior de cargo, estado o permisos quedará registrada aquí automáticamente.
+                      </small>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {auditLogs.map((log) => {
+                        let badgeColor = "#0284c7";
+                        let badgeBg = "#e0f2fe";
+                        let eventTitle = "Modificación de datos laborales";
+
+                        if (log.entity_type === "employees" && log.action === "insert") {
+                          badgeColor = "#166534";
+                          badgeBg = "#dcfce7";
+                          eventTitle = "Creación de ficha laboral";
+                        } else if (log.entity_type === "employees" && log.action === "update") {
+                          badgeColor = "#1e40af";
+                          badgeBg = "#dbeafe";
+                          eventTitle = "Actualización de ficha laboral";
+                        } else if (log.entity_type === "employee_roles") {
+                          badgeColor = "#6b21a8";
+                          badgeBg = "#f3e8ff";
+                          eventTitle = log.action === "insert" ? "Asignación de rol de sistema" : "Revocación de rol anterior";
+                        } else if (log.entity_type === "employee_permission_overrides") {
+                          badgeColor = "#92400e";
+                          badgeBg = "#fef3c7";
+                          eventTitle = "Excepción de permisos individuales";
+                        }
+
+                        return (
+                          <div
+                            key={log.id}
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "6px",
+                              padding: "12px 16px",
+                              background: "var(--color-bg-subtle, #f8fafc)",
+                              border: "1px solid var(--color-border, #e2e8f0)",
+                              borderRadius: "8px",
+                            }}
+                          >
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <span
+                                  style={{
+                                    fontSize: "0.6875rem",
+                                    fontWeight: 700,
+                                    padding: "2px 8px",
+                                    borderRadius: "9999px",
+                                    background: badgeBg,
+                                    color: badgeColor,
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.025em",
+                                  }}
+                                >
+                                  {log.action}
+                                </span>
+                                <strong style={{ fontSize: "0.875rem" }}>{eventTitle}</strong>
+                              </div>
+                              <time style={{ fontSize: "0.75rem", color: "var(--color-text-muted, #64748b)" }}>
+                                {formatInvitationDate(log.created_at)}
+                              </time>
+                            </div>
+
+                            {log.after_data && (
+                              <div style={{ fontSize: "0.8125rem", color: "var(--color-text-muted, #475569)", background: "#ffffff", padding: "8px 12px", borderRadius: "6px", border: "1px solid #f1f5f9" }}>
+                                {typeof log.after_data.job_title === "string" && (
+                                  <div><strong>Cargo registrado:</strong> {String(log.after_data.job_title)}</div>
+                                )}
+                                {typeof log.after_data.is_active === "boolean" && (
+                                  <div>
+                                    <strong>Estado laboral:</strong>{" "}
+                                    <span style={{ color: log.after_data.is_active ? "#166534" : "#b91c1c", fontWeight: 600 }}>
+                                      {log.after_data.is_active ? "Activo" : "Desactivado"}
+                                    </span>
+                                  </div>
+                                )}
+                                {typeof log.after_data.mode === "string" && (
+                                  <div><strong>Modo de excepción:</strong> {String(log.after_data.mode) === "grant" ? "Conceder permiso" : "Revocar permiso"}</div>
+                                )}
+                                {typeof log.after_data.role_id === "string" && (
+                                  <div><strong>ID de rol asignado:</strong> <code>{String(log.after_data.role_id)}</code></div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </section>

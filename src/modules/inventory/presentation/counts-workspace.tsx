@@ -640,6 +640,11 @@ export function CountsWorkspace() {
             {lastUpdated ? (
               <small className="panel-intro">Última actualización: {lastUpdated}</small>
             ) : null}
+            {contributors.length ? (
+              <small className="panel-intro">
+                Participantes: {contributors.length} ({contributors.map(([name]) => name).join(", ")})
+              </small>
+            ) : null}
           </>
         ) : (
           <p className="panel-intro">

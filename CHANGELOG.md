@@ -6,6 +6,9 @@ Este archivo registra cambios funcionales visibles y decisiones de entrega. Sigu
 
 ### Añadido
 
+- Rediseño operativo de Inventario y Kardex: navegación sin emojis, indicadores compactos, filtros agrupados, tablas adaptadas a móvil y acciones táctiles.
+- Enlaces compartibles de Inventario y Movimientos: pestaña, búsqueda, filtros y página quedan representados de forma segura en la URL.
+- Diálogos de Inventario accesibles por teclado: foco contenido, Escape, clic fuera y retorno al control de origen.
 - Expediente comercial de la cotización: solicitud original, planos, correos y soportes, orden de servicio y aprobación del cliente, con tipo, nombre, fecha, responsable y archivo privado o enlace externo. Queda auditado y no reemplaza los documentos técnicos.
 - Comparador de revisiones (R1 vs R2) de solo lectura: contrasta valor total, desglose, APU/actividades, alcance, notas, condiciones de pago, vigencia, plazo de entrega y fechas, resaltando únicamente lo que cambió.
 - Indicadores comerciales de Cotizaciones en Informes (`/reports/cotizaciones`): ganadas y perdidas con su valor, tasa de adjudicación, tiempo promedio por etapa, cotizaciones vencidas o sin seguimiento y motivos de pérdida, con filtros por período, responsable y cliente.
@@ -34,6 +37,9 @@ Este archivo registra cambios funcionales visibles y decisiones de entrega. Sigu
 
 ### Añadido
 
+- Rediseño operativo de Inventario y Kardex: navegación sin emojis, indicadores compactos, filtros agrupados, tablas adaptadas a móvil y acciones táctiles.
+- Enlaces compartibles de Inventario y Movimientos: pestaña, búsqueda, filtros y página quedan representados de forma segura en la URL.
+- Diálogos de Inventario accesibles por teclado: foco contenido, Escape, clic fuera y retorno al control de origen.
 - Sitio institucional de Representaciones Figueroa Castro con identidad RFC.
 - Base de arquitectura de monolito modular para RFC Enterprise.
 - Core inicial: auth, users, roles, permissions, modules, companies, branches, audit y settings.

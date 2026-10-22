@@ -1091,6 +1091,7 @@ function KanbanView({
             <div
               className="kanban-column-header"
               style={{ "--col-color": meta.color } as React.CSSProperties}
+              aria-label={`Columna ${meta.label}: ${colQuotes.length} ${colQuotes.length === 1 ? "cotización" : "cotizaciones"}`}
             >
               <span className="kanban-col-icon">{meta.icon}</span>
               <span className="kanban-col-label">{meta.label}</span>

@@ -953,3 +953,27 @@ Los 2.699 registros quedaron en cero. En cero significa "todavia no se ha defini
 
 **Consecuencias:** Las operaciones sensibles quedan protegidas en backend; la experiencia visual se alinea con el estándar de Inventario, Cotizaciones y Dashboard; no se altera la estructura de datos existente ni se rompen integraciones previas.
 
+
+## ADR-176 · Arquitectura de Autoservicio del Empleado (Portal del Colaborador)
+
+**Fecha:** 2026-10-22  
+**Estado:** Aceptada
+
+**Contexto.** En la operación de obras y talleres de RFC Enterprise, los trabajadores operativos en campo requieren solicitar consumibles, herramientas o reposición de EPP. Actualmente, las requisiciones de material viven dentro de `/projects`, exigiendo permisos elevados (`projects.requisitions.create`) que exponen proyectos, presupuestos o interfieren con roles administrativos. Los pedidos verbales o por mensajería generan desorden, retrasos y pérdida de trazabilidad en bodega.
+
+**Decisión.**
+1. Diseñar un flujo de **Autoservicio del Empleado** accesible desde la cuenta del trabajador (vía «Mi cuenta» `/perfil` o módulo ligero móvil `/my-requests`):
+   - **Solicitud de Materiales e Insumos de Obra:** Selección de ítem por nombre/categoría y cantidad para una obra o frente determinado.
+   - **Solicitud de Préstamo de Herramientas:** Petición de custodia temporal de herramientas con control de devolución.
+   - **Reposición de Dotación y EPP:** Solicitud justificada por desgaste o renovación periódica.
+   - **Solicitudes Laborales y Novedades:** Solicitudes de permisos, incapacidades o certificados.
+2. **Aislamiento Financiero Estricto:** La interfaz del colaborador no expone precios unitarios de compra, costos de adquisición ni márgenes comerciales; opera exclusivamente con unidades y cantidades físicas.
+3. **Flujo de Aprobación Jerárquico:**
+   - Toda solicitud de material nace en estado `draft` / `submitted`.
+   - El Supervisor de Obra o Residente asignado recibe la notificación, valida la pertinencia técnica, aprueba o ajusta la cantidad (`approved`).
+   - Al ser aprobada, pasa automáticamente a la bandeja de Bodega / Despacho para emisión del vale de salida o compra.
+4. **Persistencia e Integridad:** Reutilizar la entidad `inventory_requisitions` con `requested_by` vinculado al perfil del colaborador, garantizando trazabilidad completa sin duplicar tablas ni relajar políticas RLS.
+
+**Consecuencias:** Se elimina la fricción operativa en frentes de obra; se erradican los pedidos informales por canales no auditables; se mantiene la confidencialidad de costos corporativos y se preserva el control presupuestal bajo el residente de obra.
+
+

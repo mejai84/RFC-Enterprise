@@ -369,3 +369,20 @@ Evolución de `/employees`, `/perfil` y `/settings` hacia una arquitectura modul
 - **Mi cuenta (`/perfil`):** Se traslada del menú lateral al menú de usuario del avatar. Conserva la ruta para compatibilidad y presenta información personal, estado de seguridad y permisos asignados en solo lectura.
 - **Centro de configuración (`/settings`):** Transición a menú lateral categorizado: Empresa y sedes, Identidad corporativa, Parámetros comerciales, Costos laborales (tablas y dotación) y Seguridad y auditoría.
 
+
+### Autoservicio del Empleado: Solicitud de Materiales, Herramientas y Dotación (REQ-OPERATIVO-01)
+
+Acuerdo del 2026-10-22 (ADR-176). Extensión del Portal del Colaborador para digitalizar los pedidos de campo y erradicar solicitudes informales:
+- **Casos de uso cubiertos:**
+  1. **Materiales y Consumibles de Obra:** Solicitud directa de soldadura, discos de corte, tornillería, cables o insumos para un frente de trabajo o proyecto específico.
+  2. **Herramientas en Custodia:** Solicitud de préstamo temporal de equipos para la jornada (taladros, pulidoras, equipos de medición).
+  3. **Dotación y EPP:** Solicitud de reposición justificada por desgaste (botas, guantes, cascos, gafas, uniformes).
+  4. **Novedades Laborales:** Justificación de asistencias, permisos y solicitud de certificados laborales.
+- **Flujo y Reglas de Negocio:**
+  - El empleado **no tiene visibilidad de costos unitarios, márgenes ni precios de compra**; la interfaz opera exclusivamente con unidades físicas.
+  - Toda solicitud entra en estado `Pendiente de aprobación` y notifica al Supervisor de Obra o Residente a cargo.
+  - El supervisor valida técnicamente y aprueba o ajusta la cantidad solicitada.
+  - Una vez aprobada, la solicitud pasa a la bandeja de Bodega para emisión del vale de salida o generación de orden de compra si no hay stock disponible.
+- **Punto de acceso previsto:** Pestaña *«Mis solicitudes»* dentro de **Mi cuenta** (`/perfil`) y vista adaptada para dispositivos móviles.
+
+

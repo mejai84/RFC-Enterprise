@@ -5,6 +5,8 @@ import { ExecutiveAnalytics } from "@/modules/dashboard/presentation/executive-a
 import { getInventoryProducts } from '@/modules/inventory/application/get-inventory-products';
 import { getEffectivePermissionsOnServer } from '@/core/permissions/server';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: "Dashboard Ejecutivo de Obras y Materiales | RFC Enterprise",
   description:

@@ -140,6 +140,9 @@ export function CountsWorkspace() {
   const [openModal, setOpenModal] = useState(false);
   const [reason, setReason] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
+  const [countKind, setCountKind] = useState<"initial" | "periodic">("initial");
+  const [scopeType, setScopeType] = useState<"all" | "location" | "category">("all");
+  const [scopeValue, setScopeValue] = useState("");
   const [selectedLine, setSelectedLine] = useState<CountLine | null>(null);
   const [lineDraft, setLineDraft] = useState<LineDraft | null>(null);
   const [newItemOpen, setNewItemOpen] = useState(false);
@@ -356,10 +359,10 @@ export function CountsWorkspace() {
     setIsSaving(true);
     const { data, error } = await supabase.rpc("open_physical_count", {
       p_branch_id: branch.branch_id,
-      p_scope_type: "all",
-      p_scope_value: null,
+      p_scope_type: scopeType,
+      p_scope_value: scopeType === "all" ? null : scopeValue.trim() || null,
       p_reason: reason.trim() || null,
-      p_count_kind: "initial",
+      p_count_kind: countKind,
     });
     setIsSaving(false);
     if (error || !data) {
@@ -561,6 +564,9 @@ export function CountsWorkspace() {
               type="button"
               onClick={() => {
                 setSelectedBranchId(branches[0]?.branch_id ?? "");
+                setCountKind("initial");
+                setScopeType("all");
+                setScopeValue("");
                 setOpenModal(true);
               }}
             >
@@ -903,6 +909,40 @@ export function CountsWorkspace() {
                 ))}
               </select>
             </label>
+            <label className="form-group" htmlFor="count-kind">
+              Tipo de conteo
+              <select
+                id="count-kind"
+                value={countKind}
+                onChange={(event) => setCountKind(event.target.value as "initial" | "periodic")}
+              >
+                <option value="initial">Inventario inicial</option>
+                <option value="periodic">Conteo periódico</option>
+              </select>
+            </label>
+            <label className="form-group" htmlFor="count-scope">
+              Alcance
+              <select
+                id="count-scope"
+                value={scopeType}
+                onChange={(event) => setScopeType(event.target.value as "all" | "location" | "category")}
+              >
+                <option value="all">Toda la bodega</option>
+                <option value="location">Por ubicación</option>
+                <option value="category">Por categoría</option>
+              </select>
+            </label>
+            {scopeType !== "all" ? (
+              <label className="form-group" htmlFor="count-scope-value">
+                Valor del alcance
+                <input
+                  id="count-scope-value"
+                  value={scopeValue}
+                  onChange={(event) => setScopeValue(event.target.value)}
+                  placeholder={scopeType === "location" ? "Ej.: Bodega A" : "Ej.: Ferretería"}
+                />
+              </label>
+            ) : null}
             <label className="form-group" htmlFor="count-reason">
               Observación de la jornada
               <input

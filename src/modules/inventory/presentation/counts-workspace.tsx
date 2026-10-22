@@ -133,6 +133,7 @@ export function CountsWorkspace() {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [totalCounted, setTotalCounted] = useState(0);
   const [totalLines, setTotalLines] = useState(0);
+  const [canApprove, setCanApprove] = useState(false);
   const [openModal, setOpenModal] = useState(false);
   const [reason, setReason] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
@@ -255,6 +256,14 @@ export function CountsWorkspace() {
     setHistory(sessions);
     setSession(active);
     if (active) await loadSession(active);
+    // Permisos efectivos: solo quien tenga inventory.count.approve puede conciliar.
+    try {
+      const { data: permRows } = await supabase.rpc("my_effective_permissions");
+      const perms = ((permRows ?? []) as Array<{ code: string }>).map((r) => r.code);
+      setCanApprove(perms.includes("inventory.count.approve"));
+    } catch {
+      setCanApprove(false);
+    }
     setIsLoading(false);
   }
 
@@ -554,7 +563,7 @@ export function CountsWorkspace() {
             <button
               className="inventory-action"
               type="button"
-              disabled={isSaving || !hasLoaded || !!loadError || lines.length === 0 || pendingLines > 0}
+              disabled={isSaving || !hasLoaded || !!loadError || lines.length === 0 || pendingLines > 0 || !canApprove}
               onClick={() => {
                 setApprovalConfirmed(false);
                 setApprovalOpen(true);

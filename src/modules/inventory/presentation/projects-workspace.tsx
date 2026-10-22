@@ -186,13 +186,13 @@ export function ProjectsWorkspace({
         loadAllPages((from, to) =>
           supabase
             .from("inventory_movements")
-            .select("id, stock_id, movement_type, operation_kind, quantity, unit_cost, reference, notes, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)")
+            .select("id, stock_id, movement_type, operation_kind, quantity, unit_cost, reference, notes, occurred_at, project_id, inventory_stock!inventory_movements_stock_id_fkey!inner(inventory_items!inventory_stock_item_id_fkey!inner(name, unit)), projects(name)")
             .eq("company_id", membership.company_id)
             .order("occurred_at", { ascending: false })
             .order("id", { ascending: false })
             .range(from, to),
         ),
-        supabase.from("inventory_tool_loans").select("id,code,stock_id,worker_name,project_id,status,notes,created_at,expected_return_date,returned_at,inventory_stock!inner(inventory_items!inner(name)),projects(name)").eq("company_id",membership.company_id).order("created_at",{ascending:false}),
+        supabase.from("inventory_tool_loans").select("id,code,stock_id,worker_name,project_id,status,notes,created_at,expected_return_date,returned_at,inventory_stock!inner(inventory_items!inventory_stock_item_id_fkey!inner(name)),projects(name)").eq("company_id",membership.company_id).order("created_at",{ascending:false}),
         supabase.from("inventory_requisitions").select("id,code,project_id,requested_by_name,status,created_at,notes,projects(name),lines:inventory_requisition_lines(stock_id,item_name_snapshot,requested_quantity,unit_snapshot,unit_cost_snapshot)").eq("company_id",membership.company_id).order("created_at",{ascending:false}),
         supabase.from("project_employees").select("project_id,employee:employees(id,full_name,job_title)").eq("company_id", membership.company_id),
         supabase.from("project_budget_adjustments").select("id,project_id,amount,reason,created_at").eq("company_id", membership.company_id).order("created_at", { ascending: true }),

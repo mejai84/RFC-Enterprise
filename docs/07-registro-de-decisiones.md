@@ -880,3 +880,8 @@ Los 2.699 registros quedaron en cero. En cero significa "todavia no se ha defini
 **Decisión (2026-10-22):** `/inventory` y `/movements` reflejan en la URL la pestaña, búsqueda, filtros y página visible. Las rutas se renderizan dinámicamente para leer ese contexto en producción. Los diálogos de registrar movimiento, alta de artículo, creación de obra y nivel mínimo se identifican con título, contienen el foco mientras están abiertos, se cierran con Escape o clic fuera y devuelven el foco al control que los abrió.
 
 **Consecuencias:** un enlace puede llevar directamente a una vista filtrada del catálogo o Kardex sin persistir filtros en `localStorage`. Los parámetros inválidos vuelven a valores seguros y una página que ya no existe por cambios de filtro se limita al último tramo válido. La accesibilidad por teclado queda incorporada sin alterar las RPC ni la persistencia de inventario.
+## ADR-167 - Relaciones explicitas en consultas de inventario
+
+**Decision (2026-10-22):** las consultas PostgREST que navegan desde `inventory_stock` hacia `inventory_items` indican `inventory_stock_item_id_fkey`; las consultas del Kardex que parten de `inventory_movements` indican tambien `inventory_movements_stock_id_fkey`. La base conserva la llave compuesta de aislamiento por empresa y la llave simple historica; la aplicacion no delega al cache de PostgREST la eleccion entre ambas.
+
+**Consecuencias:** Inventario, Movimientos, Conteos fisicos, alertas, informes, proyectos, APU, alquileres y visitas tecnicas evitan el error PGRST201 de relacion ambigua. No se modificaron existencias, movimientos, permisos ni politicas RLS.

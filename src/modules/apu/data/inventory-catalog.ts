@@ -70,7 +70,7 @@ export async function loadApuInventoryCatalog(): Promise<{
     supabase
       .from("inventory_stock")
       .select(
-        "id, inventory_group, location, quantity, minimum_quantity, unit_cost, inventory_items(id, sku, name, category, brand, unit, notes, technical_reference, model, serial_number, purchase_unit, units_per_purchase, purchase_unit_cost)",
+        "id, inventory_group, location, quantity, minimum_quantity, unit_cost, inventory_items!inventory_stock_item_id_fkey(id, sku, name, category, brand, unit, notes, technical_reference, model, serial_number, purchase_unit, units_per_purchase, purchase_unit_cost)",
       )
       .order("inventory_group")
       .order("created_at")

@@ -159,7 +159,7 @@ export function ReportsWorkspace({
         loadAllPages((from, to) =>
           supabase
             .from("inventory_movements")
-            .select("id,stock_id,movement_type,operation_kind,quantity,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inner(inventory_items!inner(name,unit)),projects(name)")
+            .select("id,stock_id,movement_type,operation_kind,quantity,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inventory_movements_stock_id_fkey!inner(inventory_items!inventory_stock_item_id_fkey!inner(name,unit)),projects(name)")
             .order("occurred_at", { ascending: false })
             .order("id", { ascending: false })
             .range(from, to),

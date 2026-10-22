@@ -141,7 +141,7 @@ export async function listRentableEquipment(companyId: string): Promise<Rentable
   const { data: stockRows, error: stockError } = await loadAllPages((from, to) =>
     db
       .from("inventory_stock")
-      .select("id,quantity,inventory_group,inventory_items!inner(id,name,category,unit)")
+      .select("id,quantity,inventory_group,inventory_items!inventory_stock_item_id_fkey!inner(id,name,category,unit)")
       .eq("company_id", companyId)
       .order("id")
       .range(from, to),

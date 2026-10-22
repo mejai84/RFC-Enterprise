@@ -247,7 +247,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
         loadAllPages((from, to) =>
           supabase
             .from("inventory_movements")
-            .select("id, stock_id, movement_type, operation_kind, quantity, quantity_before, quantity_after, unit_cost, reference, notes, responsible_name, occurred_at, project_id, inventory_stock!inner(inventory_items!inner(name, unit)), projects(name)")
+            .select("id, stock_id, movement_type, operation_kind, quantity, quantity_before, quantity_after, unit_cost, reference, notes, responsible_name, occurred_at, project_id, inventory_stock!inventory_movements_stock_id_fkey!inner(inventory_items!inventory_stock_item_id_fkey!inner(name, unit)), projects(name)")
             .eq("company_id", membership.company_id)
             .order("occurred_at", { ascending: false })
             .order("id", { ascending: false })

@@ -23,7 +23,7 @@ export async function listOperationalAlerts(): Promise<OperationalAlert[]> {
     loadAllPages((from, to) =>
       supabase
         .from("inventory_stock")
-        .select("id,quantity,minimum_quantity,inventory_items!inner(name,unit)")
+        .select("id,quantity,minimum_quantity,inventory_items!inventory_stock_item_id_fkey!inner(name,unit)")
         .eq("company_id", companyId)
         .order("id")
         .range(from, to),

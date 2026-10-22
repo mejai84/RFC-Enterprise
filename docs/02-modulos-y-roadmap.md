@@ -331,3 +331,4 @@ La matriz de dotacion ahora conserva por articulo la cantidad, el valor y la fre
 ## Actualizacion 2026-10-20 - Conteo inicial colaborativo
 
 Inventarios incorpora una jornada inicial colaborativa: fotografia de saldos en Supabase, avance persistido por articulo, responsable y fecha, hallazgos de articulos nuevos en borrador y conciliacion atomica al completar toda la bodega.
+- **Integridad de consultas de inventario (2026-10-22):** las relaciones de existencias, articulos y Kardex se consultan por nombre de llave foranea para convivir con las llaves compuestas de aislamiento por empresa. Esto evita ambiguedades del API sin debilitar RLS ni modificar saldos.

@@ -120,7 +120,7 @@ export function TechnicalVisitEditor({
     if (!db || query.length < 2) return [];
     const { data, error } = await db
       .from("inventory_stock")
-      .select("id, inventory_items!inner(name, unit)")
+      .select("id, inventory_items!inventory_stock_item_id_fkey!inner(name, unit)")
       .ilike("inventory_items.name", `%${query}%`)
       .limit(8);
     if (signal.canceled || error || !data) return [];

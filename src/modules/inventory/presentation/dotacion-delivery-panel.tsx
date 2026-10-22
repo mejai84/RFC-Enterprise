@@ -35,7 +35,7 @@ export function DotacionDeliveryPanel({ companyId, projectId, employees }: { com
       loadAllPages((from, to) =>
         db
           .from("inventory_stock")
-          .select("id,quantity,inventory_items!inner(name,unit)")
+          .select("id,quantity,inventory_items!inventory_stock_item_id_fkey!inner(name,unit)")
           .eq("company_id", companyId)
           .eq("inventory_group", "dotacion")
           .order("updated_at", { ascending: false })

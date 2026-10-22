@@ -152,7 +152,7 @@ export function CountsWorkspace() {
         supabase
           .from("physical_count_lines")
           .select(
-            "id,stock_id,system_quantity,counted_quantity,counted_location,unit_cost,notes,counted_by,counted_by_name,counted_at,inventory_stock(location,inventory_items(sku,name,category,unit))",
+            "id,stock_id,system_quantity,counted_quantity,counted_location,unit_cost,notes,counted_by,counted_by_name,counted_at,inventory_stock(location,inventory_items!inventory_stock_item_id_fkey(sku,name,category,unit))",
           )
           .eq("count_id", active.id)
           .order("counted_at", { ascending: true, nullsFirst: true })

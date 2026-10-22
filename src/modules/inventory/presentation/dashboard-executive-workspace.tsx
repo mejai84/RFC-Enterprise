@@ -198,12 +198,12 @@ export function DashboardExecutiveWorkspace({
         loadAllPages((from, to) =>
           supabase
             .from("inventory_movements")
-            .select("id,stock_id,movement_type,operation_kind,quantity,quantity_before,quantity_after,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inner(inventory_items!inner(name,unit)),projects(name)")
+            .select("id,stock_id,movement_type,operation_kind,quantity,quantity_before,quantity_after,unit_cost,reference,notes,occurred_at,project_id,inventory_stock!inventory_movements_stock_id_fkey!inner(inventory_items!inventory_stock_item_id_fkey!inner(name,unit)),projects(name)")
             .order("occurred_at", { ascending: false })
             .order("id", { ascending: false })
             .range(from, to),
         ),
-        supabase.from("inventory_tool_loans").select("id,code,stock_id,worker_name,project_id,status,notes,created_at,expected_return_date,returned_at,delivery_signature_data,return_signature_data,inventory_stock!inner(inventory_items!inner(name)),projects(name)").order("created_at", { ascending: false }).limit(50),
+        supabase.from("inventory_tool_loans").select("id,code,stock_id,worker_name,project_id,status,notes,created_at,expected_return_date,returned_at,delivery_signature_data,return_signature_data,inventory_stock!inner(inventory_items!inventory_stock_item_id_fkey!inner(name)),projects(name)").order("created_at", { ascending: false }).limit(50),
         // Los APU se leen mapeados desde el módulo (snake_case → camelCase) para
         // no perder quoteId y poder contar los vinculados a cotizaciones.
         listApuAnalyses().catch(() => [] as Apu[]),

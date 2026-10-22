@@ -383,7 +383,7 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
   const totalPipeline = useMemo(() => {
     return quotes
       .filter((q) => !["lost", "closed"].includes(q.status))
-      .reduce((sum, q) => sum + (q.estimatedValue ?? 0), 0);
+      .reduce((sum, q) => sum + (q.commercialValue ?? q.estimatedValue ?? 0), 0);
   }, [quotes]);
 
   /* ── Filtrado ───────────────────────────────────────────── */

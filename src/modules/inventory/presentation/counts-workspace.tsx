@@ -125,6 +125,7 @@ export function CountsWorkspace() {
   const [lines, setLines] = useState<CountLine[]>([]);
   const [newItems, setNewItems] = useState<NewItem[]>([]);
   const [query, setQuery] = useState("");
+  const [onlyDifferences, setOnlyDifferences] = useState(false);
   const [page, setPage] = useState(0);
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -305,15 +306,19 @@ export function CountsWorkspace() {
       ? Math.round((countedLines.length / lines.length) * 100)
       : 0;
   const filteredLines = useMemo(() => {
+    let result = lines;
+    if (onlyDifferences) {
+      result = result.filter((line) => line.counted_quantity !== null && line.counted_quantity !== line.system_quantity);
+    }
     const normalized = query.trim().toLocaleLowerCase("es-CO");
-    if (!normalized) return lines;
-    return lines.filter((line) => {
+    if (!normalized) return result;
+    return result.filter((line) => {
       const item = line.inventory_stock?.inventory_items;
       return `${item?.name ?? ""} ${item?.sku ?? ""} ${item?.category ?? ""}`
         .toLocaleLowerCase("es-CO")
         .includes(normalized);
     });
-  }, [lines, query]);
+  }, [lines, query, onlyDifferences]);
   const pagedLines = filteredLines.slice(
     page * PAGE_SIZE,
     (page + 1) * PAGE_SIZE,
@@ -698,6 +703,17 @@ export function CountsWorkspace() {
                   }}
                   placeholder="Nombre, SKU o categoría"
                 />
+              </label>
+              <label className="counts-table-summary">
+                <input
+                  type="checkbox"
+                  checked={onlyDifferences}
+                  onChange={(event) => {
+                    setOnlyDifferences(event.target.checked);
+                    setPage(0);
+                  }}
+                />{" "}
+                Solo diferencias
               </label>
               <div className="counts-table-summary">
                 <strong>{filteredLines.length}</strong>

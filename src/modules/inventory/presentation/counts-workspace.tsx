@@ -146,6 +146,7 @@ export function CountsWorkspace() {
   const [newItemDraft, setNewItemDraft] = useState<NewItemDraft>(emptyNewItem);
   const [approvalOpen, setApprovalOpen] = useState(false);
   const [approvalConfirmed, setApprovalConfirmed] = useState(false);
+  const [reviewedDifferences, setReviewedDifferences] = useState(false);
 
   const client = () =>
     isSupabaseConfigured && supabaseUrl && supabasePublishableKey
@@ -592,6 +593,7 @@ export function CountsWorkspace() {
               disabled={isSaving || !hasLoaded || !!loadError || lines.length === 0 || pendingLines > 0 || !canApprove}
               onClick={() => {
                 setApprovalConfirmed(false);
+                setReviewedDifferences(false);
                 setApprovalOpen(true);
               }}
             >
@@ -1276,6 +1278,16 @@ export function CountsWorkspace() {
               Confirmo que revisé el inventario físico y autorizo aplicar esta
               conciliación.
             </label>
+            {differences.length > 0 ? (
+              <label className="counts-confirmation">
+                <input
+                  type="checkbox"
+                  checked={reviewedDifferences}
+                  onChange={(event) => setReviewedDifferences(event.target.checked)}
+                />{" "}
+                Confirmo que revisé las {differences.length} diferencia(s) encontradas.
+              </label>
+            ) : null}
             <div className="modal-actions">
               <button
                 className="btn-cancel"
@@ -1287,7 +1299,7 @@ export function CountsWorkspace() {
               <button
                 className="inventory-action"
                 type="button"
-                disabled={!approvalConfirmed || isSaving}
+                disabled={!approvalConfirmed || (differences.length > 0 && !reviewedDifferences) || isSaving}
                 onClick={() => void approve()}
               >
                 {isSaving ? "Conciliando…" : "Confirmar conciliación"}

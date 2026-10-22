@@ -137,6 +137,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [operationalAlerts, setOperationalAlerts] = useState<OperationalAlert[]>([]);
   const [areAlertsLoading, setAreAlertsLoading] = useState(true);
   const [alertLoadError, setAlertLoadError] = useState(false);
+  const [alertRefreshKey, setAlertRefreshKey] = useState(0);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const alertsRef = useRef<HTMLDivElement>(null);
 
@@ -165,7 +166,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       window.removeEventListener("focus", refreshAlerts);
       window.removeEventListener("rfc:operational-alerts-refresh", refreshAlerts);
     };
-  }, [pathname]);
+  }, [pathname, alertRefreshKey]);
   // Mientras se resuelve no se oculta nada todavía: se espera, para que el menú
   // no aparezca completo y luego se retire medio.
   const allowedHrefs = permissions ? new Set(accessibleModules(permissions).map((module) => module.href)) : null;
@@ -560,7 +561,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     {areAlertsLoading ? (
                       <p className="dashboard-alert-popover-state">Actualizando alertas…</p>
                     ) : alertLoadError ? (
-                      <p className="dashboard-alert-popover-state is-error">No fue posible actualizar las alertas. Intenta de nuevo al recargar.</p>
+                      <div className="dashboard-alert-popover-state is-error"><p>No fue posible actualizar las alertas.</p><button type="button" className="dashboard-alert-retry" onClick={() => setAlertRefreshKey((value) => value + 1)}>Reintentar</button></div>
                     ) : visibleOperationalAlerts.length ? (
                       visibleOperationalAlerts.map((alert) => (
                         <Link

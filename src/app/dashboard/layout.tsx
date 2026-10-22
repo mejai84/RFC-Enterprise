@@ -1,7 +1,11 @@
 import { DashboardShell } from "@/app/dashboard-shell";
-import { requireAuthenticatedUser } from "@/core/auth/server";
+import { requireAnyEffectivePermission } from "@/core/permissions/server";
 
 export default async function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
-  await requireAuthenticatedUser();
+  await requireAnyEffectivePermission([
+    'dashboard.view',
+    'dashboard.financials.view',
+    'dashboard.intelligence.view',
+  ]);
   return <DashboardShell>{children}</DashboardShell>;
 }

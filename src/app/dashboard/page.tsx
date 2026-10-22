@@ -1,7 +1,9 @@
 import { DashboardExecutiveWorkspace } from "@/modules/inventory/presentation/dashboard-executive-workspace";
 import { RentalsSummaryCard } from "@/modules/rentals/presentation/rentals-summary-card";
 import { AttendanceSummaryCard } from "@/modules/attendance/presentation/attendance-summary-card";
-import { getInventoryProducts } from "@/modules/inventory/application/get-inventory-products";
+import { ExecutiveAnalytics } from "@/modules/dashboard/presentation/executive-analytics";
+import { getInventoryProducts } from '@/modules/inventory/application/get-inventory-products';
+import { getEffectivePermissionsOnServer } from '@/core/permissions/server';
 
 export const metadata = {
   title: "Dashboard Ejecutivo de Obras y Materiales | RFC Enterprise",
@@ -15,7 +17,10 @@ export const metadata = {
  * trabajador ve su jornada y un gerente ve además los indicadores financieros.
  */
 export default async function DashboardPage() {
-  const inventory = await getInventoryProducts();
+  const permissions = await getEffectivePermissionsOnServer();
+  const inventory = await getInventoryProducts({
+    includeUnitCost: permissions.includes('dashboard.financials.view'),
+  });
   // El shell lo pone `dashboard/layout.tsx`. Si se envolviera aqui tambien, la
   // barra lateral y la cabecera aparecerian duplicadas.
   // El saludo y los indicadores ejecutivos van primero. Las tarjetas personales
@@ -24,6 +29,7 @@ export default async function DashboardPage() {
   return (
     <>
       <DashboardExecutiveWorkspace initialProducts={inventory.products ?? []} />
+      <ExecutiveAnalytics />
       <div className="exec-summary-grid">
         <AttendanceSummaryCard />
         <RentalsSummaryCard />

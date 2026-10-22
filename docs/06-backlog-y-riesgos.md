@@ -195,3 +195,27 @@ Pendiente de validacion con una sesion real y sin crear movimientos: confirmar q
 ## INV-027 - Movimientos durante jornada fisica abierta
 
 La conciliacion se detiene si una existencia cambio desde la fotografia de la jornada. Operacion debe pausar movimientos de bodega o reiniciar/revisar la jornada despues de una recepcion, despacho o ajuste.
+
+
+## DASH-CRIT-001 — Referencias y conciliación de devoluciones pendientes de cierre en base de datos
+
+El formulario del Dashboard dejó de aceptar devoluciones sin obra seleccionada y rechaza cantidades vacías o no positivas. Aún se requiere una migración revisada con datos reales para generar consecutivos de vales exclusivamente en servidor y comprobar, por existencia y obra, que una devolución no exceda las salidas imputadas. No se ejecuta esa migración ni se alteran datos productivos dentro de este bloque sin revisión de la regla financiera.
+
+
+## DASH-CRIT-001 — Mitigación implementada, pendiente de aplicación controlada
+
+Actualizado el 2026-10-22: la migración supabase/migrations/20261022210000_dashboard_movement_integrity.sql genera referencias MOV-AAAA-##### bajo bloqueo transaccional por empresa/año y rechaza devoluciones sin obra, de otra empresa o por encima de la salida neta de esa existencia en la obra. Permanece pendiente su validación en una base de ensayo y posterior aplicación aprobada; no se ejecutó en producción.
+
+
+## DASH-CRIT-002 - Validacion de despliegue pendiente
+
+La implementacion cliente del Dashboard cubre estado, reintento y alertas. El error de sintaxis de counts-workspace.tsx fue corregido al restaurar la paginacion explicita del conteo fisico. Antes de despliegue debe probarse con una jornada grande y aplicar de forma controlada la migracion de timeout correspondiente, junto con DASH-CRIT-001.
+
+## DASH-CRIT-003 - Aplicacion pendiente de metricas ejecutivas
+
+La interfaz de graficos requiere aplicar 20261022195857_executive_dashboard_metrics.sql en una base de ensayo y validar los agregados con datos reales y RLS antes de produccion.
+
+
+## DASH-UX-001 - Limites del centro de control
+
+El encabezado ejecutivo no contiene acciones de bodega. Las operaciones de salida y requisicion se ejecutan desde Inventario; esto evita que perfiles gerenciales reciban acciones que no corresponden a su contexto.

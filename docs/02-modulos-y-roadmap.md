@@ -332,3 +332,26 @@ La matriz de dotacion ahora conserva por articulo la cantidad, el valor y la fre
 
 Inventarios incorpora una jornada inicial colaborativa: fotografia de saldos en Supabase, avance persistido por articulo, responsable y fecha, hallazgos de articulos nuevos en borrador y conciliacion atomica al completar toda la bodega.
 - **Integridad de consultas de inventario (2026-10-22):** las relaciones de existencias, articulos y Kardex se consultan por nombre de llave foranea para convivir con las llaves compuestas de aislamiento por empresa. Esto evita ambiguedades del API sin debilitar RLS ni modificar saldos.
+
+
+## Dashboard ejecutivo — Bloque crítico (DASH-001 a DASH-005)
+
+Actualizado el 2026-10-22. El Dashboard aplica una guarda de servidor por permisos efectivos y no serializa costos unitarios al cliente sin dashboard.financials.view. La etapa actual corrige permisos, visibilidad financiera, alertas durante la resolución de permisos, cálculo de ejecución sin tope artificial y validaciones de formularios. El rediseño, filtros e inteligencia gerencial quedan fuera de este bloque.
+
+
+### Cierre operativo DASH-002 y DASH-003 (2026-10-22)
+
+El Dashboard ahora comunica estados de carga, sin datos, datos parciales y error para sus indicadores; los estados parcial y error ofrecen reintento. El centro unificado de alertas en la barra global tambien permite reintentar una consulta fallida. La visualizacion del porcentaje conserva el sobrecosto real, pero limita solo el ancho visual de la barra a 100 %.
+
+### Conteo fisico - carga paginada (2026-10-22)
+
+La jornada de conteo carga las lineas y hallazgos en lotes de 100 registros, evitando que una primera pagina con relaciones anidadas exceda el timeout en bodegas grandes. El timeout de las RPC queda como respaldo controlado en una migracion pendiente de aplicar, no como sustituto de la paginacion.
+
+### Dashboard ejecutivo - analitica etapa 1 (2026-10-22)
+
+/dashboard incorpora cinco graficos con agregados reales protegidos: cotizaciones mensuales, estados de cotizacion, obras por estado, inventario critico y jornadas por dia. Cada panel indica periodo, enlace de origen y Sin datos. Costo real, avance y rentabilidad siguen bloqueados hasta verificar sus fuentes.
+
+
+### Ajuste de jerarquia del Dashboard (2026-10-22)
+
+Se retiraron Nuevo vale de salida y Solicitud de obra del encabezado ejecutivo. Son operaciones de Inventario y permanecen en su flujo especializado; el Dashboard prioriza indicadores, alertas y enlaces de consulta.

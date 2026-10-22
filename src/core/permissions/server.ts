@@ -8,7 +8,8 @@ import { createClient } from "@/lib/supabase/server";
  * Barrera de servidor para que los datos no se serialicen a una persona que no
  * tiene permiso para el módulo. La navegación lateral es solo una ayuda visual.
  */
-export async function requireAnyEffectivePermission(allowedPermissions: readonly string[]) {
+/** Resuelve permisos en el servidor antes de serializar datos al cliente. */
+export async function getEffectivePermissionsOnServer() {
   const supabase = await createClient();
   const { data: auth, error: authError } = await supabase.auth.getUser();
   if (authError || !auth.user) redirect("/login");
@@ -17,6 +18,12 @@ export async function requireAnyEffectivePermission(allowedPermissions: readonly
   const permissions = error
     ? []
     : ((data ?? []) as Array<{ code: string }>).map((permission) => permission.code);
+
+  return permissions;
+}
+
+export async function requireAnyEffectivePermission(allowedPermissions: readonly string[]) {
+  const permissions = await getEffectivePermissionsOnServer();
 
   if (!allowedPermissions.some((permission) => permissions.includes(permission))) {
     redirect(defaultLandingPath(permissions));

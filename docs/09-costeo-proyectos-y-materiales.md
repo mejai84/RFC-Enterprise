@@ -338,3 +338,27 @@ La condicion de pago es comercial, no un costo APU: anticipo y contraentrega se 
 Para cada cargo, la matriz tiene articulos con cantidad, valor y frecuencia de reposicion en dias fisicos. La cotizacion estima cada linea como `cantidad x valor x techo(dias fisicos / frecuencia)` y permite ajustar el total solo para ese expediente. Ese resultado queda congelado en la instantanea laboral y el APU recibe ese valor, sin recalcularlo con cambios posteriores en la matriz.
 
 La entrega fisica es otro evento: se realiza desde **Proyectos > Personal de obra > Entrega de dotacion**. Requiere trabajador asignado, admite varias lineas en un solo comprobante y crea el movimiento de inventario transaccional. Por ello, cotizar no baja stock y entregar si lo baja.
+
+
+## Ejecución de presupuesto de materiales en Dashboard
+
+El porcentaje financiero se calcula como (consumo neto de materiales / presupuesto vigente) × 100 sin limitar el valor a 100. Un valor mayor a 100 representa sobrecosto y no se confunde con presupuesto agotado. Este indicador sigue limitado al presupuesto de materiales registrado por obra; ajustes presupuestales aprobados deben incorporarse desde su fuente transaccional antes de declararlo presupuesto vigente consolidado.
+
+
+## Presentacion segura de ejecucion presupuestal
+
+El Dashboard conserva el porcentaje real de ejecucion de materiales aunque supere 100 %, pues representa sobrecosto. Para no romper la interfaz, la barra usa como maximo 100 % de ancho; el texto y la clasificacion financiera mantienen el valor real. Los estados parcial y error indican que un indicador no debe usarse como cierre financiero hasta que se reintente o complete la consulta.
+
+## Conteo fisico y costo unitario
+
+La paginacion del conteo fisico no cambia el saldo ni el costo unitario fotografiado en cada linea; solo reduce el tamano de lectura al cargar la jornada. La conciliacion y su costo continúan siendo operaciones transaccionales de base de datos.
+
+
+## Limite de metricas financieras del Dashboard
+
+El valor aprobado de cotizaciones se etiqueta expresamente como no facturado. Presupuesto frente a costo real, avance y rentabilidad no se muestran hasta contar con costos ejecutados e ingresos verificables por obra.
+
+
+## Acceso a operaciones de materiales desde Dashboard
+
+El Dashboard conserva enlaces de consulta a inventario y costo, pero no muestra formularios de vale o requisicion en su encabezado. Las operaciones se realizan en Inventario para preservar su contexto de bodega y validaciones.

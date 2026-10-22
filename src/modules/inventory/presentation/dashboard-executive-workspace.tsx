@@ -3,7 +3,7 @@
 import { useEffectivePermissions } from "@/core/permissions/use-effective-permissions";
 import { canAccessModule } from "@/core/permissions";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 import {
@@ -113,7 +113,8 @@ export function DashboardExecutiveWorkspace({
   // los indicadores financieros y el conteo de cotizaciones, el APU y las obras,
   // incluso a quien solo registra su jornada.
   const { permissions, isLoading: arePermissionsLoading } = useEffectivePermissions();
-  const has = (code: string) => !permissions || permissions.includes(code);
+  // Mientras se resuelven los permisos, no se concede acceso implícito a datos sensibles.
+  const has = (code: string) => permissions?.includes(code) ?? false;
   const canViewFinancials = has("dashboard.financials.view");
   const canViewQuotes = has("quotes.view") || has("quotes.manage");
   const canViewApu = has("apu.view") || has("apu.manage");
@@ -121,6 +122,11 @@ export function DashboardExecutiveWorkspace({
   const [scope, setScope] = useState<{ companyId: string; branchId: string } | null>(null);
   // Estado operativo proveniente de Supabase.
   const [products, setProducts] = useState<StockProduct[]>(initialProducts);
+
+// Requisición Form
+  const [reqProject, setReqProject] = useState("");
+  const [reqRequestedBy, setReqRequestedBy] = useState("");
+  const [reqNotes, setReqNotes] = useState("");
 
   /**
    * Refleja en pantalla la existencia que quedo en la base de datos.
@@ -159,6 +165,10 @@ export function DashboardExecutiveWorkspace({
   const [quotes, setQuotes] = useState<Quote[]>([]);
 
   const [apus, setApus] = useState<Apu[]>([]);
+  const toastIdRef = useRef(0);
+  const [dashboardDataState, setDashboardDataState] = useState<"loading" | "ready" | "empty" | "error" | "partial_data">("loading");
+  const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0);
+  const [dashboardUpdatedAt, setDashboardUpdatedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     const supabase = inventoryClient();
@@ -177,10 +187,15 @@ export function DashboardExecutiveWorkspace({
   }, []);
 
   useEffect(() => {
+    if (arePermissionsLoading) return;
     const supabase = inventoryClient();
-    if (!supabase) return;
+    if (!supabase) {
+      void Promise.resolve().then(() => setDashboardDataState("empty"));
+      return;
+    }
 
     const loadSharedOperations = async () => {
+      setDashboardDataState("loading");
       const [projectResult, requisitionResult, quoteResult, movementResult, toolLoanResult, remoteApus] = await Promise.all([
         supabase
           .from("projects")
@@ -261,6 +276,13 @@ export function DashboardExecutiveWorkspace({
       // Los prestamos se leen de la base. Antes esta lista solo se llenaba al
       // prestar desde esta pantalla, de modo que al recargar aparecia vacia y
       // nadie veia los prestamos que si existian.
+      const operationResults = [projectResult, requisitionResult, movementResult, toolLoanResult];
+      const successfulQueries = operationResults.filter((result) => !result.error).length;
+      const hasPartialData = successfulQueries > 0 && successfulQueries < operationResults.length;
+      const hasLoadedData = (projectResult.data?.length ?? 0) > 0 || (requisitionResult.data?.length ?? 0) > 0 || (movementResult.data?.length ?? 0) > 0 || (toolLoanResult.data?.length ?? 0) > 0 || products.length > 0;
+      setDashboardDataState(successfulQueries === 0 ? "error" : hasPartialData ? "partial_data" : (hasLoadedData ? "ready" : "empty"));
+      setDashboardUpdatedAt(new Date());
+
       if (!toolLoanResult.error && toolLoanResult.data) {
         setToolLoans(
           toolLoanResult.data.map((loan) => {
@@ -301,8 +323,8 @@ export function DashboardExecutiveWorkspace({
       }
     };
 
-    void loadSharedOperations();
-  }, []);
+    void loadSharedOperations().catch(() => setDashboardDataState("error"));
+  }, [arePermissionsLoading, dashboardRefreshKey, products.length]);
 
   useEffect(() => {
     const syncCommercialModules = () => {
@@ -334,7 +356,7 @@ export function DashboardExecutiveWorkspace({
       const remaining = prj.budget - spent;
       const progressPercent =
         prj.budget > 0
-          ? Math.min(Math.round((spent / prj.budget) * 100), 100)
+          ? Math.round((spent / prj.budget) * 100)
           : 0;
 
       let statusColor = "green";
@@ -498,7 +520,7 @@ export function DashboardExecutiveWorkspace({
         ? operationalAlerts.filter((alert) =>
             canAccessModule(alert.href.split("?")[0], permissions),
           )
-        : operationalAlerts,
+        : [],
     [operationalAlerts, permissions],
   );
 
@@ -524,7 +546,7 @@ export function DashboardExecutiveWorkspace({
     projects[0]?.id || "",
   );
   const [quantityInput, setQuantityInput] = useState("");
-  const [responsibleInput, setResponsibleInput] = useState("Maestro de Obra");
+  const [responsibleInput, setResponsibleInput] = useState("");
   const [notesInput, setNotesInput] = useState("");
   const [workerNameInput, setWorkerNameInput] = useState("");
   // La herramienta se elige del inventario, no se escribe a mano: sin la
@@ -540,12 +562,6 @@ export function DashboardExecutiveWorkspace({
   const [toolReturnSignature, setToolReturnSignature] = useState("");
   const [toolReturnNotes, setToolReturnNotes] = useState("");
 
-  // Requisición Form
-  const [reqProject, setReqProject] = useState(projects[0]?.id || "");
-  const [reqRequestedBy, setReqRequestedBy] = useState(
-    "Carlos Restrepo (Maestro)",
-  );
-  const [reqNotes, setReqNotes] = useState("");
 
   // Toast notifications
   const [toasts, setToasts] = useState<
@@ -555,7 +571,7 @@ export function DashboardExecutiveWorkspace({
     message: string,
     type: "success" | "warning" | "info" = "success",
   ) => {
-    const id = Date.now();
+    const id = ++toastIdRef.current;
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(
       () => setToasts((prev) => prev.filter((t) => t.id !== id)),
@@ -593,7 +609,6 @@ export function DashboardExecutiveWorkspace({
     const prj = projects.find((p) => p.id === selectedProjectId);
     const db = inventoryClient();
     if (!db || !scope || !prj) return alert("No fue posible validar la empresa y la obra del despacho.");
-    const reference = `VALE-${new Date().getFullYear()}-${String(movements.length + 1).padStart(3, "0")}`;
     const knownCost = (selectedProduct.unitCost ?? 0) > 0 ? selectedProduct.unitCost : null;
 
     setIsSavingMovement(true);
@@ -603,7 +618,7 @@ export function DashboardExecutiveWorkspace({
         p_movement_type: "exit",
         p_quantity: qty,
         p_unit_cost: knownCost,
-        p_reference: reference,
+        p_reference: null,
         p_project_id: prj.id,
         p_responsible_name: responsibleInput || null,
         p_notes: notesInput || null,
@@ -615,6 +630,13 @@ export function DashboardExecutiveWorkspace({
         | { movement_id: string; unit_cost: number; occurred_at: string; quantity_before: number | null; quantity_after: number | null }
         | null;
       if (!saved) return alert("La base de datos no confirmó el vale. Recarga antes de reintentar.");
+
+      const { data: persistedMovement } = await db
+        .from("inventory_movements")
+        .select("reference")
+        .eq("id", saved.movement_id)
+        .maybeSingle();
+      const reference = persistedMovement?.reference ?? "Movimiento registrado";
 
       const savedUnitCost = Number(saved.unit_cost);
       const newMovement: InventoryMovement = {
@@ -664,8 +686,7 @@ export function DashboardExecutiveWorkspace({
 
     const prj = projects.find((p) => p.id === selectedProjectId);
     const db = inventoryClient();
-    if (!db || !scope) return alert("No fue posible validar la empresa para la devolución.");
-    const reference = `DEV-${new Date().getFullYear()}-${String(movements.length + 1).padStart(3, "0")}`;
+    if (!db || !scope || !prj) return alert("Selecciona la obra de origen de la devolución.");
     const knownCost = (selectedProduct.unitCost ?? 0) > 0 ? selectedProduct.unitCost : null;
 
     setIsSavingMovement(true);
@@ -675,8 +696,8 @@ export function DashboardExecutiveWorkspace({
         p_movement_type: "entry",
         p_quantity: qty,
         p_unit_cost: knownCost,
-        p_reference: reference,
-        p_project_id: prj?.id ?? null,
+        p_reference: null,
+        p_project_id: prj.id,
         p_responsible_name: responsibleInput || null,
         p_notes: `Devolución sobrante de obra: ${notesInput}`,
         p_operation_kind: "return",
@@ -687,6 +708,13 @@ export function DashboardExecutiveWorkspace({
         | { movement_id: string; unit_cost: number; occurred_at: string; quantity_before: number | null; quantity_after: number | null }
         | null;
       if (!saved) return alert("La base de datos no confirmó la devolución. Recarga antes de reintentar.");
+
+      const { data: persistedMovement } = await db
+        .from("inventory_movements")
+        .select("reference")
+        .eq("id", saved.movement_id)
+        .maybeSingle();
+      const reference = persistedMovement?.reference ?? "Movimiento registrado";
 
       const savedUnitCost = Number(saved.unit_cost);
       const newMovement: InventoryMovement = {
@@ -700,8 +728,8 @@ export function DashboardExecutiveWorkspace({
         totalCost: qty * savedUnitCost,
         occurredAt: formatDateTime(saved.occurred_at),
         reference,
-        projectId: prj?.id,
-        projectName: prj?.name,
+        projectId: prj.id,
+        projectName: prj.name,
         responsible: responsibleInput,
         notes: `Devolución sobrante de obra: ${notesInput}`,
         signatureDataUrl: returnSignature,
@@ -735,15 +763,17 @@ export function DashboardExecutiveWorkspace({
     if (!prj) return alert("Selecciona una obra válida para la requisición.");
     const db = inventoryClient();
     if (!db) return alert("No fue posible conectar con la base de datos.");
-    const quantity = parseFloat(quantityInput) || 10;
-    const { data: savedReq, error } = await db.rpc("create_inventory_requisition", { target_project: prj.id, requester_name: reqRequestedBy, target_needed_by: null, request_notes: reqNotes || null, request_lines: [{ stock_id: selectedProduct.id, quantity }] });
+    const quantity = Number(quantityInput);
+    if (!Number.isFinite(quantity) || quantity <= 0) return alert('Ingresa una cantidad mayor que cero.');
+    if (!reqRequestedBy.trim()) return alert('Indica quién solicita el material.');
+    const { data: savedReq, error } = await db.rpc("create_inventory_requisition", { target_project: prj.id, requester_name: reqRequestedBy.trim(), target_needed_by: null, request_notes: reqNotes || null, request_lines: [{ stock_id: selectedProduct.id, quantity }] });
     if (error || !savedReq?.[0]) return alert(error?.message ?? "No fue posible guardar la requisición en la base de datos.");
     const newReq: MaterialRequisition = {
       id: savedReq[0].requisition_id,
       code: savedReq[0].requisition_code,
       projectId: prj.id,
       projectName: prj?.name || "Obra General",
-      requestedBy: reqRequestedBy,
+      requestedBy: reqRequestedBy.trim(),
       status: "pending",
       createdAt: formatDateTime(),
       notes: reqNotes,
@@ -994,6 +1024,13 @@ export function DashboardExecutiveWorkspace({
       id="main-content"
       tabIndex={-1}
     >
+      {dashboardDataState !== "ready" ? (
+        <section className={`dashboard-panel dashboard-data-state is-${dashboardDataState}`} role={dashboardDataState === "error" ? "alert" : "status"}>
+          <p>{dashboardDataState === "loading" ? "Actualizando indicadores autorizados…" : dashboardDataState === "error" ? "No fue posible cargar los indicadores." : dashboardDataState === "partial_data" ? "Algunos indicadores no están disponibles; se muestran los datos confirmados." : "No hay datos disponibles para los filtros y permisos actuales."}</p>
+          {dashboardDataState === "error" || dashboardDataState === "partial_data" ? <button type="button" className="btn-secondary-action" onClick={() => setDashboardRefreshKey((value) => value + 1)}>Reintentar</button> : null}
+        </section>
+      ) : null}
+      {dashboardUpdatedAt ? <p className="dashboard-data-updated">Actualizado: {formatDateTime(dashboardUpdatedAt.toISOString())}</p> : null}
       {/* Contextual Greeting & Activity Summary */}
       <section className="dashboard-heading greeting-section">
         <div>
@@ -1017,20 +1054,6 @@ export function DashboardExecutiveWorkspace({
               </span>
             )}
           </div>
-        </div>
-        <div className="dash-quick-btns">
-          <button
-            className="inventory-action btn-primary-action"
-            onClick={() => setActiveModal("dispatch")}
-          >
-            📤 Nuevo Vale de Salida
-          </button>
-          <button
-            className="inventory-action btn-secondary-action"
-            onClick={() => setActiveModal("requisition")}
-          >
-            📝 Solicitud de Obra
-          </button>
         </div>
       </section>
 
@@ -1297,7 +1320,7 @@ export function DashboardExecutiveWorkspace({
       </section>
 
       {/* MAIN CENTERPIECE: Active Projects & Material Costing */}
-      <section className="exec-projects-section">
+      <section className="exec-projects-section" hidden={!canViewFinancials}>
         <div className="section-title">
           <div>
             <p>Control Financiero por Frente de Trabajo</p>
@@ -1340,7 +1363,7 @@ export function DashboardExecutiveWorkspace({
                 <div className="prj-bar-track">
                   <div
                     className={`prj-bar-fill fill-${prj.statusColor}`}
-                    style={{ width: `${prj.progressPercent}%` }}
+                    style={{ width: `${Math.min(prj.progressPercent, 100)}%` }}
                   />
                 </div>
               </div>

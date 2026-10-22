@@ -158,7 +158,7 @@ export function CountsWorkspace() {
           .order("counted_at", { ascending: true, nullsFirst: true })
           .order("id")
           .range(from, to),
-      ),
+      100),
       loadAllPages((from, to) =>
         supabase
           .from("physical_count_new_items")
@@ -169,13 +169,13 @@ export function CountsWorkspace() {
           .order("created_at")
           .order("id")
           .range(from, to),
-      ),
+      100),
     ]);
     if (lineResult.error || newItemResult.error) {
       setStatus(
-        lineResult.error?.message ??
-          newItemResult.error?.message ??
-          "No fue posible cargar la jornada.",
+        /statement timeout/i.test(lineResult.error?.message ?? newItemResult.error?.message ?? "")
+          ? "La jornada es grande y tardó más de lo permitido. Intenta nuevamente; si persiste, solicita aplicar la optimización de conteo."
+          : (lineResult.error?.message ?? newItemResult.error?.message ?? "No fue posible cargar la jornada."),
       );
       return;
     }
@@ -232,7 +232,10 @@ export function CountsWorkspace() {
     setBranches((branchData ?? []) as Branch[]);
     setHistory(sessions);
     setSession(active);
-    if (active) await loadSession(active);
+    if (active) {
+      setIsLoading(true);
+      await loadSession(active);
+    }
     setIsLoading(false);
   }
 

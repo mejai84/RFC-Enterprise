@@ -885,3 +885,45 @@ Los 2.699 registros quedaron en cero. En cero significa "todavia no se ha defini
 **Decision (2026-10-22):** las consultas PostgREST que navegan desde `inventory_stock` hacia `inventory_items` indican `inventory_stock_item_id_fkey`; las consultas del Kardex que parten de `inventory_movements` indican tambien `inventory_movements_stock_id_fkey`. La base conserva la llave compuesta de aislamiento por empresa y la llave simple historica; la aplicacion no delega al cache de PostgREST la eleccion entre ambas.
 
 **Consecuencias:** Inventario, Movimientos, Conteos fisicos, alertas, informes, proyectos, APU, alquileres y visitas tecnicas evitan el error PGRST201 de relacion ambigua. No se modificaron existencias, movimientos, permisos ni politicas RLS.
+
+
+## ADR-168 — El Dashboard niega por defecto la exposición financiera
+
+**Decisión (2026-10-22):** la ruta /dashboard valida permisos efectivos en el servidor antes de renderizar. DashboardPage obtiene esos permisos en el servidor y entrega al componente cliente el catálogo sin unitCost si falta dashboard.financials.view. En el cliente, un permiso aún no resuelto no concede acceso; las alertas se mantienen vacías hasta resolver los permisos y el centro de costos queda oculto sin autorización.
+
+**Consecuencias:** la interfaz no presenta un destello de información financiera restringida ni la incluye como prop inicial. La base de datos y sus políticas RLS siguen siendo la barrera autoritativa para las consultas y operaciones.
+
+
+## ADR-169 — Las referencias de movimientos y devoluciones se resuelven en PostgreSQL
+
+**Decisión (2026-10-22):** `register_inventory_movement` genera la referencia cuando el cliente no la envía, protegida con pg_advisory_xact_lock por empresa y año. Una devolución requiere una obra de la misma empresa y no puede exceder las salidas menos devoluciones ya imputadas para esa combinación de existencia y obra.
+
+**Consecuencias:** el navegador usa un client_request_id únicamente para idempotencia y vuelve a leer la referencia que confirmó la base. La migración no cambia movimientos históricos y debe aplicarse mediante el flujo controlado de Supabase tras prueba transaccional.
+
+
+## ADR-170 - Estados explicitos para indicadores y alertas del Dashboard
+
+**Decision (2026-10-22):** el Dashboard no interpreta un fallo como ausencia de trabajo. Expone estados de carga, vacio, parcial y error; conserva los datos confirmados en un resultado parcial y habilita reintento. La campana global aplica el mismo criterio para alertas operativas.
+
+**Consecuencias:** las personas usuarias distinguen datos realmente vacios de una consulta incompleta. El porcentaje puede superar 100 % para indicar sobrecosto; solo la barra grafica se acota para evitar desbordamiento visual.
+
+
+## ADR-171 - Conteo fisico por paginas pequenas
+
+**Decision (2026-10-22):** las lineas y hallazgos del conteo fisico se recuperan en paginas de 100 registros. Esto limita el costo de cada consulta con relaciones anidadas y conserva el listado completo sin usar datos ficticios.
+
+**Consecuencias:** las bodegas con mas de mil articulos pueden cargar progresivamente. El timeout de las RPC de apertura y conciliacion es solo una medida de respaldo y requiere aplicacion controlada en la base de datos.
+
+
+## ADR-172 - Graficos ejecutivos con agregados protegidos
+
+**Decision (2026-10-22):** los cinco graficos prioritarios consumen una funcion SQL SECURITY INVOKER que devuelve solo agregados autorizados por periodo. No se cargan listas completas en el navegador.
+
+**Consecuencias:** los paneles respetan RLS y permisos; las metricas sin fuente verificable se muestran bloqueadas, no simuladas.
+
+
+## ADR-173 - El Dashboard es un centro de control, no un formulario operativo
+
+**Decision (2026-10-22):** las acciones Nuevo vale de salida y Solicitud de obra se retiran del encabezado de /dashboard. El Dashboard enlaza los modulos de origen y reserva su espacio principal para indicadores y alertas.
+
+**Consecuencias:** disminuye el ruido visual y las operaciones mantienen sus validaciones y permisos en Inventario.

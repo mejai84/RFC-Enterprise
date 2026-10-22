@@ -9,7 +9,7 @@ export type InventoryLoadResult =
   | { source: "demo"; products: undefined; error?: undefined }
   | { source: "database"; products: StockProduct[]; error?: string };
 
-export async function getInventoryProducts(): Promise<InventoryLoadResult> {
+export async function getInventoryProducts({ includeUnitCost = true }: { includeUnitCost?: boolean } = {}): Promise<InventoryLoadResult> {
   if (!isSupabaseConfigured) return { source: "demo", products: undefined };
 
   try {
@@ -43,7 +43,7 @@ export async function getInventoryProducts(): Promise<InventoryLoadResult> {
         inventoryGroupName: groupNames[stock.inventory_group] ?? stock.inventory_group,
         unit: item.unit ?? "unidad",
         minimum: stock.minimum_quantity === null ? null : Number(stock.minimum_quantity),
-        unitCost: Number(stock.unit_cost),
+        unitCost: includeUnitCost ? Number(stock.unit_cost) : 0,
         purchaseUnit: item.purchase_unit ?? undefined,
         unitsPerPurchase: item.units_per_purchase === null ? undefined : Number(item.units_per_purchase),
         purchaseUnitCost: item.purchase_unit_cost === null ? undefined : Number(item.purchase_unit_cost),

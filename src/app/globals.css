@@ -8,6 +8,7 @@
 @import "./labor-matrix.css";
 @import "./rentals.css";
 @import "./attendance.css";
+@import "./attendance-refresh.css";
 @import "./responsive-devices.css";
 
 :root {

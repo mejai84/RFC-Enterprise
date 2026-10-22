@@ -92,6 +92,9 @@ export function shiftAttendancePeriod(kind: AttendancePeriodKind, anchor: string
     base.setUTCDate(base.getUTCDate() + 7 * direction);
     return toIsoDate(base);
   }
+  // El desplazamiento mensual se calcula desde el primer día del mes para
+  // evitar desbordes en fechas 29, 30 y 31.
+  base.setUTCDate(1);
   base.setUTCMonth(base.getUTCMonth() + direction);
   return toIsoDate(base);
 }

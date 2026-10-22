@@ -133,9 +133,9 @@ export function AttendanceConsultation() {
               <span>{kind === "day" ? "Día" : kind === "week" ? "Semana" : "Mes"}</span>
               <input
                 id="attendance-anchor"
-                onChange={(event) => event.target.value && setAnchor(event.target.value)}
+                onChange={(event) => event.target.value && setAnchor(kind === "month" ? `${event.target.value}-01` : event.target.value)}
                 type={kind === "month" ? "month" : "date"}
-                value={anchor}
+                value={kind === "month" ? anchor.slice(0, 7) : anchor}
               />
             </label>
             <button

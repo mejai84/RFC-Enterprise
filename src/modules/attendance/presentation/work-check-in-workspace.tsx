@@ -158,8 +158,9 @@ export function WorkCheckInWorkspace() {
     } finally { setIsSaving(false); }
   }
 
-  const disabled = isLoading || isSaving || !data?.employeeName;
+  const hasClosedWorkday = Boolean(workday && workday.status !== "open");
   const hasOpenWorkday = workday?.status === "open";
+  const disabled = isLoading || isSaving || !data?.employeeName || hasClosedWorkday;
 
   return (
     <section className="attendance-layout" aria-busy={isLoading}>
@@ -169,7 +170,9 @@ export function WorkCheckInWorkspace() {
             <p>{hasOpenWorkday ? "Jornada en curso" : "Mi jornada"}</p>
             <h2>{data?.employeeName ? `Hola, ${data.employeeName}` : "Registra tu llegada"}</h2>
           </div>
-          <span className="attendance-tag attendance-tag--ok">{hasOpenWorkday ? "Abierta" : "Sin iniciar"}</span>
+          <span className={`attendance-tag ${hasOpenWorkday ? "attendance-tag--ok" : hasClosedWorkday ? "attendance-tag--closed" : ""}`}>
+           {hasOpenWorkday ? "Abierta" : hasClosedWorkday ? "Cerrada" : "Pendiente"}
+         </span>
         </div>
 
         {hasOpenWorkday && workday.currentSegment ? (
@@ -235,7 +238,9 @@ export function WorkCheckInWorkspace() {
             ? "Guardando…"
             : hasOpenWorkday
               ? `Registrar ${segmentActionLabels[segmentType]}`
-              : "Registrar entrada"}
+              : hasClosedWorkday
+                ? "Jornada finalizada"
+                : "Registrar entrada"}
         </button>
         {hasOpenWorkday ? (
           <button className="attendance-finish" disabled={disabled} onClick={() => void finish()} type="button">

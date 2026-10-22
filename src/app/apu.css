@@ -6,17 +6,29 @@
 .apu-quote-picker-search { display:grid; gap:5px; }.apu-quote-picker-search > span { color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.03em; text-transform:uppercase; }.apu-quote-picker-search input { min-height:42px; width:100%; border:1px solid var(--line); border-radius:7px; padding:9px 11px; background:var(--canvas); color:var(--ink); font:inherit; }.apu-quote-picker-search input:focus { border-color:var(--brand); outline:none; box-shadow:0 0 0 3px var(--brand-glow); }
 .apu-quote-picker-results { grid-column:1 / -1; display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; }.apu-quote-picker-results > p { grid-column:1 / -1; color:var(--muted); font-size:13px; font-weight:400; letter-spacing:normal; text-transform:none; }.apu-quote-picker-results button { display:grid; gap:2px; min-height:64px; border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:var(--canvas); color:var(--ink); cursor:pointer; font:inherit; text-align:left; }.apu-quote-picker-results button:hover,.apu-quote-picker-results button:focus-visible { border-color:var(--brand); background:var(--brand-soft); outline:none; }.apu-quote-picker-results button strong { color:var(--brand-dark); font-size:12px; }.apu-quote-picker-results button span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; }.apu-quote-picker-results button small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .apu-workspace--readonly .apu-activity-catalog,.apu-workspace--readonly .apu-new-form,.apu-workspace--readonly .apu-editor input,.apu-workspace--readonly .apu-editor select,.apu-workspace--readonly .apu-editor button:not(.apu-print-btn) { cursor:not-allowed; opacity:.56; pointer-events:none; }
-.apu-activity-catalog { display:grid; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:12px; margin-bottom:20px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.03); }
+.apu-activity-catalog { display:grid; gap:14px; background:var(--surface); border:1px solid var(--line); border-radius:12px; margin-bottom:20px; padding:14px 18px; box-shadow:0 1px 3px rgba(0,0,0,0.03); transition:border-color .15s ease, padding .15s ease, background-color .15s ease; }
+.apu-activity-catalog.is-collapsed { gap:0; padding:10px 16px; }
+.apu-activity-catalog.is-collapsed:hover { border-color:var(--brand); }
 .apu-resource-note { margin:10px 0 0; padding:9px 11px; border-radius:8px; background:#edf6ff; color:#20548f; font-size:.82rem; line-height:1.4; }
 .apu-yield-panel { background:#f5faff; border:1px solid #bdd8ee; border-radius:10px; display:grid; gap:12px; margin-top:12px; padding:14px; }
 .apu-yield-panel-heading { display:grid; gap:3px; }.apu-yield-panel-heading h2 { color:var(--brand-dark); font-size:13px; margin:0; }.apu-yield-panel-heading p { color:var(--muted); font-size:12px; margin:0; }.apu-yield-fields { display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); }.apu-yield-fields label { display:grid; gap:6px; }.apu-yield-fields label > span { color:var(--ink); font-size:13px; font-weight:750; }.apu-yield-panel .apu-resource-note { margin:0; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
-.apu-catalog-header { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
-.apu-catalog-header > div:first-child { display:grid; gap:2px; }
-.apu-catalog-header strong { font-size:15px; color:var(--ink); }
+.apu-catalog-header { display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; }
+.apu-catalog-title-wrap { display:grid; gap:2px; cursor:pointer; user-select:none; }
+.apu-catalog-title-wrap:focus-visible { outline:2px solid var(--brand); outline-offset:4px; border-radius:4px; }
+.apu-catalog-title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.apu-catalog-title-icon { font-size:16px; line-height:1; }
+.apu-catalog-title-row strong { font-size:15px; color:var(--ink); font-weight:750; }
+.apu-catalog-badge { display:inline-flex; align-items:center; background:var(--brand-soft); color:var(--brand-dark); font-size:11px; font-weight:700; padding:2px 8px; border-radius:12px; border:1px solid rgba(22, 101, 52, 0.15); }
 .apu-catalog-header small { color:var(--muted); font-size:12px; }
-.apu-catalog-search-wrap { position:relative; min-width:280px; flex:1 1 360px; max-width:540px; }
-.apu-catalog-search-input { width:100%; border:1px solid var(--line); border-radius:8px; font:inherit; min-height:42px; padding:9px 36px 9px 14px; background:var(--canvas); color:var(--ink); transition:border-color .15s ease, box-shadow .15s ease; }
+.apu-catalog-header-actions { display:flex; align-items:center; gap:10px; flex:1 1 auto; justify-content:flex-end; flex-wrap:wrap; }
+.apu-catalog-toggle-btn { display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:6px 14px; border:1px solid var(--line); border-radius:8px; background:var(--canvas); color:var(--brand-dark); font-size:12px; font-weight:700; cursor:pointer; transition:all .15s ease; white-space:nowrap; }
+.apu-catalog-toggle-btn:hover, .apu-catalog-toggle-btn:focus-visible { border-color:var(--brand); background:var(--brand-soft); color:var(--brand-dark); outline:none; }
+.apu-catalog-toggle-btn.is-active { background:var(--brand-soft); border-color:var(--brand); color:var(--brand-dark); }
+.apu-catalog-body { display:grid; gap:12px; animation: apuFadeIn .2s ease forwards; }
+@keyframes apuFadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+.apu-catalog-search-wrap { position:relative; min-width:240px; flex:1 1 300px; max-width:480px; }
+.apu-catalog-search-input { width:100%; border:1px solid var(--line); border-radius:8px; font:inherit; min-height:38px; padding:8px 34px 8px 12px; background:var(--canvas); color:var(--ink); transition:border-color .15s ease, box-shadow .15s ease; font-size:13px; }
 .apu-catalog-search-input:focus { border-color:var(--brand); outline:none; box-shadow:0 0 0 3px var(--brand-glow); background:var(--surface); }
 .apu-catalog-clear-btn { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px; padding:4px 6px; border-radius:4px; }
 .apu-catalog-clear-btn:hover { color:var(--ink); background:var(--line); }

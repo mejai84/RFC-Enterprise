@@ -339,15 +339,18 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
         setCompanyId(remote.companyId);
         setBranchId(remote.branchId ?? null);
         const remoteQuotes = remote.quotes;
+        lastSavedQuotesRef.current = remoteQuotes;
         setQuotes((current) => {
           if (remoteQuotes.length) return remoteQuotes;
           // Primera sincronización: conservar únicamente registros locales reales y
           // reemplazar sus IDs históricos cortos por UUIDs válidos para Supabase.
-          return current.map((quote) => ({
+          const localWithUuids = current.map((quote) => ({
             ...quote,
             id: crypto.randomUUID(),
             history: quote.history.map((entry) => ({ ...entry, id: crypto.randomUUID() })),
           }));
+          lastSavedQuotesRef.current = localWithUuids;
+          return localWithUuids;
         });
         setSelectedQuote((current) => current && remoteQuotes.length ? remoteQuotes.find((quote) => quote.id === current.id) ?? null : current);
         setIsRemoteReady(true);
@@ -387,6 +390,40 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
       .filter((q) => !["lost", "closed"].includes(q.status))
       .reduce((sum, q) => sum + (q.commercialValue ?? q.estimatedValue ?? 0), 0);
   }, [quotes]);
+
+  /* ── Indicadores comerciales (R08) ─────────────────────────────────── */
+  const receivedCount = summary.received ?? 0;
+  const activeCount = summary.in_review + summary.estimating + summary.sent + summary.awaiting_response;
+  const sentCount = summary.sent ?? 0;
+  const awaitingResponseCount = summary.awaiting_response ?? 0;
+  const staleQuotes = quotes.filter((q) => quoteStaleness(q, { warningDays: 3, criticalDays: 7 })).length;
+  const wonCount = summary.confirmed ?? 0;
+  const lostCount = summary.lost ?? 0;
+  const totalWithValue = quotes.filter((q) => q.commercialValue !== undefined).length;
+  const conversionRate = receivedCount > 0 ? (wonCount / receivedCount) * 100 : 0;
+  const avgPrepTime = quotes.length > 0
+    ? quotes.reduce((sum, q) => sum + (quoteStaleness(q).days ?? 0), 0) / quotes.length
+    : 0;
+  const activeByResponsible = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const q of quotes) {
+      const res = q.responsible ?? "Sin asignar";
+      m.set(res, (m.get(res) ?? 0) + 1);
+    }
+    return m;
+  }, [quotes]);
+  const activeByClient = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const q of quotes) {
+      const cl = q.client ?? "Sin cliente";
+      m.set(cl, (m.get(cl) ?? 0) + 1);
+    }
+    return m;
+  }, [quotes]);
+
+  /* Helper: formato K para el indicador "Tiempo medio" */
+  const formatDays = (d: number): string =>
+    d >= 365 ? `${Math.round(d / 365)}a` : d >= 30 ? `${Math.round(d / 30)}m` : `${d}d`;
 
   /* Estados de chip consistentes con el sistema RFC */
   const chipStatusClass = (status: QuoteStatus): string => {

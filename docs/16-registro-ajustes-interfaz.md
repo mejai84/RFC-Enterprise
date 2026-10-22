@@ -49,3 +49,12 @@ ultima_actualizacion: 2026-10-19
 - El presupuesto de obras aclara que suma todas las obras registradas, no solo las activas; el gasto real aclara que son salidas de kardex menos devoluciones; el saldo advierte que puede ser negativo.
 - Los contadores comerciales explican los estados que incluyen: cotizaciones en costeo, por revisar, sin APU, APU vinculados, frentes activos y cotizaciones confirmadas con su valor estimado.
 - Se conserva el patrón visual y de teclado del componente de ayuda usado en Cotizaciones, Configuración y Mano de obra; el popover se abre con hover, foco o toque y no hereda las mayúsculas de las tarjetas.
+
+## 2026-10-22 — Catálogo de actividades APU colapsable
+
+- El bloque superior de catálogo de actividades prediseñadas del APU (`ApuActivityCatalog`) ahora es colapsable para evitar la sobrecarga visual y despejar el espacio de trabajo del analista de costos.
+- En estado colapsado muestra una barra compacta con el título, badge de actividades disponibles (73) y botón interactivo `Explorar catálogo (73) ▼`.
+- En estado expandido muestra el buscador predictivo, los chips de categoría y la grilla de actividades con el botón `Ocultar catálogo ▲`.
+- La preferencia de visualización (abierto/cerrado) se almacena en `localStorage` (`rfc_apu_catalog_collapsed`) para respetar la elección del usuario entre sesiones.
+- Se habilitan controles de accesibilidad completos con soporte de teclado (Enter / Espacio) y atributos `aria-expanded` y `aria-controls`.
+

@@ -1024,18 +1024,29 @@ export function DashboardExecutiveWorkspace({
       id="main-content"
       tabIndex={-1}
     >
-      {dashboardDataState !== "ready" ? (
+      {dashboardDataState !== "ready" && dashboardDataState !== "partial_data" ? (
         <section className={`dashboard-panel dashboard-data-state is-${dashboardDataState}`} role={dashboardDataState === "error" ? "alert" : "status"}>
-          <p>{dashboardDataState === "loading" ? "Actualizando indicadores autorizados…" : dashboardDataState === "error" ? "No fue posible cargar los indicadores." : dashboardDataState === "partial_data" ? "Algunos indicadores no están disponibles; se muestran los datos confirmados." : "No hay datos disponibles para los filtros y permisos actuales."}</p>
-          {dashboardDataState === "error" || dashboardDataState === "partial_data" ? <button type="button" className="btn-secondary-action" onClick={() => setDashboardRefreshKey((value) => value + 1)}>Reintentar</button> : null}
+          <p>{dashboardDataState === "loading" ? "Actualizando indicadores autorizados…" : dashboardDataState === "error" ? "No fue posible cargar los indicadores." : "No hay datos disponibles para los filtros y permisos actuales."}</p>
+          {dashboardDataState === "error" ? <button type="button" className="btn-secondary-action" onClick={() => setDashboardRefreshKey((value) => value + 1)}>Reintentar</button> : null}
         </section>
       ) : null}
-      {dashboardUpdatedAt ? <p className="dashboard-data-updated">Actualizado: {formatDateTime(dashboardUpdatedAt.toISOString())}</p> : null}
       {/* Contextual Greeting & Activity Summary */}
       <section className="dashboard-heading greeting-section">
         <div>
           <p className="greeting-date">{todayFormatted}</p>
           <h1>{greeting}, {viewerName}</h1>
+          {dashboardUpdatedAt ? (
+            <p className="dashboard-data-updated">
+              Actualizado: {formatDateTime(dashboardUpdatedAt.toISOString())}
+              {dashboardDataState === "partial_data" ? (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>Algunos datos se actualizarán al reintentar.</span>
+                  <button type="button" onClick={() => setDashboardRefreshKey((value) => value + 1)}>Reintentar</button>
+                </>
+              ) : null}
+            </p>
+          ) : null}
           <div className="greeting-activity">
             <span className="activity-pill pill-dispatches">
               📤 {activitySummary.totalDispatches} despachos

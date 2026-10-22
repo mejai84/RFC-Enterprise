@@ -1413,3 +1413,205 @@
     min-height: 54px;
   }
 }
+
+/* Conteo físico: hoja operativa compacta, con el avance como señal principal. */
+.counts-workspace {
+  --count-surface: #ffffff;
+  --count-muted-surface: #f6f9f7;
+  --count-rule: #e4ebe7;
+}
+
+.counts-workspace .dashboard-heading {
+  align-items: center;
+  border-bottom: 1px solid var(--count-rule);
+  margin-bottom: 20px;
+  padding: 0 0 20px;
+}
+
+.counts-workspace .dashboard-heading h1 {
+  font-family: var(--font-sans, Inter, system-ui, sans-serif);
+  font-size: clamp(22px, 2.2vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.counts-workspace .dashboard-heading small {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.counts-heading-actions {
+  gap: 8px;
+  grid-template-columns: auto auto auto;
+}
+
+.counts-heading-actions .inventory-action,
+.counts-heading-actions .btn-cancel,
+.count-session-badge {
+  min-height: 36px;
+}
+
+.counts-heading-actions .inventory-action {
+  grid-column: auto;
+  padding-inline: 14px;
+}
+
+.counts-heading-actions .btn-cancel {
+  padding-inline: 12px;
+}
+
+.count-session-badge {
+  background: var(--count-muted-surface);
+  border-color: #bfdbc9;
+  border-radius: 6px;
+  font-weight: 700;
+  padding: 6px 10px;
+}
+
+.counts-progress-panel {
+  align-content: start;
+  background: var(--count-surface);
+  box-shadow: none;
+  gap: 12px;
+  padding: 20px 22px;
+}
+
+.counts-progress-heading {
+  align-items: end;
+  gap: 24px;
+}
+
+.counts-progress-heading > strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.counts-progress-track {
+  background: #e7efea;
+  border-radius: 4px;
+  height: 8px;
+}
+
+.counts-progress-track span {
+  border-radius: 4px;
+}
+
+.counts-progress-panel .panel-intro {
+  margin: 0;
+  max-width: none;
+}
+
+.counts-progress-panel > small.panel-intro,
+.counts-progress-panel > label.panel-intro {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.counts-progress-panel > label.panel-intro {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.counts-progress-panel .counts-status {
+  margin-top: 2px;
+}
+
+.counts-workspace > .dashboard-panel:not(.counts-progress-panel) {
+  box-shadow: none;
+  padding: 20px 22px;
+}
+
+.counts-workspace .inventory-catalog-controls {
+  align-items: end;
+  gap: 16px;
+  grid-template-columns: minmax(280px, 1fr) auto auto;
+  margin: 0 0 16px;
+}
+
+.counts-workspace .inventory-catalog-controls label {
+  color: var(--ink-secondary);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.counts-workspace .inventory-catalog-controls input {
+  border-radius: 6px;
+  min-height: 38px;
+}
+
+.counts-table-summary {
+  min-height: 38px;
+  padding-bottom: 0;
+}
+
+.counts-workspace .inventory-table-container {
+  border-color: var(--count-rule);
+  border-radius: 8px;
+  margin-top: 0;
+}
+
+.counts-workspace .inventory-data-table thead {
+  background: transparent;
+  border-bottom-color: var(--count-rule);
+}
+
+.counts-workspace .inventory-data-table th {
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+  padding: 11px 14px;
+  text-transform: none;
+}
+
+.counts-workspace .inventory-data-table td {
+  height: 68px;
+  padding: 12px 14px;
+}
+
+.counts-workspace .inventory-data-table tbody tr {
+  border-bottom-color: var(--count-rule);
+}
+
+.counts-workspace .inventory-data-table tbody tr:hover {
+  background: #f7faf8;
+}
+
+.count-line-status {
+  background: #fff8e8;
+  border-radius: 4px;
+  display: inline-flex;
+  font-size: 11px;
+  padding: 3px 6px;
+}
+
+.count-line-status.is-counted {
+  background: #edf8f1;
+}
+
+.count-line-status.is-difference {
+  background: #fff1ed;
+  color: #a2412f;
+}
+
+@media (max-width: 760px) {
+  .counts-workspace .dashboard-heading {
+    align-items: flex-start;
+  }
+
+  .counts-heading-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .counts-workspace .inventory-catalog-controls {
+    grid-template-columns: 1fr auto;
+  }
+
+  .counts-workspace .search-field {
+    grid-column: 1 / -1;
+  }
+}

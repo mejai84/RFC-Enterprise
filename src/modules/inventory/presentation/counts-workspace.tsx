@@ -576,12 +576,10 @@ export function CountsWorkspace() {
     <main className="dashboard-content counts-workspace">
       <section className="dashboard-heading">
         <div>
-          <p>Operaciones | RFC Enterprise</p>
-          <h1>Inventario físico inicial</h1>
+          <h1>Conteo físico</h1>
           <small>
-            Una sola jornada para toda la bodega. Cada persona guarda sus
-            conteos y el inventario se vuelve oficial solo al conciliar el 100
-            %.
+            Jornada única para la bodega. El inventario se vuelve oficial al
+            conciliar el 100 % de los artículos.
           </small>
         </div>
         <div className="counts-heading-actions">

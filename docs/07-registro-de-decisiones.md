@@ -885,3 +885,9 @@ Los 2.699 registros quedaron en cero. En cero significa "todavia no se ha defini
 **Decision (2026-10-22):** las consultas PostgREST que navegan desde `inventory_stock` hacia `inventory_items` indican `inventory_stock_item_id_fkey`; las consultas del Kardex que parten de `inventory_movements` indican tambien `inventory_movements_stock_id_fkey`. La base conserva la llave compuesta de aislamiento por empresa y la llave simple historica; la aplicacion no delega al cache de PostgREST la eleccion entre ambas.
 
 **Consecuencias:** Inventario, Movimientos, Conteos fisicos, alertas, informes, proyectos, APU, alquileres y visitas tecnicas evitan el error PGRST201 de relacion ambigua. No se modificaron existencias, movimientos, permisos ni politicas RLS.
+
+## ADR-168 - Attendance modela needs_review como estado propio
+
+**Decision (2026-10-22):** en `/attendance`, `CurrentWorkday.status` distingue `open`, `closed` y `needs_review`; el estado `pending` corresponde a la ausencia de jornada del dia. `hasClosedWorkday` deja de tratar `needs_review` como un cierre normal: se calcula como `closed || needs_review`, pero el tag y el historial muestran "En revisión" para `needs_review` y "Cerrada" para `closed`. La jornada en `needs_review` queda en solo lectura, igual que la cerrada.
+
+**Consecuencias:** la pantalla del empleado no ofrece "Registrar entrada" ni el formulario cuando la jornada esta cerrada o en revisión. El supervisor puede distinguir visualmente las jornadas que quedaron señaladas para revisión. El cierre exige un resumen previo (entrada, tramos, actividad actual) con confirmación explícita; el botón de salida ocupa todo el ancho en móvil y cumple mínimo de 44 px. No se modificaron RPC, RLS ni migraciones.

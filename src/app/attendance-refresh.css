@@ -302,6 +302,60 @@
   color: var(--ink-secondary);
 }
 
+.attendance-tag--review {
+  background: #fff7e6;
+  border-color: #f0d9a8;
+  color: #8a6a00;
+}
+
+.attendance-close-summary {
+  border: 1px solid var(--border, #d8e3dc);
+  border-radius: 8px;
+  padding: 14px;
+  margin-top: 8px;
+  background: var(--surface, #f7faf8);
+}
+
+.attendance-close-list {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.attendance-close-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.attendance-close-list dt {
+  font-weight: 600;
+  color: var(--ink-secondary);
+}
+
+.attendance-close-list dd {
+  margin: 0;
+  text-align: right;
+}
+
+.attendance-close-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.attendance-close-actions .attendance-finish,
+.attendance-close-actions .attendance-secondary {
+  flex: 1 1 160px;
+  min-height: 44px;
+}
+
+.attendance-finish {
+  width: 100%;
+  min-height: 44px;
+}
+
 .attendance-location {
   border-radius: 8px;
   gap: 8px;

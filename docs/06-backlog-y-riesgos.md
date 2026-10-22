@@ -195,3 +195,7 @@ Pendiente de validacion con una sesion real y sin crear movimientos: confirmar q
 ## INV-027 - Movimientos durante jornada fisica abierta
 
 La conciliacion se detiene si una existencia cambio desde la fotografia de la jornada. Operacion debe pausar movimientos de bodega o reiniciar/revisar la jornada despues de una recepcion, despacho o ajuste.
+
+## ATT-001 - Jornada cerrada en solo lectura y estados explicitos
+
+Resueltos BUG-001 (jornada cerrada muestra "Jornada finalizada" y deshabilita el formulario) y BUG-002 (selector mensual corregido para dias 29, 30 y 31). `needs_review` se modela ahora como estado propio en la UI (tag "En revision", solo lectura) y no como cierre normal. Pendientes BUG-003 a BUG-007: limite de 800 registros en la consulta gerencial y metricas potencialmente engañosas cuando el resultado se trunca. Se añadio aviso visible cuando la consulta alcanza el limite de 800 registros.

@@ -40,6 +40,7 @@ export function AttendanceConsultation() {
   const [employees, setEmployees] = useState<AttendanceEmployee[]>([]);
   const [projects, setProjects] = useState<AttendanceProject[]>([]);
   const [records, setRecords] = useState<WorkCheckIn[]>([]);
+  const [truncated, setTruncated] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -77,6 +78,7 @@ export function AttendanceConsultation() {
         search: appliedSearch,
       });
       setRecords(next);
+      setTruncated(next.length >= 800);
     } catch {
       setError("No fue posible consultar las declaraciones del período.");
     } finally {
@@ -192,6 +194,11 @@ export function AttendanceConsultation() {
           <strong>{range.label}</strong> · {daysInPeriod} {daysInPeriod === 1 ? "día" : "días"}
           {activeProject ? ` · ${activeProject.label}` : ""}
         </p>
+        {truncated ? (
+          <p className="attendance-alert attendance-alert--warning" role="status">
+            Se muestran los primeros 800 registros del período. Usa los filtros (empleado, obra o búsqueda) para acotar la consulta y ver el resto.
+          </p>
+        ) : null}
       </div>
 
       <div className="attendance-metrics">

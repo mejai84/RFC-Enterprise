@@ -288,6 +288,31 @@ export function CountsWorkspace() {
   }, [autoRefresh, session]);
 
   useEffect(() => {
+    const supabase = client();
+    if (!supabase || !session) return;
+    const channel = supabase
+      .channel(`counts-${session.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "physical_count_lines", filter: `count_id=eq.${session.id}` },
+        () => {
+          void loadSession(session);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "physical_count_new_items", filter: `count_id=eq.${session.id}` },
+        () => {
+          void loadSession(session);
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [session]);
+
+  useEffect(() => {
     const onEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || isSaving) return;
       setSelectedLine(null);

@@ -675,6 +675,11 @@ export function CountsWorkspace() {
                 Diferencias encontradas: {differences.length}
               </small>
             ) : null}
+            {pendingCosts > 0 ? (
+              <small className="panel-intro">
+                Registros sin costo confirmado: {pendingCosts}
+              </small>
+            ) : null}
             {session ? (
               <label className="panel-intro">
                 <input

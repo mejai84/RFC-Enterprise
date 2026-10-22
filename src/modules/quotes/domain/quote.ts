@@ -170,7 +170,9 @@ export type Quote = {
   emailOrigin?: string;     // Correo/asunto de donde llegó la solicitud
   status: QuoteStatus;
   responsible: string;      // Nombre del responsable interno (ej. Jorge Figueroa)
-  estimatedValue?: number;  // Valor total estimado en COP
+  estimatedValue?: number;  // Valor total estimado en COP (compatibilidad)
+  commercialValue?: number; // Precio ofertado al cliente en COP
+  estimatedCost?: number;   // Costo estimado total en COP
   costBreakdown?: QuoteCostBreakdown; // Desglose de costeo
   validityDays?: number;    // Días de validez comercial (por defecto 30 días)
   sentAt?: string;          // Fecha en que se envió al cliente ISO (YYYY-MM-DD)

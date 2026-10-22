@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import {
   getInventoryItemKind,
@@ -37,6 +38,121 @@ const movementLabels: Record<MovementType, string> = {
 };
 
 type TabKey = "catalog" | "movements" | "projects" | "low-stock" | "writeoffs" | "settings";
+
+const tabKeys = new Set<TabKey>(["catalog", "movements", "projects", "low-stock", "writeoffs", "settings"]);
+const itemKinds = new Set(["all", "material", "tool", "equipment", "ppe"] as const);
+const pageSizes = new Set([25, 50, 100]);
+const focusableSelector = ["button:not([disabled])", "[href]", "input:not([disabled])", "select:not([disabled])", "textarea:not([disabled])", "[tabindex]:not([tabindex='-1'])"].join(",");
+
+function parseStringParam(value: string | null, fallback: string, allowed?: ReadonlySet<string>) {
+  if (!value?.trim()) return fallback;
+  return !allowed || allowed.has(value) ? value : fallback;
+}
+
+function parsePositiveInteger(value: string | null, fallback: number) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function useUrlParamState<T>({
+  key,
+  fallback,
+  parse,
+  serialize = String,
+}: {
+  key: string;
+  fallback: T;
+  parse: (value: string | null) => T;
+  serialize?: (value: T) => string;
+}): [T, Dispatch<SetStateAction<T>>] {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const value = parse(searchParams.get(key));
+
+  const setValue: Dispatch<SetStateAction<T>> = (nextValue) => {
+    const resolvedValue = typeof nextValue === "function"
+      ? (nextValue as (current: T) => T)(value)
+      : nextValue;
+    const params = new URLSearchParams(searchParams.toString());
+    const serializedValue = serialize(resolvedValue);
+
+    if (serializedValue === serialize(fallback) || serializedValue === "") {
+      params.delete(key);
+    } else {
+      params.set(key, serializedValue);
+    }
+
+    const queryString = params.toString();
+    router.replace(`${pathname}${queryString ? `?${queryString}` : ""}`, { scroll: false });
+  };
+
+  return [value, setValue];
+}
+
+function InventoryDialog({
+  children,
+  labelledBy,
+  onClose,
+  className = "",
+}: {
+  children: ReactNode;
+  labelledBy: string;
+  onClose: () => void;
+  className?: string;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusTimer = window.setTimeout(() => dialogRef.current?.querySelector<HTMLElement>(focusableSelector)?.focus(), 0);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? []);
+      if (!controls.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
+    };
+  }, []);
+
+  return (
+    <div className="modal-backdrop" onMouseDown={(event) => event.currentTarget === event.target && onCloseRef.current()}>
+      <div ref={dialogRef} className={`modal-card ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={labelledBy}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function formatDateTime() {
   const date = new Date();
@@ -133,19 +249,19 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     })();
   }, [supabase]);
 
-  // Estados de navegación e interfaz
-  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
-  const [query, setQuery] = useState("");
-  const [groupFilter, setGroupFilter] = useState("all");
-  const [itemKindFilter, setItemKindFilter] = useState<"all" | "material" | "tool" | "equipment" | "ppe">("all");
-  const [stockFilter, setStockFilter] = useState("all");
-  const [locationFilter, setLocationFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [movementTypeFilter, setMovementTypeFilter] = useState("all");
-  const [movementProjectFilter, setMovementProjectFilter] = useState("all");
-  const [pageSize, setPageSize] = useState(50);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [movementPage, setMovementPage] = useState(1);
+  // Los filtros y la página se reflejan en la URL: se pueden compartir y sobreviven al volver atrás.
+  const [activeTab, setActiveTab] = useUrlParamState<TabKey>({ key: "tab", fallback: initialTab, parse: (value) => parseStringParam(value, initialTab, tabKeys) as TabKey });
+  const [query, setQuery] = useUrlParamState<string>({ key: "q", fallback: "", parse: (value) => value ?? "", serialize: (value) => value.trim() });
+  const [groupFilter, setGroupFilter] = useUrlParamState<string>({ key: "group", fallback: "all", parse: (value) => parseStringParam(value, "all", new Set(["all", "bodega", "dotacion", "trabajadores"])) });
+  const [itemKindFilter, setItemKindFilter] = useUrlParamState<"all" | "material" | "tool" | "equipment" | "ppe">({ key: "kind", fallback: "all", parse: (value) => parseStringParam(value, "all", itemKinds) as "all" | "material" | "tool" | "equipment" | "ppe" });
+  const [stockFilter, setStockFilter] = useUrlParamState<string>({ key: "stock", fallback: "all", parse: (value) => parseStringParam(value, "all", new Set(["all", "available", "low", "out"])) });
+  const [locationFilter, setLocationFilter] = useUrlParamState<string>({ key: "location", fallback: "all", parse: (value) => parseStringParam(value, "all") });
+  const [categoryFilter, setCategoryFilter] = useUrlParamState<string>({ key: "category", fallback: "all", parse: (value) => parseStringParam(value, "all") });
+  const [movementTypeFilter, setMovementTypeFilter] = useUrlParamState<string>({ key: "movement", fallback: "all", parse: (value) => parseStringParam(value, "all", new Set(["all", "entry", "exit", "return", "adjustment", "transfer"])) });
+  const [movementProjectFilter, setMovementProjectFilter] = useUrlParamState<string>({ key: "project", fallback: "all", parse: (value) => parseStringParam(value, "all") });
+  const [pageSize, setPageSize] = useUrlParamState<number>({ key: "size", fallback: 50, parse: (value) => { const parsed = parsePositiveInteger(value, 50); return pageSizes.has(parsed) ? parsed : 50; } });
+  const [currentPage, setCurrentPage] = useUrlParamState<number>({ key: "page", fallback: 1, parse: (value) => parsePositiveInteger(value, 1) });
+  const [movementPage, setMovementPage] = useUrlParamState<number>({ key: "movementPage", fallback: 1, parse: (value) => parsePositiveInteger(value, 1) });
   const movementPageSize = 50;
   const [isSavingMovement, setIsSavingMovement] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
@@ -233,10 +349,11 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
 
   // Paginación
   const totalPages = Math.ceil(filteredProducts.length / pageSize) || 1;
+  const catalogPage = Math.min(currentPage, totalPages);
   const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
+    const start = (catalogPage - 1) * pageSize;
     return filteredProducts.slice(start, start + pageSize);
-  }, [filteredProducts, currentPage, pageSize]);
+  }, [catalogPage, filteredProducts, pageSize]);
 
   // Filtrado de movimientos
   const filteredMovements = useMemo(() => {
@@ -248,10 +365,11 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
   }, [movements, movementTypeFilter, movementProjectFilter]);
 
   const movementTotalPages = Math.max(1, Math.ceil(filteredMovements.length / movementPageSize));
+  const visibleMovementPage = Math.min(movementPage, movementTotalPages);
   const paginatedMovements = useMemo(() => {
-    const start = (movementPage - 1) * movementPageSize;
+    const start = (visibleMovementPage - 1) * movementPageSize;
     return filteredMovements.slice(start, start + movementPageSize);
-  }, [filteredMovements, movementPage, movementPageSize]);
+  }, [filteredMovements, movementPageSize, visibleMovementPage]);
 
   // Resumen de gasto por proyecto
   const projectExpenses = useMemo(() => {
@@ -985,18 +1103,18 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
             <div className="pagination-bar">
               <button
                 className="btn-page"
-                disabled={currentPage === 1}
+                disabled={catalogPage === 1}
                 onClick={() => setCurrentPage((c) => Math.max(1, c - 1))}
                 type="button"
               >
                 ← Anterior
               </button>
               <span>
-                Página <b>{currentPage}</b> de <b>{totalPages}</b>
+                Página <b>{catalogPage}</b> de <b>{totalPages}</b>
               </span>
               <button
                 className="btn-page"
-                disabled={currentPage === totalPages}
+                disabled={catalogPage === totalPages}
                 onClick={() => setCurrentPage((c) => Math.min(totalPages, c + 1))}
                 type="button"
               >
@@ -1247,18 +1365,18 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
             <div className="pagination-bar">
               <button
                 className="btn-page"
-                disabled={movementPage === 1}
+                disabled={visibleMovementPage === 1}
                 onClick={() => setMovementPage((page) => Math.max(1, page - 1))}
                 type="button"
               >
                 ← Anterior
               </button>
               <span>
-                Página <b>{movementPage}</b> de <b>{movementTotalPages}</b> · {numberFormatter.format(filteredMovements.length)} movimientos
+                Página <b>{visibleMovementPage}</b> de <b>{movementTotalPages}</b> · {numberFormatter.format(filteredMovements.length)} movimientos
               </span>
               <button
                 className="btn-page"
-                disabled={movementPage === movementTotalPages}
+                disabled={visibleMovementPage === movementTotalPages}
                 onClick={() => setMovementPage((page) => Math.min(movementTotalPages, page + 1))}
                 type="button"
               >
@@ -1372,14 +1490,13 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       {/* MODAL 1: REGISTRAR MOVIMIENTO CON COSTEO */}
       {/* ========================================================================= */}
       {isMovementModalOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-card">
+        <InventoryDialog labelledBy="movement-dialog-title" onClose={() => { if (!isSavingMovement) setIsMovementModalOpen(false); }}>
             <div className="modal-header">
               <div>
                 <p>Operación de Almacén</p>
-                <h3>Registrar Movimiento de Inventario</h3>
+                <h3 id="movement-dialog-title">Registrar movimiento de inventario</h3>
               </div>
-              <button className="btn-close-modal" onClick={() => setIsMovementModalOpen(false)} type="button">
+              <button className="btn-close-modal" aria-label="Cerrar registro de movimiento" onClick={() => setIsMovementModalOpen(false)} type="button">
                 ✕
               </button>
             </div>
@@ -1585,26 +1702,24 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </InventoryDialog>
       )}
 
       {isNewItemModalOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="new-item-title"><div className="modal-card"><div className="modal-header"><div><p>Catálogo de inventario</p><h3 id="new-item-title">Nuevo artículo</h3></div><button className="btn-close-modal" aria-label="Cerrar" onClick={() => setIsNewItemModalOpen(false)} type="button">×</button></div><form onSubmit={handleCreateItem}><div className="form-grid-2"><div className="form-group"><label>Nombre *</label><input required value={newItem.name} onChange={e => setNewItem(v => ({ ...v, name: e.target.value }))} /></div><div className="form-group"><label>SKU / código de barras</label><input value={newItem.sku} onChange={e => setNewItem(v => ({ ...v, sku: e.target.value }))} /></div></div><div className="form-grid-2"><div className="form-group"><label>Tipo / categoría *</label><InlineCatalogCombobox label="Tipo o categoría" options={categoryOptions} onChange={category => setNewItem(v => ({ ...v, category }))} onCreate={category => setCustomCategories(values => [...new Set([...values, category])])} placeholder="Busca o crea una categoría" required value={newItem.category} /></div><div className="form-group"><label>Marca</label><InlineCatalogCombobox label="Marca" options={brandOptions} onChange={brand => setNewItem(v => ({ ...v, brand }))} onCreate={brand => setCustomBrands(values => [...new Set([...values, brand])])} placeholder="Busca o crea una marca" value={newItem.brand} /></div></div><div className="form-grid-2"><div className="form-group"><label>Unidad de consumo *</label><InlineCatalogCombobox label="Unidad de consumo" options={unitOptions} onChange={unit => setNewItem(v => ({ ...v, unit }))} onCreate={unit => setCustomUnits(values => [...new Set([...values, unit])])} placeholder="Ej. unidad" required value={newItem.unit} /></div><div className="form-group"><label>Presentación de compra *</label><InlineCatalogCombobox label="Presentación de compra" options={unitOptions} onChange={purchaseUnit => setNewItem(v => ({ ...v, purchaseUnit }))} onCreate={purchaseUnit => setCustomUnits(values => [...new Set([...values, purchaseUnit])])} placeholder="Ej. caja" required value={newItem.purchaseUnit} /></div></div><div className="form-grid-2"><div className="form-group"><label>Contenido por presentación *</label><input min="1" placeholder="Ej. 100" required step="any" type="number" value={newItem.unitsPerPurchase} onChange={e => setNewItem(v => ({ ...v, unitsPerPurchase: e.target.value }))} /></div><div className="form-group"><label>Cantidad recibida *</label><input min="0.001" placeholder="Ej. 3 cajas" required step="any" type="number" value={newItem.quantity} onChange={e => setNewItem(v => ({ ...v, quantity: e.target.value }))} /></div></div><div className="form-grid-2"><div className="form-group"><label>Costo por presentación COP *</label><input type="number" min="0" step="any" required value={newItem.cost} onChange={e => setNewItem(v => ({ ...v, cost: e.target.value }))} /></div><div className="form-group"><label>Stock mínimo ({newItem.unit || "consumo"})</label><input type="number" min="0" value={newItem.minimum} onChange={e => setNewItem(v => ({ ...v, minimum: e.target.value }))} /></div></div>{Number(newItem.quantity) > 0 && Number(newItem.unitsPerPurchase) > 0 ? <p className="conversion-preview">Se registrarán <strong>{Number(newItem.quantity) * Number(newItem.unitsPerPurchase)} {newItem.unit || "unidades"}</strong> en stock ({newItem.quantity} {newItem.purchaseUnit || "presentaciones"} × {newItem.unitsPerPurchase}).</p> : null}<div className="form-group"><label>Ubicación *</label><InlineCatalogCombobox label="Ubicación" options={locationOptions} onChange={location => setNewItem(v => ({ ...v, location }))} onCreate={location => setCustomLocations(values => [...new Set([...values, location])])} placeholder="Busca o crea una ubicación" required value={newItem.location} /></div><div className="modal-actions"><button className="btn-cancel" type="button" onClick={() => setIsNewItemModalOpen(false)}>Cancelar</button><button className="inventory-action" type="submit">Crear y registrar entrada</button></div></form></div></div>
+        <InventoryDialog labelledBy="new-item-title" onClose={() => setIsNewItemModalOpen(false)}><div className="modal-header"><div><p>Catálogo de inventario</p><h3 id="new-item-title">Nuevo artículo</h3></div><button className="btn-close-modal" aria-label="Cerrar" onClick={() => setIsNewItemModalOpen(false)} type="button">×</button></div><form onSubmit={handleCreateItem}><div className="form-grid-2"><div className="form-group"><label>Nombre *</label><input required value={newItem.name} onChange={e => setNewItem(v => ({ ...v, name: e.target.value }))} /></div><div className="form-group"><label>SKU / código de barras</label><input value={newItem.sku} onChange={e => setNewItem(v => ({ ...v, sku: e.target.value }))} /></div></div><div className="form-grid-2"><div className="form-group"><label>Tipo / categoría *</label><InlineCatalogCombobox label="Tipo o categoría" options={categoryOptions} onChange={category => setNewItem(v => ({ ...v, category }))} onCreate={category => setCustomCategories(values => [...new Set([...values, category])])} placeholder="Busca o crea una categoría" required value={newItem.category} /></div><div className="form-group"><label>Marca</label><InlineCatalogCombobox label="Marca" options={brandOptions} onChange={brand => setNewItem(v => ({ ...v, brand }))} onCreate={brand => setCustomBrands(values => [...new Set([...values, brand])])} placeholder="Busca o crea una marca" value={newItem.brand} /></div></div><div className="form-grid-2"><div className="form-group"><label>Unidad de consumo *</label><InlineCatalogCombobox label="Unidad de consumo" options={unitOptions} onChange={unit => setNewItem(v => ({ ...v, unit }))} onCreate={unit => setCustomUnits(values => [...new Set([...values, unit])])} placeholder="Ej. unidad" required value={newItem.unit} /></div><div className="form-group"><label>Presentación de compra *</label><InlineCatalogCombobox label="Presentación de compra" options={unitOptions} onChange={purchaseUnit => setNewItem(v => ({ ...v, purchaseUnit }))} onCreate={purchaseUnit => setCustomUnits(values => [...new Set([...values, purchaseUnit])])} placeholder="Ej. caja" required value={newItem.purchaseUnit} /></div></div><div className="form-grid-2"><div className="form-group"><label>Contenido por presentación *</label><input min="1" placeholder="Ej. 100" required step="any" type="number" value={newItem.unitsPerPurchase} onChange={e => setNewItem(v => ({ ...v, unitsPerPurchase: e.target.value }))} /></div><div className="form-group"><label>Cantidad recibida *</label><input min="0.001" placeholder="Ej. 3 cajas" required step="any" type="number" value={newItem.quantity} onChange={e => setNewItem(v => ({ ...v, quantity: e.target.value }))} /></div></div><div className="form-grid-2"><div className="form-group"><label>Costo por presentación COP *</label><input type="number" min="0" step="any" required value={newItem.cost} onChange={e => setNewItem(v => ({ ...v, cost: e.target.value }))} /></div><div className="form-group"><label>Stock mínimo ({newItem.unit || "consumo"})</label><input type="number" min="0" value={newItem.minimum} onChange={e => setNewItem(v => ({ ...v, minimum: e.target.value }))} /></div></div>{Number(newItem.quantity) > 0 && Number(newItem.unitsPerPurchase) > 0 ? <p className="conversion-preview">Se registrarán <strong>{Number(newItem.quantity) * Number(newItem.unitsPerPurchase)} {newItem.unit || "unidades"}</strong> en stock ({newItem.quantity} {newItem.purchaseUnit || "presentaciones"} × {newItem.unitsPerPurchase}).</p> : null}<div className="form-group"><label>Ubicación *</label><InlineCatalogCombobox label="Ubicación" options={locationOptions} onChange={location => setNewItem(v => ({ ...v, location }))} onCreate={location => setCustomLocations(values => [...new Set([...values, location])])} placeholder="Busca o crea una ubicación" required value={newItem.location} /></div><div className="modal-actions"><button className="btn-cancel" type="button" onClick={() => setIsNewItemModalOpen(false)}>Cancelar</button><button className="inventory-action" type="submit">Crear y registrar entrada</button></div></form></InventoryDialog>
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 2: CREAR NUEVA OBRA / PROYECTO */}
       {/* ========================================================================= */}
       {isProjectModalOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-card">
+        <InventoryDialog labelledBy="project-dialog-title" onClose={() => setIsProjectModalOpen(false)}>
             <div className="modal-header">
               <div>
                 <p>Centro de Costos</p>
-                <h3>Crear Nueva Obra / Proyecto</h3>
+                <h3 id="project-dialog-title">Crear nueva obra o proyecto</h3>
               </div>
-              <button className="btn-close-modal" onClick={() => setIsProjectModalOpen(false)} type="button">
+              <button className="btn-close-modal" aria-label="Cerrar creación de obra" onClick={() => setIsProjectModalOpen(false)} type="button">
                 ✕
               </button>
             </div>
@@ -1669,22 +1784,20 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </InventoryDialog>
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 3: AJUSTAR STOCK MÍNIMO */}
       {/* ========================================================================= */}
       {editingMinimumProduct && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-card small">
+        <InventoryDialog className="small" labelledBy="minimum-dialog-title" onClose={() => setEditingMinimumProduct(null)}>
             <div className="modal-header">
               <div>
                 <p>Nivel de Reorden</p>
-                <h3>Configurar Stock Mínimo</h3>
+                <h3 id="minimum-dialog-title">Configurar stock mínimo</h3>
               </div>
-              <button className="btn-close-modal" onClick={() => setEditingMinimumProduct(null)} type="button">
+              <button className="btn-close-modal" aria-label="Cerrar configuración de stock mínimo" onClick={() => setEditingMinimumProduct(null)} type="button">
                 ✕
               </button>
             </div>
@@ -1715,8 +1828,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </InventoryDialog>
       )}
     </main>
   );

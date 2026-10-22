@@ -1,3 +1,4 @@
+<!-- Registro 2026-10-22: Inventario y Movimientos conservan pestaña, búsqueda, filtros y página en la URL para enlaces operativos compartibles. Sus diálogos son accesibles por teclado: foco contenido, Escape, clic fuera y retorno al control de origen. -->
 <!-- Registro 2026-10-19: el Resumen del dashboard explica cada indicador con un icono de ayuda contextual; presupuesto de obras, gasto real, saldo, alertas y contadores comerciales indican que miden y de donde salen. -->
 <!-- Registro 2026-10-20: Compras ya permite registrar recepción total o parcial de una orden, con factura/remisión, costo unitario y entrada transaccional a inventario. -->
 <!-- Registro 2026-10-20: Informes de inventario agrega consumo por obra, rotación, stock inmovilizado y valoración por grupo sobre datos persistidos. El alquiler rápido pasa a documento multi-línea con una sola firma y devolución parcial por ítem. El catálogo de transporte del APU deja de usar localStorage como fuente de verdad y migra sus códigos ausentes a Supabase. -->
@@ -7,7 +8,7 @@
 ---
 estado: vigente
 propietario: Producto y Desarrollo RFC Enterprise
-ultima_actualizacion: 2026-10-21
+ultima_actualizacion: 2026-10-22
 audiencia: Dirección, Producto y Desarrollo
 ---
 

@@ -55,13 +55,15 @@ import { TechnicalDocumentsEditor } from "@/modules/quotes/presentation/technica
 
 /* ── Helpers de formato ─────────────────────────────────────── */
 
-function formatCOP(value: number | undefined): string {
-  if (value == null) return "—";
+function formatCOP(value: number | undefined | null): string {
+  if (value === null) return "Sin valor";
+  if (value === undefined) return "—";
   return "$" + value.toLocaleString("es-CO");
 }
 
-function formatCompactCOP(value: number | undefined): string {
-  if (value == null || value === 0) return "—";
+function formatCompactCOP(value: number | undefined | null): string {
+  if (value === null) return "Sin valor";
+  if (value === undefined || value === 0) return "—";
   if (value >= 1_000_000) {
     const mill = (value / 1_000_000).toFixed(1).replace(".0", "");
     return `$${mill}M`;

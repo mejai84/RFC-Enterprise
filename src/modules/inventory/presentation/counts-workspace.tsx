@@ -706,9 +706,13 @@ export function CountsWorkspace() {
                         <td>{line.counted_by_name ?? "Sin identificar"}</td>
                         <td>
                           <span
-                            className={`count-line-status ${saved ? "is-counted" : ""}`}
+                            className={`count-line-status ${saved ? (line.counted_quantity !== line.system_quantity ? "is-difference" : "is-counted") : ""}`}
                           >
-                            {saved ? "Registrado" : "Pendiente"}
+                            {!saved
+                              ? "Pendiente"
+                              : line.counted_quantity !== line.system_quantity
+                                ? "Requiere revisión"
+                                : "Contado"}
                           </span>
                         </td>
                       </tr>

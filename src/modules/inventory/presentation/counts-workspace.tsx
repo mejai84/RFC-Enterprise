@@ -135,6 +135,7 @@ export function CountsWorkspace() {
   const [totalLines, setTotalLines] = useState(0);
   const [openModal, setOpenModal] = useState(false);
   const [reason, setReason] = useState("");
+  const [selectedBranchId, setSelectedBranchId] = useState("");
   const [selectedLine, setSelectedLine] = useState<CountLine | null>(null);
   const [lineDraft, setLineDraft] = useState<LineDraft | null>(null);
   const [newItemOpen, setNewItemOpen] = useState(false);
@@ -319,10 +320,10 @@ export function CountsWorkspace() {
 
   async function openCount() {
     const supabase = client();
-    const branch = branches[0];
+    const branch = branches.find((item) => item.branch_id === selectedBranchId) ?? null;
     if (!supabase || !branch) {
       setStatus(
-        "No tienes una sede de inventario habilitada para abrir la jornada.",
+        "Selecciona una sede de inventario habilitada para abrir la jornada.",
       );
       return;
     }
@@ -532,7 +533,10 @@ export function CountsWorkspace() {
             <button
               className="inventory-action"
               type="button"
-              onClick={() => setOpenModal(true)}
+              onClick={() => {
+                setSelectedBranchId(branches[0]?.branch_id ?? "");
+                setOpenModal(true);
+              }}
             >
               Abrir jornada
             </button>
@@ -809,6 +813,21 @@ export function CountsWorkspace() {
               trabajar varios días y los artículos nuevos quedarán en borrador
               hasta la conciliación.
             </p>
+            <label className="form-group" htmlFor="count-branch">
+              Sede
+              <select
+                id="count-branch"
+                value={selectedBranchId}
+                onChange={(event) => setSelectedBranchId(event.target.value)}
+              >
+                <option value="">Selecciona una sede</option>
+                {branches.map((branch) => (
+                  <option key={branch.branch_id} value={branch.branch_id}>
+                    {branch.branch_name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="form-group" htmlFor="count-reason">
               Observación de la jornada
               <input

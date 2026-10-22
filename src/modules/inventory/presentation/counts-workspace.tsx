@@ -125,18 +125,31 @@ export function CountsWorkspace() {
   const [lines, setLines] = useState<CountLine[]>([]);
   const [newItems, setNewItems] = useState<NewItem[]>([]);
   const [query, setQuery] = useState("");
+  const [onlyDifferences, setOnlyDifferences] = useState(false);
   const [page, setPage] = useState(0);
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [totalCounted, setTotalCounted] = useState(0);
+  const [totalLines, setTotalLines] = useState(0);
+  const [canApprove, setCanApprove] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [openModal, setOpenModal] = useState(false);
   const [reason, setReason] = useState("");
+  const [selectedBranchId, setSelectedBranchId] = useState("");
+  const [countKind, setCountKind] = useState<"initial" | "periodic">("initial");
+  const [scopeType, setScopeType] = useState<"all" | "location" | "category">("all");
+  const [scopeValue, setScopeValue] = useState("");
   const [selectedLine, setSelectedLine] = useState<CountLine | null>(null);
   const [lineDraft, setLineDraft] = useState<LineDraft | null>(null);
   const [newItemOpen, setNewItemOpen] = useState(false);
   const [newItemDraft, setNewItemDraft] = useState<NewItemDraft>(emptyNewItem);
   const [approvalOpen, setApprovalOpen] = useState(false);
   const [approvalConfirmed, setApprovalConfirmed] = useState(false);
+  const [reviewedDifferences, setReviewedDifferences] = useState(false);
 
   const client = () =>
     isSupabaseConfigured && supabaseUrl && supabasePublishableKey
@@ -147,39 +160,53 @@ export function CountsWorkspace() {
     const supabase = client();
     const active = target ?? session;
     if (!supabase || !active) return;
-    const [lineResult, newItemResult] = await Promise.all([
-      loadAllPages((from, to) =>
-        supabase
-          .from("physical_count_lines")
-          .select(
-            "id,stock_id,system_quantity,counted_quantity,counted_location,unit_cost,notes,counted_by,counted_by_name,counted_at,inventory_stock(location,inventory_items!inventory_stock_item_id_fkey(sku,name,category,unit))",
-          )
-          .eq("count_id", active.id)
-          .order("counted_at", { ascending: true, nullsFirst: true })
-          .order("id")
-          .range(from, to),
-      100),
-      loadAllPages((from, to) =>
-        supabase
-          .from("physical_count_new_items")
-          .select(
-            "id,sku,name,category,brand,unit,location,counted_quantity,unit_cost,notes,status,counted_by_name,counted_at",
-          )
-          .eq("count_id", active.id)
-          .order("created_at")
-          .order("id")
-          .range(from, to),
-      100),
+    setLoadError("");
+    setHasLoaded(false);
+    // Carga paginada de la primera página para evitar timeouts con jornadas grandes.
+    const [lineResult, newItemResult, countedResult, totalResult] = await Promise.all([
+      supabase
+        .from("physical_count_lines")
+        .select(
+          "id,stock_id,system_quantity,counted_quantity,counted_location,unit_cost,notes,counted_by,counted_by_name,counted_at,inventory_stock(location,inventory_items!inventory_stock_item_id_fkey(sku,name,category,unit))",
+        )
+        .eq("count_id", active.id)
+        .order("counted_at", { ascending: true, nullsFirst: true })
+        .order("id")
+        .range(0, PAGE_SIZE - 1),
+      supabase
+        .from("physical_count_new_items")
+        .select(
+          "id,sku,name,category,brand,unit,location,counted_quantity,unit_cost,notes,status,counted_by_name,counted_at",
+        )
+        .eq("count_id", active.id)
+        .order("created_at")
+        .order("id")
+        .range(0, PAGE_SIZE - 1),
+      supabase
+        .from("physical_count_lines")
+        .select("id", { count: "exact", head: true })
+        .eq("count_id", active.id)
+        .not("counted_quantity", "is", null),
+      supabase
+        .from("physical_count_lines")
+        .select("id", { count: "exact", head: true })
+        .eq("count_id", active.id),
     ]);
-    if (lineResult.error || newItemResult.error) {
-      setStatus(
-        /statement timeout/i.test(lineResult.error?.message ?? newItemResult.error?.message ?? "")
-          ? "La jornada es grande y tardó más de lo permitido. Intenta nuevamente; si persiste, solicita aplicar la optimización de conteo."
-          : (lineResult.error?.message ?? newItemResult.error?.message ?? "No fue posible cargar la jornada."),
-      );
+    if (lineResult.error || newItemResult.error || countedResult.error || totalResult.error) {
+      const message =
+        lineResult.error?.message ??
+        newItemResult.error?.message ??
+        countedResult.error?.message ??
+        totalResult.error?.message ??
+        "No fue posible cargar la jornada.";      const friendlyMessage = /statement timeout/i.test(message)
+        ? "La jornada es grande y tardó más de lo permitido. Intenta nuevamente; si persiste, solicita aplicar la optimización de conteo."
+        : countMessage(message);
+      setLoadError(friendlyMessage);
+      setStatus(friendlyMessage);
+      setHasLoaded(false);
       return;
     }
-    const normalizedLines = lineResult.data.map((row) => {
+    const normalizedLines = (lineResult.data ?? []).map((row) => {
       const stock = Array.isArray(row.inventory_stock)
         ? (row.inventory_stock[0] ?? null)
         : row.inventory_stock;
@@ -194,7 +221,11 @@ export function CountsWorkspace() {
       };
     });
     setLines(normalizedLines as CountLine[]);
-    setNewItems(newItemResult.data as NewItem[]);
+    setNewItems((newItemResult.data ?? []) as NewItem[]);
+    setTotalCounted(countedResult.count ?? 0);
+    setTotalLines(totalResult.count ?? 0);
+    setHasLoaded(true);
+    setLastUpdated(new Date().toLocaleString("es-CO"));
   }
 
   async function loadWorkspace() {
@@ -205,6 +236,8 @@ export function CountsWorkspace() {
       return;
     }
     setIsLoading(true);
+    setHasLoaded(false);
+    setLoadError("");
     const [
       { data: branchData, error: branchError },
       { data: sessionData, error: sessionError },
@@ -232,9 +265,14 @@ export function CountsWorkspace() {
     setBranches((branchData ?? []) as Branch[]);
     setHistory(sessions);
     setSession(active);
-    if (active) {
-      setIsLoading(true);
-      await loadSession(active);
+    if (active) await loadSession(active);
+    // Permisos efectivos: solo quien tenga inventory.count.approve puede conciliar.
+    try {
+      const { data: permRows } = await supabase.rpc("my_effective_permissions");
+      const perms = ((permRows ?? []) as Array<{ code: string }>).map((r) => r.code);
+      setCanApprove(perms.includes("inventory.count.approve"));
+    } catch {
+      setCanApprove(false);
     }
     setIsLoading(false);
   }
@@ -242,6 +280,39 @@ export function CountsWorkspace() {
   useEffect(() => {
     void loadWorkspace();
   }, []);
+
+  useEffect(() => {
+    if (!autoRefresh || !session) return;
+    const timer = window.setInterval(() => {
+      void loadSession(session);
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, [autoRefresh, session]);
+
+  useEffect(() => {
+    const supabase = client();
+    if (!supabase || !session) return;
+    const channel = supabase
+      .channel(`counts-${session.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "physical_count_lines", filter: `count_id=eq.${session.id}` },
+        () => {
+          void loadSession(session);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "physical_count_new_items", filter: `count_id=eq.${session.id}` },
+        () => {
+          void loadSession(session);
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [session]);
 
   useEffect(() => {
     const onEscape = (event: KeyboardEvent) => {
@@ -257,20 +328,28 @@ export function CountsWorkspace() {
   }, [isSaving]);
 
   const countedLines = lines.filter((line) => line.counted_quantity !== null);
-  const pendingLines = lines.length - countedLines.length;
-  const progress = session?.expected_line_count
-    ? Math.round((countedLines.length / session.expected_line_count) * 100)
-    : 0;
+  const effectiveCounted = hasLoaded && !loadError ? totalCounted : countedLines.length;
+  const effectiveTotal = hasLoaded && !loadError ? totalLines || (session?.expected_line_count ?? 0) : lines.length;
+  const pendingLines = Math.max(0, (session?.expected_line_count ?? effectiveTotal) - effectiveCounted);
+  const progress = session?.expected_line_count && hasLoaded && !loadError
+    ? Math.round((effectiveCounted / session.expected_line_count) * 100)
+    : lines.length
+      ? Math.round((countedLines.length / lines.length) * 100)
+      : 0;
   const filteredLines = useMemo(() => {
+    let result = lines;
+    if (onlyDifferences) {
+      result = result.filter((line) => line.counted_quantity !== null && line.counted_quantity !== line.system_quantity);
+    }
     const normalized = query.trim().toLocaleLowerCase("es-CO");
-    if (!normalized) return lines;
-    return lines.filter((line) => {
+    if (!normalized) return result;
+    return result.filter((line) => {
       const item = line.inventory_stock?.inventory_items;
       return `${item?.name ?? ""} ${item?.sku ?? ""} ${item?.category ?? ""}`
         .toLocaleLowerCase("es-CO")
         .includes(normalized);
     });
-  }, [lines, query]);
+  }, [lines, query, onlyDifferences]);
   const pagedLines = filteredLines.slice(
     page * PAGE_SIZE,
     (page + 1) * PAGE_SIZE,
@@ -297,20 +376,20 @@ export function CountsWorkspace() {
 
   async function openCount() {
     const supabase = client();
-    const branch = branches[0];
+    const branch = branches.find((item) => item.branch_id === selectedBranchId) ?? null;
     if (!supabase || !branch) {
       setStatus(
-        "No tienes una sede de inventario habilitada para abrir la jornada.",
+        "Selecciona una sede de inventario habilitada para abrir la jornada.",
       );
       return;
     }
     setIsSaving(true);
     const { data, error } = await supabase.rpc("open_physical_count", {
       p_branch_id: branch.branch_id,
-      p_scope_type: "all",
-      p_scope_value: null,
+      p_scope_type: scopeType,
+      p_scope_value: scopeType === "all" ? null : scopeValue.trim() || null,
       p_reason: reason.trim() || null,
-      p_count_kind: "initial",
+      p_count_kind: countKind,
     });
     setIsSaving(false);
     if (error || !data) {
@@ -447,6 +526,7 @@ export function CountsWorkspace() {
         "Artículo",
         "Sistema",
         "Físico",
+        "Diferencia",
         "Ubicación",
         "Costo",
         "Cont?",
@@ -459,6 +539,7 @@ export function CountsWorkspace() {
         line.inventory_stock?.inventory_items?.name ?? "",
         line.system_quantity,
         line.counted_quantity ?? "Pendiente",
+        line.counted_quantity !== null ? line.counted_quantity - line.system_quantity : "Pendiente",
         line.counted_location ?? line.inventory_stock?.location ?? "",
         line.unit_cost ?? "Pendiente",
         line.counted_by_name ?? "",
@@ -470,6 +551,7 @@ export function CountsWorkspace() {
         item.sku,
         item.name,
         0,
+        item.counted_quantity,
         item.counted_quantity,
         item.location ?? "",
         item.unit_cost ?? "Pendiente",
@@ -510,7 +592,13 @@ export function CountsWorkspace() {
             <button
               className="inventory-action"
               type="button"
-              onClick={() => setOpenModal(true)}
+              onClick={() => {
+                setSelectedBranchId(branches[0]?.branch_id ?? "");
+                setCountKind("initial");
+                setScopeType("all");
+                setScopeValue("");
+                setOpenModal(true);
+              }}
             >
               Abrir jornada
             </button>
@@ -526,11 +614,22 @@ export function CountsWorkspace() {
           ) : null}
           {session ? (
             <button
+              className="btn-cancel"
+              type="button"
+              onClick={() => void loadSession(session)}
+              disabled={isSaving}
+            >
+              Actualizar
+            </button>
+          ) : null}
+          {session ? (
+            <button
               className="inventory-action"
               type="button"
-              disabled={pendingLines > 0 || isSaving}
+              disabled={isSaving || !hasLoaded || !!loadError || lines.length === 0 || pendingLines > 0 || !canApprove}
               onClick={() => {
                 setApprovalConfirmed(false);
+                setReviewedDifferences(false);
                 setApprovalOpen(true);
               }}
             >
@@ -568,11 +667,56 @@ export function CountsWorkspace() {
             >
               <span style={{ width: `${progress}%` }} />
             </div>
+            {loadError ? (
+              <p className="counts-status" role="alert">
+                {countMessage(loadError)}
+                <button
+                  className="btn-cancel"
+                  type="button"
+                  onClick={() => session && void loadSession(session)}
+                  style={{ marginLeft: 8 }}
+                >
+                  Reintentar carga
+                </button>
+              </p>
+            ) : null}
             <p className="panel-intro">
-              {pendingLines
-                ? `Faltan ${pendingLines} artículo(s). Registra 0 cuando no exista físicamente.`
-                : "Cobertura completa. Revisa el resumen y concilia cuando estés listo."}
+              {!hasLoaded
+                ? "Cargando la jornada…"
+                : pendingLines
+                  ? `Faltan ${pendingLines} artículo(s). Registra 0 cuando no exista físicamente.`
+                  : totalLines > 0
+                    ? "Cobertura completa. Revisa el resumen y concilia cuando estés listo."
+                    : "Sin artículos cargados."}
             </p>
+            {lastUpdated ? (
+              <small className="panel-intro">Última actualización: {lastUpdated}</small>
+            ) : null}
+            {contributors.length ? (
+              <small className="panel-intro">
+                Participantes: {contributors.length} ({contributors.map(([name]) => name).join(", ")})
+              </small>
+            ) : null}
+            {differences.length ? (
+              <small className="panel-intro">
+                Diferencias encontradas: {differences.length}
+              </small>
+            ) : null}
+            {pendingCosts > 0 ? (
+              <small className="panel-intro">
+                Registros sin costo confirmado: {pendingCosts}
+              </small>
+            ) : null}
+            {session ? (
+              <label className="panel-intro">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(event) => setAutoRefresh(event.target.checked)}
+                />{" "}
+                Actualización automática cada 30 s
+              </label>
+            ) : null}
           </>
         ) : (
           <p className="panel-intro">
@@ -602,6 +746,17 @@ export function CountsWorkspace() {
                   }}
                   placeholder="Nombre, SKU o categoría"
                 />
+              </label>
+              <label className="counts-table-summary">
+                <input
+                  type="checkbox"
+                  checked={onlyDifferences}
+                  onChange={(event) => {
+                    setOnlyDifferences(event.target.checked);
+                    setPage(0);
+                  }}
+                />{" "}
+                Solo diferencias
               </label>
               <div className="counts-table-summary">
                 <strong>{filteredLines.length}</strong>
@@ -654,9 +809,13 @@ export function CountsWorkspace() {
                         <td>{line.counted_by_name ?? "Sin identificar"}</td>
                         <td>
                           <span
-                            className={`count-line-status ${saved ? "is-counted" : ""}`}
+                            className={`count-line-status ${saved ? (line.counted_quantity !== line.system_quantity ? "is-difference" : "is-counted") : ""}`}
                           >
-                            {saved ? "Registrado" : "Pendiente"}
+                            {!saved
+                              ? "Pendiente"
+                              : line.counted_quantity !== line.system_quantity
+                                ? "Requiere revisión"
+                                : "Contado"}
                           </span>
                         </td>
                       </tr>
@@ -770,6 +929,55 @@ export function CountsWorkspace() {
               trabajar varios días y los artículos nuevos quedarán en borrador
               hasta la conciliación.
             </p>
+            <label className="form-group" htmlFor="count-branch">
+              Sede
+              <select
+                id="count-branch"
+                value={selectedBranchId}
+                onChange={(event) => setSelectedBranchId(event.target.value)}
+              >
+                <option value="">Selecciona una sede</option>
+                {branches.map((branch) => (
+                  <option key={branch.branch_id} value={branch.branch_id}>
+                    {branch.branch_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="form-group" htmlFor="count-kind">
+              Tipo de conteo
+              <select
+                id="count-kind"
+                value={countKind}
+                onChange={(event) => setCountKind(event.target.value as "initial" | "periodic")}
+              >
+                <option value="initial">Inventario inicial</option>
+                <option value="periodic">Conteo periódico</option>
+              </select>
+            </label>
+            <label className="form-group" htmlFor="count-scope">
+              Alcance
+              <select
+                id="count-scope"
+                value={scopeType}
+                onChange={(event) => setScopeType(event.target.value as "all" | "location" | "category")}
+              >
+                <option value="all">Toda la bodega</option>
+                <option value="location">Por ubicación</option>
+                <option value="category">Por categoría</option>
+              </select>
+            </label>
+            {scopeType !== "all" ? (
+              <label className="form-group" htmlFor="count-scope-value">
+                Valor del alcance
+                <input
+                  id="count-scope-value"
+                  value={scopeValue}
+                  onChange={(event) => setScopeValue(event.target.value)}
+                  placeholder={scopeType === "location" ? "Ej.: Bodega A" : "Ej.: Ferretería"}
+                />
+              </label>
+            ) : null}
             <label className="form-group" htmlFor="count-reason">
               Observación de la jornada
               <input
@@ -1145,6 +1353,16 @@ export function CountsWorkspace() {
               Confirmo que revisé el inventario físico y autorizo aplicar esta
               conciliación.
             </label>
+            {differences.length > 0 ? (
+              <label className="counts-confirmation">
+                <input
+                  type="checkbox"
+                  checked={reviewedDifferences}
+                  onChange={(event) => setReviewedDifferences(event.target.checked)}
+                />{" "}
+                Confirmo que revisé las {differences.length} diferencia(s) encontradas.
+              </label>
+            ) : null}
             <div className="modal-actions">
               <button
                 className="btn-cancel"
@@ -1156,7 +1374,7 @@ export function CountsWorkspace() {
               <button
                 className="inventory-action"
                 type="button"
-                disabled={!approvalConfirmed || isSaving}
+                disabled={!approvalConfirmed || (differences.length > 0 && !reviewedDifferences) || isSaving}
                 onClick={() => void approve()}
               >
                 {isSaving ? "Conciliando…" : "Confirmar conciliación"}

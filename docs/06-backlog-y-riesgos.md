@@ -219,3 +219,8 @@ La interfaz de graficos requiere aplicar 20261022195857_executive_dashboard_metr
 ## DASH-UX-001 - Limites del centro de control
 
 El encabezado ejecutivo no contiene acciones de bodega. Las operaciones de salida y requisicion se ejecutan desde Inventario; esto evita que perfiles gerenciales reciban acciones que no corresponden a su contexto.
+
+
+## ATT-001 - Jornada cerrada en solo lectura y estados explicitos
+
+Resueltos los estados de jornada cerrada y needs_review, el selector mensual y el aviso de limite de 800 registros. Pendiente revisar metricas gerenciales si la consulta llega al limite.

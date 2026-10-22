@@ -927,3 +927,10 @@ Los 2.699 registros quedaron en cero. En cero significa "todavia no se ha defini
 **Decision (2026-10-22):** las acciones Nuevo vale de salida y Solicitud de obra se retiran del encabezado de /dashboard. El Dashboard enlaza los modulos de origen y reserva su espacio principal para indicadores y alertas.
 
 **Consecuencias:** disminuye el ruido visual y las operaciones mantienen sus validaciones y permisos en Inventario.
+
+
+## ADR-174 - Attendance modela needs_review como estado propio
+
+**Decision (2026-10-22):** /attendance distingue open, closed y needs_review; pending representa ausencia de jornada. needs_review queda en solo lectura y se identifica como En revision; el cierre exige un resumen y confirmacion.
+
+**Consecuencias:** la persona no puede registrar una nueva entrada cuando la jornada esta cerrada o en revision y supervision puede identificar el caso sin cambiar RPC, RLS ni migraciones.

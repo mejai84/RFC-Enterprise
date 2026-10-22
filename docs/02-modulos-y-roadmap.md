@@ -355,3 +355,8 @@ La jornada de conteo carga las lineas y hallazgos en lotes de 100 registros, evi
 ### Ajuste de jerarquia del Dashboard (2026-10-22)
 
 Se retiraron Nuevo vale de salida y Solicitud de obra del encabezado ejecutivo. Son operaciones de Inventario y permanecen en su flujo especializado; el Dashboard prioriza indicadores, alertas y enlaces de consulta.
+
+
+### Attendance Enterprise V2 (2026-10-22)
+
+/attendance distingue Mi jornada del empleado y Consulta de jornada de supervision; estados pending, open, closed y needs_review se modelan explicitamente, con resumen previo al cierre, aviso al alcanzar 800 registros y acciones moviles de 44 px. No cambia RPC, RLS ni migraciones.

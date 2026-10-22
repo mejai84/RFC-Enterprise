@@ -54,6 +54,7 @@ export function WorkCheckInWorkspace() {
   const [location, setLocation] = useState<DeclaredLocationRecord>();
   const [isLocating, setIsLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState(LOCATION_CONSENT_TEXT);
+  const [showCloseSummary, setShowCloseSummary] = useState(false);
   const successRef = useRef<HTMLParagraphElement>(null);
   const activityRef = useRef<HTMLTextAreaElement>(null);
 
@@ -158,8 +159,11 @@ export function WorkCheckInWorkspace() {
     } finally { setIsSaving(false); }
   }
 
-  const disabled = isLoading || isSaving || !data?.employeeName;
   const hasOpenWorkday = workday?.status === "open";
+  const isNeedsReview = workday?.status === "needs_review";
+  const isClosedWorkday = workday?.status === "closed";
+  const hasClosedWorkday = isClosedWorkday || isNeedsReview;
+  const disabled = isLoading || isSaving || !data?.employeeName || hasClosedWorkday;
 
   return (
     <section className="attendance-layout" aria-busy={isLoading}>
@@ -169,7 +173,9 @@ export function WorkCheckInWorkspace() {
             <p>{hasOpenWorkday ? "Jornada en curso" : "Mi jornada"}</p>
             <h2>{data?.employeeName ? `Hola, ${data.employeeName}` : "Registra tu llegada"}</h2>
           </div>
-          <span className="attendance-tag attendance-tag--ok">{hasOpenWorkday ? "Abierta" : "Sin iniciar"}</span>
+          <span className={`attendance-tag ${hasOpenWorkday ? "attendance-tag--ok" : isNeedsReview ? "attendance-tag--review" : hasClosedWorkday ? "attendance-tag--closed" : ""}`}>
+           {hasOpenWorkday ? "Abierta" : isNeedsReview ? "En revisión" : isClosedWorkday ? "Cerrada" : "Pendiente"}
+         </span>
         </div>
 
         {hasOpenWorkday && workday.currentSegment ? (
@@ -235,12 +241,46 @@ export function WorkCheckInWorkspace() {
             ? "Guardando…"
             : hasOpenWorkday
               ? `Registrar ${segmentActionLabels[segmentType]}`
-              : "Registrar entrada"}
+              : hasClosedWorkday
+                ? "Jornada finalizada"
+                : "Registrar entrada"}
         </button>
         {hasOpenWorkday ? (
-          <button className="attendance-finish" disabled={disabled} onClick={() => void finish()} type="button">
+          <button className="attendance-finish" disabled={disabled} onClick={() => setShowCloseSummary(true)} type="button">
             Registrar salida y finalizar jornada
           </button>
+        ) : null}
+        {hasOpenWorkday && showCloseSummary ? (
+          <div className="attendance-close-summary" role="dialog" aria-modal="true" aria-labelledby="attendance-close-title">
+            <h3 id="attendance-close-title">Resumen antes de cerrar</h3>
+            <p className="attendance-helper">
+              Revisa tu jornada antes de registrar la salida. Una vez cerrada, no se puede modificar.
+            </p>
+            <dl className="attendance-close-list">
+              <div>
+                <dt>Entrada</dt>
+                <dd>{workday?.startedAt ? dateTimeFormatter.format(new Date(workday.startedAt)) : "—"}</dd>
+              </div>
+              <div>
+                <dt>Tramos registrados</dt>
+                <dd>{segments.length}</dd>
+              </div>
+              {workday?.currentSegment ? (
+                <div>
+                  <dt>Actividad actual</dt>
+                  <dd>{workday.currentSegment.siteName} · {workday.currentSegment.activityDescription}</dd>
+                </div>
+              ) : null}
+            </dl>
+            <div className="attendance-close-actions">
+              <button className="attendance-finish" disabled={isSaving} onClick={() => void finish().then(() => setShowCloseSummary(false))} type="button">
+                {isSaving ? "Cerrando…" : "Confirmar salida"}
+              </button>
+              <button className="attendance-secondary" disabled={isSaving} onClick={() => setShowCloseSummary(false)} type="button">
+                Cancelar
+              </button>
+            </div>
+          </div>
         ) : null}
         {hasOpenWorkday ? (
           <p className="attendance-continue-hint">
@@ -256,7 +296,7 @@ export function WorkCheckInWorkspace() {
       <section className="attendance-history dashboard-panel" aria-labelledby="attendance-history-title">
         <div className="attendance-panel-heading"><div><p>Seguimiento personal</p><h2 id="attendance-history-title">Tu jornada de hoy</h2></div></div>
         <div className="attendance-today">
-          {hasOpenWorkday ? <><span className="attendance-tag attendance-tag--ok">Jornada abierta</span><span>Vas sumando actividades al día. Registra la salida cuando te retires.</span></> : workday ? <><span className="attendance-tag attendance-tag--ok">Jornada cerrada</span><span>Tu jornada de hoy quedó cerrada a las {workday.endedAt ? dateTimeFormatter.format(new Date(workday.endedAt)) : "—"}.</span></> : <><span className="attendance-tag">Pendiente</span><span>Registra tu entrada al llegar. La jornada no se completa solo con actividades.</span></>}
+          {hasOpenWorkday ? <><span className="attendance-tag attendance-tag--ok">Jornada abierta</span><span>Vas sumando actividades al día. Registra la salida cuando te retires.</span></> : isNeedsReview ? <><span className="attendance-tag attendance-tag--review">En revisión</span><span>Tu jornada quedó señalada para revisión{workday?.endedAt ? ` (cerrada a las ${dateTimeFormatter.format(new Date(workday.endedAt))})` : ""}.</span></> : isClosedWorkday ? <><span className="attendance-tag attendance-tag--ok">Jornada cerrada</span><span>Tu jornada de hoy quedó cerrada a las {workday.endedAt ? dateTimeFormatter.format(new Date(workday.endedAt)) : "—"}.</span></> : <><span className="attendance-tag">Pendiente</span><span>Registra tu entrada al llegar. La jornada no se completa solo con actividades.</span></>}
         </div>
         <p className="attendance-helper">El registro por tramos evita periodos sin explicación: usa “Desplazamiento” cuando cambies de frente y “Pausa” si aplica.</p>
 

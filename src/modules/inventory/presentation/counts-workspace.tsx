@@ -129,6 +129,10 @@ export function CountsWorkspace() {
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [totalCounted, setTotalCounted] = useState(0);
+  const [totalLines, setTotalLines] = useState(0);
   const [openModal, setOpenModal] = useState(false);
   const [reason, setReason] = useState("");
   const [selectedLine, setSelectedLine] = useState<CountLine | null>(null);
@@ -147,39 +151,51 @@ export function CountsWorkspace() {
     const supabase = client();
     const active = target ?? session;
     if (!supabase || !active) return;
-    const [lineResult, newItemResult] = await Promise.all([
-      loadAllPages((from, to) =>
-        supabase
-          .from("physical_count_lines")
-          .select(
-            "id,stock_id,system_quantity,counted_quantity,counted_location,unit_cost,notes,counted_by,counted_by_name,counted_at,inventory_stock(location,inventory_items!inventory_stock_item_id_fkey(sku,name,category,unit))",
-          )
-          .eq("count_id", active.id)
-          .order("counted_at", { ascending: true, nullsFirst: true })
-          .order("id")
-          .range(from, to),
-      ),
-      loadAllPages((from, to) =>
-        supabase
-          .from("physical_count_new_items")
-          .select(
-            "id,sku,name,category,brand,unit,location,counted_quantity,unit_cost,notes,status,counted_by_name,counted_at",
-          )
-          .eq("count_id", active.id)
-          .order("created_at")
-          .order("id")
-          .range(from, to),
-      ),
+    setLoadError("");
+    setHasLoaded(false);
+    // Carga paginada de la primera página para evitar timeouts con jornadas grandes.
+    const [lineResult, newItemResult, countedResult, totalResult] = await Promise.all([
+      supabase
+        .from("physical_count_lines")
+        .select(
+          "id,stock_id,system_quantity,counted_quantity,counted_location,unit_cost,notes,counted_by,counted_by_name,counted_at,inventory_stock(location,inventory_items!inventory_stock_item_id_fkey(sku,name,category,unit))",
+        )
+        .eq("count_id", active.id)
+        .order("counted_at", { ascending: true, nullsFirst: true })
+        .order("id")
+        .range(0, PAGE_SIZE - 1),
+      supabase
+        .from("physical_count_new_items")
+        .select(
+          "id,sku,name,category,brand,unit,location,counted_quantity,unit_cost,notes,status,counted_by_name,counted_at",
+        )
+        .eq("count_id", active.id)
+        .order("created_at")
+        .order("id")
+        .range(0, PAGE_SIZE - 1),
+      supabase
+        .from("physical_count_lines")
+        .select("id", { count: "exact", head: true })
+        .eq("count_id", active.id)
+        .not("counted_quantity", "is", null),
+      supabase
+        .from("physical_count_lines")
+        .select("id", { count: "exact", head: true })
+        .eq("count_id", active.id),
     ]);
-    if (lineResult.error || newItemResult.error) {
-      setStatus(
+    if (lineResult.error || newItemResult.error || countedResult.error || totalResult.error) {
+      const message =
         lineResult.error?.message ??
-          newItemResult.error?.message ??
-          "No fue posible cargar la jornada.",
-      );
+        newItemResult.error?.message ??
+        countedResult.error?.message ??
+        totalResult.error?.message ??
+        "No fue posible cargar la jornada.";
+      setLoadError(message);
+      setStatus(countMessage(message));
+      setHasLoaded(false);
       return;
     }
-    const normalizedLines = lineResult.data.map((row) => {
+    const normalizedLines = (lineResult.data ?? []).map((row) => {
       const stock = Array.isArray(row.inventory_stock)
         ? (row.inventory_stock[0] ?? null)
         : row.inventory_stock;
@@ -194,7 +210,10 @@ export function CountsWorkspace() {
       };
     });
     setLines(normalizedLines as CountLine[]);
-    setNewItems(newItemResult.data as NewItem[]);
+    setNewItems((newItemResult.data ?? []) as NewItem[]);
+    setTotalCounted(countedResult.count ?? 0);
+    setTotalLines(totalResult.count ?? 0);
+    setHasLoaded(true);
   }
 
   async function loadWorkspace() {
@@ -205,6 +224,8 @@ export function CountsWorkspace() {
       return;
     }
     setIsLoading(true);
+    setHasLoaded(false);
+    setLoadError("");
     const [
       { data: branchData, error: branchError },
       { data: sessionData, error: sessionError },
@@ -254,10 +275,14 @@ export function CountsWorkspace() {
   }, [isSaving]);
 
   const countedLines = lines.filter((line) => line.counted_quantity !== null);
-  const pendingLines = lines.length - countedLines.length;
-  const progress = session?.expected_line_count
-    ? Math.round((countedLines.length / session.expected_line_count) * 100)
-    : 0;
+  const effectiveCounted = hasLoaded && !loadError ? totalCounted : countedLines.length;
+  const effectiveTotal = hasLoaded && !loadError ? totalLines || (session?.expected_line_count ?? 0) : lines.length;
+  const pendingLines = Math.max(0, (session?.expected_line_count ?? effectiveTotal) - effectiveCounted);
+  const progress = session?.expected_line_count && hasLoaded && !loadError
+    ? Math.round((effectiveCounted / session.expected_line_count) * 100)
+    : lines.length
+      ? Math.round((countedLines.length / lines.length) * 100)
+      : 0;
   const filteredLines = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("es-CO");
     if (!normalized) return lines;
@@ -525,7 +550,7 @@ export function CountsWorkspace() {
             <button
               className="inventory-action"
               type="button"
-              disabled={pendingLines > 0 || isSaving}
+              disabled={isSaving || !hasLoaded || !!loadError || lines.length === 0 || pendingLines > 0}
               onClick={() => {
                 setApprovalConfirmed(false);
                 setApprovalOpen(true);
@@ -565,10 +590,27 @@ export function CountsWorkspace() {
             >
               <span style={{ width: `${progress}%` }} />
             </div>
+            {loadError ? (
+              <p className="counts-status" role="alert">
+                {countMessage(loadError)}
+                <button
+                  className="btn-cancel"
+                  type="button"
+                  onClick={() => session && void loadSession(session)}
+                  style={{ marginLeft: 8 }}
+                >
+                  Reintentar carga
+                </button>
+              </p>
+            ) : null}
             <p className="panel-intro">
-              {pendingLines
-                ? `Faltan ${pendingLines} artículo(s). Registra 0 cuando no exista físicamente.`
-                : "Cobertura completa. Revisa el resumen y concilia cuando estés listo."}
+              {!hasLoaded
+                ? "Cargando la jornada…"
+                : pendingLines
+                  ? `Faltan ${pendingLines} artículo(s). Registra 0 cuando no exista físicamente.`
+                  : totalLines > 0
+                    ? "Cobertura completa. Revisa el resumen y concilia cuando estés listo."
+                    : "Sin artículos cargados."}
             </p>
           </>
         ) : (

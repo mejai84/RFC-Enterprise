@@ -21,6 +21,28 @@ export const quoteStatuses = [
 
 export type QuoteStatus = (typeof quoteStatuses)[number]["value"];
 
+/** Matriz de transiciones válidas entre estados del pipeline comercial. */
+export const quoteStatusTransitions: Record<QuoteStatus, QuoteStatus[]> = {
+  received: ["in_review", "lost"],
+  in_review: ["estimating", "received", "lost"],
+  estimating: ["sent", "revision_requested", "lost"],
+  sent: ["awaiting_response", "revision_requested", "confirmed", "lost"],
+  awaiting_response: ["confirmed", "revision_requested", "lost", "sent"],
+  revision_requested: ["estimating", "sent", "lost"],
+  confirmed: ["in_execution", "lost"],
+  in_execution: ["work_completed", "lost"],
+  work_completed: ["billing_pending", "closed"],
+  billing_pending: ["closed"],
+  closed: [],
+  lost: ["received"],
+};
+
+/** Indica si la transición from -> to está permitida. */
+export function canTransitionQuoteStatus(from: QuoteStatus, to: QuoteStatus): boolean {
+  if (from === to) return true;
+  return quoteStatusTransitions[from]?.includes(to) ?? false;
+}
+
 /** Columnas visibles en el Kanban operativo (las más usadas día a día) */
 export const kanbanColumns: QuoteStatus[] = quoteStatuses.map((status) => status.value);
 

@@ -134,6 +134,7 @@ export function CountsWorkspace() {
   const [totalCounted, setTotalCounted] = useState(0);
   const [totalLines, setTotalLines] = useState(0);
   const [canApprove, setCanApprove] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string>("");
   const [openModal, setOpenModal] = useState(false);
   const [reason, setReason] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
@@ -216,6 +217,7 @@ export function CountsWorkspace() {
     setTotalCounted(countedResult.count ?? 0);
     setTotalLines(totalResult.count ?? 0);
     setHasLoaded(true);
+    setLastUpdated(new Date().toLocaleString("es-CO"));
   }
 
   async function loadWorkspace() {
@@ -635,6 +637,9 @@ export function CountsWorkspace() {
                     ? "Cobertura completa. Revisa el resumen y concilia cuando estés listo."
                     : "Sin artículos cargados."}
             </p>
+            {lastUpdated ? (
+              <small className="panel-intro">Última actualización: {lastUpdated}</small>
+            ) : null}
           </>
         ) : (
           <p className="panel-intro">

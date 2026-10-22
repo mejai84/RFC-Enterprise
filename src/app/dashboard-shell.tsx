@@ -198,12 +198,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // viven dentro de Configuracion (tablas salariales, propuesta, firma y empresa)
   // para llegar directo sin digitar "configuracion" y desplazarse.
   const [navSearchQuery, setNavSearchQuery] = useState("");
-  const settingsAccess: Array<{ label: string; href: string; hint: string }> = [
+  const settingsAccess = useMemo<Array<{ label: string; href: string; hint: string }>>(() => [
     { label: "Tablas salariales", href: "/settings?tab=labor_rates", hint: "Configuración" },
     { label: "Propuesta", href: "/settings?tab=proposal", hint: "Configuración" },
     { label: "Firma y membrete", href: "/settings?tab=branding", hint: "Configuración" },
     { label: "Empresa y nómina", href: "/settings?tab=company", hint: "Configuración" },
-  ];
+  ], []);
   const normalizeSearch = (value: string) =>
     value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   const searchResults = useMemo(() => {
@@ -216,7 +216,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       .filter((item) => normalizeSearch(item.label).includes(term))
       .map((item) => ({ label: item.label, href: item.href, hint: item.hint }));
     return [...modules, ...sections];
-  }, [navSearchQuery, visibleNavigation]);
+  }, [navSearchQuery, visibleNavigation, settingsAccess]);
 
   const menuLoose =
     permissions && permissions.length > 0 ? navigationSections(permissions).loose : ["/dashboard"];
@@ -309,7 +309,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, [isAccountMenuOpen]);
 
   useEffect(() => {
-    setIsAccountMenuOpen(false);
+    void Promise.resolve().then(() => setIsAccountMenuOpen(false));
   }, [pathname]);
   const initials = useMemo(() => currentUser.name.split(" ").filter(Boolean).map((part) => part[0]).slice(0, 2).join("").toUpperCase() || "RF", [currentUser.name]);
 
@@ -342,13 +342,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      setIsSidebarCollapsed(localStorage.getItem("rfc_dashboard_sidebar_collapsed") === "true");
-      try {
-        const stored = localStorage.getItem("rfc_nav_groups");
-        if (stored) setCollapsedGroups(JSON.parse(stored) as string[]);
-      } catch {
-        // Si el valor guardado no es valido, todos los bloques empiezan abiertos.
-      }
+      const isCollapsed = localStorage.getItem("rfc_dashboard_sidebar_collapsed") === "true";
+      const stored = localStorage.getItem("rfc_nav_groups");
+      void Promise.resolve().then(() => {
+        setIsSidebarCollapsed(isCollapsed);
+        if (stored) {
+          try {
+            setCollapsedGroups(JSON.parse(stored) as string[]);
+          } catch {
+            // Si el valor guardado no es valido, todos los bloques empiezan abiertos.
+          }
+        }
+      });
     } catch {
       // La barra lateral permanece expandida si el almacenamiento no está disponible.
     }
@@ -622,7 +627,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     role="menuitem"
                   >
                     <Icon name="users" />
-                    <span>Mi perfil</span>
+                    <span>Mi cuenta</span>
                   </Link>
                   <Link
                     className="dashboard-account-item"

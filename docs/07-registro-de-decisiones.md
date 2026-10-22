@@ -934,3 +934,22 @@ Los 2.699 registros quedaron en cero. En cero significa "todavia no se ha defini
 **Decision (2026-10-22):** /attendance distingue open, closed y needs_review; pending representa ausencia de jornada. needs_review queda en solo lectura y se identifica como En revision; el cierre exige un resumen y confirmacion.
 
 **Consecuencias:** la persona no puede registrar una nueva entrada cuando la jornada esta cerrada o en revision y supervision puede identificar el caso sin cambiar RPC, RLS ni migraciones.
+
+
+## ADR-175 - Reestructuración de Personal y accesos, Mi cuenta y Centro de configuración
+
+**Fecha:** 2026-10-22
+**Estado:** Aceptada
+
+**Contexto:** Los módulos `/employees`, `/perfil` y `/settings` presentaban solapamiento de responsabilidades, riesgos de fuga de permisos en desactivación (ADMIN-001), operaciones no atómicas de asignación de roles (ADMIN-003) y creación de fichas (ADMIN-004), falta de protección del último administrador (ADMIN-006) y sobrecarga en la navegación con pestañas desproporcionadas.
+
+**Decisión:**
+1. Separar conceptual y visualmente las entidades: empleado (ficha laboral), cuenta de usuario (identidad Auth), rol del sistema (autorización RBAC) y oficio/cargo laboral.
+2. Renombrar en navegación `/employees` a **Personal y accesos**, organizándolo en cuatro pestañas: Directorio, Ficha del empleado, Cuentas e invitaciones, y Roles y permisos.
+3. Retirar `/perfil` del bloque administrativo del menú lateral; mantener la ruta `/perfil` operativa y renombrarla visualmente a **Mi cuenta**, accesible de forma predominante desde el menú del avatar.
+4. Convertir `/settings` en un **Centro de configuración** con navegación lateral categorizada: Empresa y sedes, Identidad corporativa, Parámetros comerciales, Costos laborales, y Seguridad y auditoría.
+5. Blindar en base de datos la revocación de permisos para empleados inactivos (`is_active = false`), impidiendo el fallback accidental a `user_roles`, e implementar RPCs transaccionales atómicas para asignación de roles y creación de empleados.
+6. Proteger la cuenta del último administrador activo impidiendo su desactivación o degradación accidental.
+
+**Consecuencias:** Las operaciones sensibles quedan protegidas en backend; la experiencia visual se alinea con el estándar de Inventario, Cotizaciones y Dashboard; no se altera la estructura de datos existente ni se rompen integraciones previas.
+

@@ -360,3 +360,12 @@ Se retiraron Nuevo vale de salida y Solicitud de obra del encabezado ejecutivo. 
 ### Attendance Enterprise V2 (2026-10-22)
 
 /attendance distingue Mi jornada del empleado y Consulta de jornada de supervision; estados pending, open, closed y needs_review se modelan explicitamente, con resumen previo al cierre, aviso al alcanzar 800 registros y acciones moviles de 44 px. No cambia RPC, RLS ni migraciones.
+
+
+### Reestructuración de Personal y accesos, Mi cuenta y Configuración (2026-10-22)
+
+Evolución de `/employees`, `/perfil` y `/settings` hacia una arquitectura modular corporativa (ADR-175, doc 20):
+- **Personal y accesos (`/employees`):** Subdividido en cuatro vistas: Directorio de personal, Ficha del empleado, Cuentas e invitaciones, y Roles y permisos. Las asignaciones de rol y creaciones son atómicas vía RPC; las desactivaciones de empleados bloquean de inmediato todos los permisos en backend sin recurrir indebidamente a `user_roles`. Se protege la cuenta del último administrador.
+- **Mi cuenta (`/perfil`):** Se traslada del menú lateral al menú de usuario del avatar. Conserva la ruta para compatibilidad y presenta información personal, estado de seguridad y permisos asignados en solo lectura.
+- **Centro de configuración (`/settings`):** Transición a menú lateral categorizado: Empresa y sedes, Identidad corporativa, Parámetros comerciales, Costos laborales (tablas y dotación) y Seguridad y auditoría.
+

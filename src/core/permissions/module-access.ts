@@ -22,8 +22,8 @@ export const moduleAccess: ModuleAccess[] = [
   { href: "/movements", label: "Movimientos", permissions: ["inventory.kardex.view", "inventory.movements.read", "inventory.movements.create", "inventory.dispatch.create", "inventory.return.create", "inventory.stock.read"] },
   { href: "/counts", label: "Conteos físicos", permissions: ["inventory.stock.manage"] },
   { href: "/reports", label: "Informes", permissions: ["reports.view"] },
-  { href: "/employees", label: "Empleados", permissions: ["core.users.manage"] },
-  { href: "/perfil", label: "Mi perfil", permissions: ["core.profile.view"] },
+  { href: "/employees", label: "Personal y accesos", permissions: ["core.users.manage"] },
+  { href: "/perfil", label: "Mi cuenta", permissions: ["core.profile.view"] },
   { href: "/settings", label: "Configuración", permissions: ["core.companies.manage"] },
 ];
 
@@ -51,7 +51,7 @@ export const moduleGroups: ModuleGroup[] = [
   { id: "obras", label: "Obras", hrefs: ["/projects", "/attendance", "/rentals"] },
   { id: "bodega", label: "Bodega", hrefs: ["/purchases", "/inventory", "/movements", "/counts"] },
   { id: "consultas", label: "Consultas", hrefs: ["/reports"] },
-  { id: "administracion", label: "Administración", hrefs: ["/employees", "/perfil", "/settings"] },
+  { id: "administracion", label: "Administración", hrefs: ["/employees", "/settings"] },
 ];
 
 export type NavigationSection = { id: ModuleGroupId | null; label: string; hrefs: string[] };

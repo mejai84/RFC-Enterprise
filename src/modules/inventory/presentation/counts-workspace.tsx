@@ -162,17 +162,15 @@ export function CountsWorkspace() {
     if (!supabase || !active) return;
     setLoadError("");
     setHasLoaded(false);
-    // Carga paginada de la primera página para evitar timeouts con jornadas grandes.
-    const [lineResult, newItemResult, countedResult, totalResult] = await Promise.all([
-      supabase
-        .from("physical_count_lines")
-        .select(
-          "id,stock_id,system_quantity,counted_quantity,counted_location,unit_cost,notes,counted_by,counted_by_name,counted_at,inventory_stock(location,inventory_items!inventory_stock_item_id_fkey(sku,name,category,unit))",
-        )
-        .eq("count_id", active.id)
-        .order("counted_at", { ascending: true, nullsFirst: true })
-        .order("id")
-        .range(0, PAGE_SIZE - 1),
+    // Carga paginada desde PostgreSQL para evitar timeouts y filtrado local.
+    const [pageResult, summaryResult, newItemResult] = await Promise.all([
+      supabase.rpc("count_lines_page", {
+        p_count_id: active.id,
+        p_search: query.trim() || null,
+        p_page: page,
+        p_page_size: PAGE_SIZE,
+      }),
+      supabase.rpc("count_summary", { p_count_id: active.id }),
       supabase
         .from("physical_count_new_items")
         .select(
@@ -182,23 +180,14 @@ export function CountsWorkspace() {
         .order("created_at")
         .order("id")
         .range(0, PAGE_SIZE - 1),
-      supabase
-        .from("physical_count_lines")
-        .select("id", { count: "exact", head: true })
-        .eq("count_id", active.id)
-        .not("counted_quantity", "is", null),
-      supabase
-        .from("physical_count_lines")
-        .select("id", { count: "exact", head: true })
-        .eq("count_id", active.id),
     ]);
-    if (lineResult.error || newItemResult.error || countedResult.error || totalResult.error) {
+    if (pageResult.error || summaryResult.error || newItemResult.error) {
       const message =
-        lineResult.error?.message ??
+        pageResult.error?.message ??
+        summaryResult.error?.message ??
         newItemResult.error?.message ??
-        countedResult.error?.message ??
-        totalResult.error?.message ??
-        "No fue posible cargar la jornada.";      const friendlyMessage = /statement timeout/i.test(message)
+        "No fue posible cargar la jornada.";
+      const friendlyMessage = /statement timeout/i.test(message)
         ? "La jornada es grande y tardó más de lo permitido. Intenta nuevamente; si persiste, solicita aplicar la optimización de conteo."
         : countMessage(message);
       setLoadError(friendlyMessage);
@@ -206,24 +195,33 @@ export function CountsWorkspace() {
       setHasLoaded(false);
       return;
     }
-    const normalizedLines = (lineResult.data ?? []).map((row) => {
-      const stock = Array.isArray(row.inventory_stock)
-        ? (row.inventory_stock[0] ?? null)
-        : row.inventory_stock;
-      const item = stock
-        ? Array.isArray(stock.inventory_items)
-          ? (stock.inventory_items[0] ?? null)
-          : (stock.inventory_items ?? null)
-        : null;
-      return {
-        ...row,
-        inventory_stock: stock ? { ...stock, inventory_items: item } : null,
-      };
-    });
-    setLines(normalizedLines as CountLine[]);
+    const rows = (pageResult.data ?? []) as Array<any>;
+    const normalizedLines = rows.map((row) => ({
+      id: row.id,
+      stock_id: row.stock_id,
+      system_quantity: row.system_quantity,
+      counted_quantity: row.counted_quantity,
+      counted_location: row.counted_location,
+      unit_cost: row.unit_cost,
+      notes: row.notes,
+      counted_by: row.counted_by,
+      counted_by_name: row.counted_by_name,
+      counted_at: row.counted_at,
+      inventory_stock: {
+        location: row.location,
+        inventory_items: {
+          sku: row.sku,
+          name: row.name,
+          category: row.category,
+          unit: row.unit,
+        },
+      },
+    })) as CountLine[];
+    setLines(normalizedLines);
     setNewItems((newItemResult.data ?? []) as NewItem[]);
-    setTotalCounted(countedResult.count ?? 0);
-    setTotalLines(totalResult.count ?? 0);
+    const summary = (summaryResult.data ?? [])[0] ?? {};
+    setTotalCounted(Number(summary.counted_lines ?? 0));
+    setTotalLines(Number(summary.expected_lines ?? rows[0]?.total_count ?? 0));
     setHasLoaded(true);
     setLastUpdated(new Date().toLocaleString("es-CO"));
   }
@@ -280,6 +278,10 @@ export function CountsWorkspace() {
   useEffect(() => {
     void loadWorkspace();
   }, []);
+
+  useEffect(() => {
+    if (session) void loadSession(session);
+  }, [page, query]);
 
   useEffect(() => {
     if (!autoRefresh || !session) return;
@@ -517,8 +519,61 @@ export function CountsWorkspace() {
     await loadWorkspace();
   }
 
-  function downloadReport() {
+  async function downloadReport() {
     if (!session) return;
+    const supabase = client();
+    if (!supabase) return;
+    const allLines: CountLine[] = [];
+    let currentPage = 0;
+    while (true) {
+      const { data } = await supabase.rpc("count_lines_page", {
+        p_count_id: session.id,
+        p_search: null,
+        p_page: currentPage,
+        p_page_size: 1000,
+      });
+      const rows = (data ?? []) as any[];
+      allLines.push(
+        ...rows.map((row) => ({
+          id: row.id,
+          stock_id: row.stock_id,
+          system_quantity: row.system_quantity,
+          counted_quantity: row.counted_quantity,
+          counted_location: row.counted_location,
+          unit_cost: row.unit_cost,
+          notes: row.notes,
+          counted_by: row.counted_by,
+          counted_by_name: row.counted_by_name,
+          counted_at: row.counted_at,
+          inventory_stock: {
+            location: row.location,
+            inventory_items: {
+              sku: row.sku,
+              name: row.name,
+              category: row.category,
+              unit: row.unit,
+            },
+          },
+        })) as CountLine[],
+      );
+      if (rows.length < 1000) break;
+      currentPage += 1;
+    }
+    const allNewItems: NewItem[] = [];
+    let from = 0;
+    while (true) {
+      const { data } = await supabase
+        .from("physical_count_new_items")
+        .select("id,sku,name,category,brand,unit,location,counted_quantity,unit_cost,notes,status,counted_by_name,counted_at")
+        .eq("count_id", session.id)
+        .order("created_at")
+        .order("id")
+        .range(from, from + 999);
+      const batch = (data ?? []) as NewItem[];
+      allNewItems.push(...batch);
+      if (batch.length < 1000) break;
+      from += 1000;
+    }
     const rows = [
       [
         "Tipo",
@@ -533,7 +588,7 @@ export function CountsWorkspace() {
         "Fecha",
         "Notas",
       ],
-      ...lines.map((line) => [
+      ...allLines.map((line) => [
         "Existente",
         line.inventory_stock?.inventory_items?.sku ?? "",
         line.inventory_stock?.inventory_items?.name ?? "",

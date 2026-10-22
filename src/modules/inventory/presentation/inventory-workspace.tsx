@@ -14,6 +14,7 @@ import {
   withDefaultInventoryAliases,
 } from "../index";
 import { InlineCatalogCombobox } from "./inline-catalog-combobox";
+import { InventoryIcon } from "./inventory-icons";
 import { WriteoffsPanel } from "./writeoffs-panel";
 import { CurrencyInput } from "@/shared/components/currency-input";
 import { loadAllPages } from "@/shared/supabase/load-all";
@@ -34,6 +35,16 @@ const movementLabels: Record<MovementType, string> = {
   adjustment: "Ajuste de Inventario",
   return: "Devolución a Bodega",
   transfer: "Traslado de Ubicación",
+};
+
+const movementOperationLabels: Record<string, string> = {
+  adjustment: "Ajuste",
+  dispatch: "Despacho",
+  entry: "Entrada",
+  exit: "Salida",
+  loan: "Préstamo",
+  return: "Devolución",
+  transfer: "Traslado",
 };
 
 type TabKey = "catalog" | "movements" | "projects" | "low-stock" | "writeoffs" | "settings";
@@ -661,30 +672,43 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
     <main className="dashboard-content inventory-workspace-pro">
       {/* Toast Feedback */}
       {toastMessage && (
-        <div className={`inventory-toast ${toastMessage.type}`} role="status">
-          <span>{toastMessage.type === "success" ? "✓" : "⚠"}</span>
+        <div className={`inventory-toast ${toastMessage.type}`} role="status" aria-live="polite">
+          <span className="inventory-toast-icon">
+            <InventoryIcon name={toastMessage.type === "success" ? "check" : "warning"} />
+          </span>
           <p>{toastMessage.text}</p>
         </div>
       )}
 
-      {/* Encabezado y Acción Principal */}
-      <section className="dashboard-heading">
-        <div>
+      {/* Encabezado y acción principal */}
+      <section className={`dashboard-heading inventory-heading ${isMovementsView ? "is-movements" : "is-inventory"}`}>
+        <div className="inventory-heading-copy">
           <p>Módulo de Operaciones · RFC Enterprise</p>
-          <h1>{isMovementsView ? "Kardex de Movimientos" : "Control de Inventario"}</h1>
+          <h1>{isMovementsView ? "Kardex de movimientos" : "Control de inventario"}</h1>
           <small>
-            {isMovementsView ? "Consulta y registra entradas, salidas, ajustes y devoluciones de inventario." : `Catálogo activo con ${numberFormatter.format(products.length)} artículos y existencias disponibles.`}
+            {isMovementsView
+              ? "Consulta el libro de movimientos y registra entradas, salidas, devoluciones o ajustes con su soporte."
+              : `Catálogo activo con ${numberFormatter.format(products.length)} artículos, existencias y costos en un solo lugar.`}
           </small>
         </div>
-        <div className="header-actions">
+        <div className="inventory-heading-actions">
           {isMovementsView ? (
-            <button className="inventory-action" onClick={() => openMovementModal()} type="button">+ Registrar movimiento</button>
+            <button className="inventory-action primary" onClick={() => openMovementModal()} type="button">
+              <InventoryIcon name="plus" />
+              Registrar movimiento
+            </button>
           ) : (
             <>
-              <Link className="inventory-action secondary" href="/inventory/import">Importar CSV/XLSX</Link>
-              <button className="inventory-action secondary" onClick={() => setIsNewItemModalOpen(true)} type="button">+ Nuevo artículo</button>
-              <button className="inventory-action btn-secondary-action" onClick={() => openMovementModal(undefined, "entry")} type="button">+ Registrar entrada</button>
-              <button className="inventory-action" onClick={() => openMovementModal(undefined, "exit")} type="button">+ Registrar salida</button>
+              <Link className="inventory-action secondary" href="/inventory/import">
+                Importar inventario
+              </Link>
+              <button className="inventory-action secondary" onClick={() => setIsNewItemModalOpen(true)} type="button">
+                Nuevo artículo
+              </button>
+              <button className="inventory-action primary" onClick={() => openMovementModal()} type="button">
+                <InventoryIcon name="plus" />
+                Registrar movimiento
+              </button>
             </>
           )}
         </div>
@@ -693,11 +717,11 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       {/* Aviso de Conexión */}
       {dataSource === "database" ? (
         <p className="inventory-session-notice">
-          Conectado a Base de Datos Supabase: Existencias sincronizadas con la nube de RFC Enterprise.
+          Datos sincronizados con Supabase.
         </p>
       ) : (
         <p className="inventory-session-notice">
-          Sin conexión operativa: las acciones de inventario requieren conexión a la base de datos.
+          Sin conexión operativa: las acciones requieren la base de datos.
         </p>
       )}
 
@@ -707,105 +731,126 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
         </p>
       )}
 
-      {/* Tarjetas de Indicadores Principales */}
-      <section className="inventory-summary-cards" aria-label="Indicadores ejecutivos de inventario">
-        <article className="stat-card">
-          <span>Artículos en Catálogo</span>
-          <strong>{numberFormatter.format(products.length)}</strong>
-          <small>Catálogo sincronizado con la base de datos</small>
-        </article>
-        <article className="stat-card">
-          <span>Unidades Disponibles</span>
-          <strong>{numberFormatter.format(totalUnits)}</strong>
-          <small>En almacén y frentes de trabajo</small>
-        </article>
-        <article className="stat-card valuation">
-          <span>Valorización de Inventario</span>
-          <strong>{currencyFormatter.format(totalValuation)}</strong>
-          <small>Valor comercial estimado en bodega</small>
-        </article>
-        <article className="stat-card project-costs">
-          <span>Gasto Total en Obras</span>
-          <strong>{currencyFormatter.format(totalProjectExpenses)}</strong>
-          <small>{movements.filter((m) => m.type === "exit").length} vales de salida despachados</small>
-        </article>
-      </section>
+      {/* Indicadores compactos: el catálogo y el Kardex conservan el foco. */}
+      {!isMovementsView && (
+        <section className="inventory-metric-grid" aria-label="Indicadores de inventario">
+          <article className="inventory-metric is-primary">
+            <span className="inventory-metric-label">Artículos activos</span>
+            <strong>{numberFormatter.format(products.length)}</strong>
+            <small>Registrados en el catálogo</small>
+          </article>
+          <article className="inventory-metric">
+            <span className="inventory-metric-label">Unidades disponibles</span>
+            <strong>{numberFormatter.format(totalUnits)}</strong>
+            <small>En almacén y frentes de trabajo</small>
+          </article>
+          <article className="inventory-metric">
+            <span className="inventory-metric-label">Valor del inventario</span>
+            <strong>{currencyFormatter.format(totalValuation)}</strong>
+            <small>Valorización con costos conocidos</small>
+          </article>
+          <article className={`inventory-metric ${lowStockCount > 0 ? "is-alert" : ""}`}>
+            <span className="inventory-metric-label">Requieren reposición</span>
+            <strong>{numberFormatter.format(lowStockCount)}</strong>
+            <small>Artículos en o bajo su mínimo</small>
+          </article>
+        </section>
+      )}
 
-      {/* Barra de Pestañas de Navegación */}
-      <nav className="inventory-tabs-nav" aria-label="Secciones del módulo">
-        {isMovementsView ? (
-          <button className="tab-btn active" type="button" aria-current="page">Kardex y Movimientos ({movements.length})</button>
-        ) : <>
-        <button
-          className={`tab-btn ${activeTab === "catalog" ? "active" : ""}`}
-          onClick={() => setActiveTab("catalog")}
-          type="button"
-        >
-          📦 Existencias y Catálogo ({filteredProducts.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "projects" ? "active" : ""}`}
-          onClick={() => setActiveTab("projects")}
-          type="button"
-        >
-          🏗️ Costos por Proyecto / Obra ({projects.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "movements" ? "active" : ""}`}
-          onClick={() => setActiveTab("movements")}
-          type="button"
-        >
-          🔄 Kardex y Movimientos ({movements.length})
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "low-stock" ? "active" : ""}`}
-          onClick={() => {
-            setActiveTab("low-stock");
-            setStockFilter("low");
-          }}
-          type="button"
-        >
-          ⚠️ Alertas de Stock Mínimo {lowStockCount > 0 && <span className="tab-badge">{lowStockCount}</span>}
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "writeoffs" ? "active" : ""}`}
-          onClick={() => setActiveTab("writeoffs")}
-          type="button"
-          title="Bajas de inventario por deterioro, daño, vencimiento o pérdida"
-        >
-          🗑️ Bajas de Inventario
-        </button>
-        <button className={`tab-btn ${activeTab === "settings" ? "active" : ""}`} onClick={() => setActiveTab("settings")} type="button"><svg aria-hidden="true" className="inventory-tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 2-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-2.8v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3L9 19l-2-2 .1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H5.6v-2.8h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L7 8.2l2-2 .1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.2h2.8V5a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 2 2-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2V14H21a1.7 1.7 0 0 0-1.6 1Z" /></svg>Configuración de inventario</button>
-        </>}
-      </nav>
+      {/* Navegación principal y secciones secundarias */}
+      {!isMovementsView && (
+        <nav className="inventory-tabs-nav" aria-label="Secciones del módulo">
+          <div className="inventory-tabs-primary">
+            <button
+              className={`tab-btn ${activeTab === "catalog" ? "active" : ""}`}
+              onClick={() => setActiveTab("catalog")}
+              aria-current={activeTab === "catalog" ? "page" : undefined}
+              type="button"
+            >
+              <InventoryIcon name="box" />
+              <span className="tab-label">Existencias</span>
+              <span className="tab-count">{numberFormatter.format(filteredProducts.length)}</span>
+            </button>
+            <button
+              className={`tab-btn ${activeTab === "movements" ? "active" : ""}`}
+              onClick={() => setActiveTab("movements")}
+              aria-current={activeTab === "movements" ? "page" : undefined}
+              type="button"
+            >
+              <InventoryIcon name="movement" />
+              <span className="tab-label">Movimientos</span>
+              <span className="tab-count">{numberFormatter.format(movements.length)}</span>
+            </button>
+            <button
+              className={`tab-btn ${activeTab === "projects" ? "active" : ""}`}
+              onClick={() => setActiveTab("projects")}
+              aria-current={activeTab === "projects" ? "page" : undefined}
+              type="button"
+            >
+              <InventoryIcon name="project" />
+              <span className="tab-label">Obras</span>
+              <span className="tab-count">{numberFormatter.format(projects.length)}</span>
+            </button>
+          </div>
+          <div className="inventory-tabs-secondary">
+            <span className="inventory-tabs-label">Más</span>
+            <button
+              className={`tab-btn ${activeTab === "low-stock" ? "active" : ""}`}
+              onClick={() => {
+                setActiveTab("low-stock");
+                setStockFilter("low");
+              }}
+              aria-current={activeTab === "low-stock" ? "page" : undefined}
+              type="button"
+            >
+              <span className="tab-label">Alertas</span>
+              {lowStockCount > 0 && <span className="tab-badge">{lowStockCount}</span>}
+            </button>
+            <button
+              className={`tab-btn ${activeTab === "writeoffs" ? "active" : ""}`}
+              onClick={() => setActiveTab("writeoffs")}
+              aria-current={activeTab === "writeoffs" ? "page" : undefined}
+              type="button"
+              title="Bajas de inventario por deterioro, daño, vencimiento o pérdida"
+            >
+              <span className="tab-label">Bajas</span>
+            </button>
+            <button
+              className={`tab-btn ${activeTab === "settings" ? "active" : ""}`}
+              onClick={() => setActiveTab("settings")}
+              aria-current={activeTab === "settings" ? "page" : undefined}
+              type="button"
+            >
+              <span className="tab-label">Configuración</span>
+            </button>
+          </div>
+        </nav>
+      )}
 
       {/* ========================================================================= */}
       {/* PESTAÑA 1: CATÁLOGO DE EXISTENCIAS */}
       {/* ========================================================================= */}
       {!isMovementsView && activeTab === "catalog" && (
         <section className="dashboard-panel inventory-catalog-panel">
-          <div className="panel-title">
+          <div className="panel-title inventory-panel-title">
             <div>
-              <p>Existencias Físicas</p>
-              <h2>Catálogo de Materiales y Herramientas</h2>
-            </div>
-            <div className="panel-actions">
-              <span className="inventory-result-count">
-                Mostrando {paginatedProducts.length} de {numberFormatter.format(filteredProducts.length)} artículos
-              </span>
+              <p>Existencias físicas</p>
+              <h2>Catálogo de materiales y herramientas</h2>
             </div>
           </div>
 
-          {/* Filtros y Búsqueda */}
+          {/* Búsqueda principal y filtros agrupados */}
           <div className="inventory-catalog-controls">
-            <label className="search-field">
+            <label className="search-field inventory-search-field" htmlFor="inventory-catalog-search">
               Buscar artículo
               <input
+                id="inventory-catalog-search"
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="Nombre, código, marca, categoría o ubicación…"
+                placeholder="Nombre, SKU, marca, categoría o ubicación…"
+                type="search"
                 value={query}
               />
               {query.trim() && <div className="catalog-live-results" role="listbox" aria-label="Coincidencias de artículos">
@@ -813,99 +858,101 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
               </div>}
             </label>
 
-            <label>
-              Grupo de inventario
-              <select
-                onChange={(e) => {
-                  setGroupFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                value={groupFilter}
-              >
-                <option value="all">Todos los grupos</option>
-                <option value="bodega">Bodega Principal</option>
-                <option value="dotacion">Dotación</option>
-                <option value="trabajadores">Herramientas Trabajadores</option>
-              </select>
-            </label>
+            <div className="inventory-filter-grid" aria-label="Filtros del catálogo">
+              <label>
+                Grupo
+                <select
+                  onChange={(e) => {
+                    setGroupFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  value={groupFilter}
+                >
+                  <option value="all">Todos los grupos</option>
+                  <option value="bodega">Bodega principal</option>
+                  <option value="dotacion">Dotación</option>
+                  <option value="trabajadores">Herramientas trabajadores</option>
+                </select>
+              </label>
 
-            <label>
-              Estado de stock
-              <select
-                onChange={(e) => {
-                  setStockFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                value={stockFilter}
-              >
-                <option value="all">Todos los estados</option>
-                <option value="available">Disponibles</option>
-                <option value="low">Bajo mínimo requerido</option>
-                <option value="out">Sin existencias (Agotados)</option>
-              </select>
-            </label>
+              <label>
+                Estado de stock
+                <select
+                  onChange={(e) => {
+                    setStockFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  value={stockFilter}
+                >
+                  <option value="all">Todos los estados</option>
+                  <option value="available">Disponibles</option>
+                  <option value="low">Bajo mínimo requerido</option>
+                  <option value="out">Sin existencias (agotados)</option>
+                </select>
+              </label>
 
-            <label>
-              Tipo operativo
-              <select value={itemKindFilter} onChange={(e) => { setItemKindFilter(e.target.value as typeof itemKindFilter); setCurrentPage(1); }}>
-                <option value="all">Todos</option>
-                <option value="material">Material / insumo</option>
-                <option value="tool">Herramienta</option>
-                <option value="equipment">Equipo</option>
-                <option value="ppe">Dotación / EPP</option>
-              </select>
-            </label>
+              <label>
+                Tipo operativo
+                <select value={itemKindFilter} onChange={(e) => { setItemKindFilter(e.target.value as typeof itemKindFilter); setCurrentPage(1); }}>
+                  <option value="all">Todos</option>
+                  <option value="material">Material / insumo</option>
+                  <option value="tool">Herramienta</option>
+                  <option value="equipment">Equipo</option>
+                  <option value="ppe">Dotación / EPP</option>
+                </select>
+              </label>
 
-            <label>
-              Ubicación en almacén
-              <select value={locationFilter} onChange={(e) => { setLocationFilter(e.target.value); setCurrentPage(1); }}>
-                <option value="all">Todas las ubicaciones</option>
-                {[...new Set(products.map((p) => p.location).filter(Boolean))].sort().map((location) => <option key={location} value={location}>{location}</option>)}
-              </select>
-            </label>
+              <label>
+                Ubicación
+                <select value={locationFilter} onChange={(e) => { setLocationFilter(e.target.value); setCurrentPage(1); }}>
+                  <option value="all">Todas las ubicaciones</option>
+                  {[...new Set(products.map((p) => p.location).filter(Boolean))].sort().map((location) => <option key={location} value={location}>{location}</option>)}
+                </select>
+              </label>
 
-            <label>
-              Categoría
-              <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}>
-                <option value="all">Todas las categorías</option>
-                {[...new Set(products.map((p) => p.category).filter(Boolean))].sort().map((category) => <option key={category} value={category}>{category}</option>)}
-              </select>
-            </label>
+              <label>
+                Categoría
+                <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}>
+                  <option value="all">Todas las categorías</option>
+                  {[...new Set(products.map((p) => p.category).filter(Boolean))].sort().map((category) => <option key={category} value={category}>{category}</option>)}
+                </select>
+              </label>
 
-            <label>
-              Por página
-              <select
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                value={pageSize}
-              >
-                <option value="25">25 artículos</option>
-                <option value="50">50 artículos</option>
-                <option value="100">100 artículos</option>
-              </select>
-            </label>
+              <label>
+                Por página
+                <select
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  value={pageSize}
+                >
+                  <option value="25">25 artículos</option>
+                  <option value="50">50 artículos</option>
+                  <option value="100">100 artículos</option>
+                </select>
+              </label>
+            </div>
           </div>
 
-          {/* Tabla de Artículos */}
+          <p className="inventory-table-scroll-hint">Desliza horizontalmente para consultar todas las columnas.</p>
           <div className="inventory-table-container">
-            <table className="inventory-data-table">
+            <table className="inventory-data-table inventory-catalog-table" aria-label="Catálogo de existencias">
               <thead>
                 <tr>
-                  <th>Artículo / Especificación</th>
-                  <th>Ubicación</th>
-                  <th>Grupo</th>
-                  <th style={{ textAlign: "right" }}>Costo Unit. (COP)</th>
-                  <th style={{ textAlign: "right" }}>Disponible</th>
-                  <th style={{ textAlign: "center" }}>Estado</th>
-                  <th style={{ textAlign: "right" }}>Acciones</th>
+                  <th className="col-item">Artículo / especificación</th>
+                  <th className="col-location">Ubicación</th>
+                  <th className="col-group">Grupo</th>
+                  <th className="is-numeric">Costo unitario</th>
+                  <th className="is-numeric">Disponible</th>
+                  <th className="is-center">Estado</th>
+                  <th className="is-actions">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedProducts.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: "center", padding: "40px 0", color: "var(--muted)" }}>
+                  <tr className="inventory-empty-row">
+                    <td colSpan={7} className="inventory-empty-cell">
                       No se encontraron artículos con los filtros aplicados.
                     </td>
                   </tr>
@@ -914,49 +961,51 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                     const st = stockState(p);
                     return (
                       <tr key={p.id}>
-                        <td>
-                          <strong>{p.name}</strong>
+                        <td className="cell-item" data-label="Artículo">
+                          <strong title={p.name}>{p.name}</strong>
                           <small>
                             {p.sku ? `SKU: ${p.sku} · ` : ""}
                             {p.category} {p.brand ? `· ${p.brand}` : ""}
                           </small>
                         </td>
-                        <td>
+                        <td className="cell-location" data-label="Ubicación">
                           <span className="location-tag">{p.location || "Sin ubicación"}</span>
                         </td>
-                        <td>
+                        <td className="cell-group" data-label="Grupo">
                           <span className="group-tag">{p.inventoryGroupName}</span>
                           <small>{getInventoryItemKind(p) === "material" ? "Material / insumo" : getInventoryItemKind(p) === "tool" ? "Herramienta" : getInventoryItemKind(p) === "equipment" ? "Equipo" : "Dotación / EPP"}</small>
                         </td>
-                        <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                        <td className="cell-numeric" data-label="Costo unitario">
                           {(p.unitCost ?? 0) > 0 ? currencyFormatter.format(p.unitCost ?? 0) : <span className="pending-cost">Pendiente</span>}
                         </td>
-                        <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                        <td className="cell-numeric cell-stock" data-label="Disponible">
                           <b className="stock-quantity">
                             {p.available} <small>{p.unit}</small>
                           </b>
                           {p.minimum !== null && <span className="stock-min-hint">Mín: {p.minimum}</span>}
                         </td>
-                        <td style={{ textAlign: "center" }}>
+                        <td className="cell-status" data-label="Estado">
                           <span className={`status-pill ${st.className}`}>{st.label}</span>
                         </td>
-                        <td style={{ textAlign: "right" }}>
-                          <div className="row-actions">
+                        <td className="cell-actions" data-label="Acciones">
+                          <div className="row-actions" role="group" aria-label={`Acciones para ${p.name}`}>
                             <button
                               className="btn-row-action"
                               onClick={() => openMovementModal(p, "exit")}
                               title="Despachar para obra"
+                              aria-label={`Despachar ${p.name} para obra`}
                               type="button"
                             >
-                              📤 Despachar
+                              Despachar
                             </button>
                             <button
                               className="btn-row-action"
                               onClick={() => openMovementModal(p, "entry")}
                               title="Ingresar material a bodega"
+                              aria-label={`Registrar entrada de ${p.name}`}
                               type="button"
                             >
-                              📥 Entrada
+                              Entrada
                             </button>
                             <button
                               className="btn-row-action subtle"
@@ -965,11 +1014,20 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                                 setNewMinimumValue(p.minimum !== null ? String(p.minimum) : "");
                               }}
                               title="Configurar nivel mínimo de stock"
+                              aria-label={`Configurar mínimo de ${p.name}`}
                               type="button"
                             >
-                              ⚙️ Mínimo
+                              Mínimo
                             </button>
-                            <button className="btn-row-action subtle" onClick={() => relocateProduct(p)} title="Trasladar a otra ubicación" type="button">↔ Reubicar</button>
+                            <button
+                              className="btn-row-action subtle"
+                              onClick={() => relocateProduct(p)}
+                              title="Trasladar a otra ubicación"
+                              aria-label={`Reubicar ${p.name}`}
+                              type="button"
+                            >
+                              Reubicar
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -980,30 +1038,34 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
             </table>
           </div>
 
-          {/* Paginación */}
-          {totalPages > 1 && (
-            <div className="pagination-bar">
-              <button
-                className="btn-page"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((c) => Math.max(1, c - 1))}
-                type="button"
-              >
-                ← Anterior
-              </button>
-              <span>
-                Página <b>{currentPage}</b> de <b>{totalPages}</b>
-              </span>
-              <button
-                className="btn-page"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((c) => Math.min(totalPages, c + 1))}
-                type="button"
-              >
-                Siguiente →
-              </button>
-            </div>
-          )}
+          <div className="inventory-table-footer">
+            <span className="pagination-summary">
+              Mostrando <b>{paginatedProducts.length}</b> de <b>{numberFormatter.format(filteredProducts.length)}</b> artículos
+            </span>
+            {totalPages > 1 && (
+              <div className="pagination-bar">
+                <button
+                  className="btn-page"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((c) => Math.max(1, c - 1))}
+                  type="button"
+                >
+                  ← Anterior
+                </button>
+                <span>
+                  Página <b>{currentPage}</b> de <b>{totalPages}</b>
+                </span>
+                <button
+                  className="btn-page"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((c) => Math.min(totalPages, c + 1))}
+                  type="button"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            )}
+          </div>
         </section>
       )}
 
@@ -1018,13 +1080,13 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
               <h2>Control de Gasto por Obra y Proyecto</h2>
             </div>
             <button className="inventory-action secondary" onClick={() => setIsProjectModalOpen(true)} type="button">
-              + Crear Nueva Obra
+              Crear obra
             </button>
           </div>
 
           <p className="panel-intro">
-            Consulta en tiempo real cuánto dinero en materiales se ha despachado a cada obra, comparado con el presupuesto
-            asignado para evitar sobrecostos.
+            Consulta cuánto material se ha despachado a cada obra frente a su presupuesto. Gasto acumulado registrado:{" "}
+            <b>{currencyFormatter.format(totalProjectExpenses)}</b>.
           </p>
 
           <div className="projects-grid">
@@ -1069,7 +1131,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                   <div className="budget-progress-container">
                     <div className="budget-progress-labels">
                       <span>Ejecución presupuestal: {percent}%</span>
-                      <span>{isOverBudget ? "⚠️ Sobrecosto" : `${data.movementsCount} despachos`}</span>
+                      <span className={isOverBudget ? "budget-warning-label" : undefined}>{isOverBudget ? "Sobrecosto" : `${data.movementsCount} despachos`}</span>
                     </div>
                     <div className="budget-progress-track">
                       <div
@@ -1110,7 +1172,7 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                       }}
                       type="button"
                     >
-                      📤 Despachar material a esta obra
+                      Despachar material a esta obra
                     </button>
                   </div>
                 </article>
@@ -1125,34 +1187,40 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       {/* ========================================================================= */}
       {(isMovementsView || activeTab === "movements") && (
         <section className="dashboard-panel inventory-movements-panel">
-          <div className="panel-title">
+          <div className="panel-title inventory-panel-title">
             <div>
               <p>Trazabilidad y Kardex</p>
-              <h2>Historial de Entradas, Salidas y Ajustes</h2>
+              <h2>Movimientos registrados</h2>
+              <small className="inventory-panel-summary">
+                {numberFormatter.format(movements.length)} movimientos en el libro de inventario.
+              </small>
             </div>
-            <button className="inventory-action secondary" onClick={exportMovementsCSV} type="button">
-              📥 Descargar Reporte CSV (Excel)
-            </button>
+            <div className="inventory-panel-actions">
+              <button className="inventory-action secondary" onClick={exportMovementsCSV} type="button">
+                <InventoryIcon name="download" />
+                Descargar CSV
+              </button>
+            </div>
           </div>
 
-          {/* Filtros de Movimientos */}
-          <div className="inventory-catalog-controls" style={{ gridTemplateColumns: "1fr 1fr auto" }}>
+          {/* Filtros del Kardex */}
+          <div className="inventory-movement-controls">
             <label>
               Tipo de movimiento
               <select onChange={(e) => { setMovementTypeFilter(e.target.value); setMovementPage(1); }} value={movementTypeFilter}>
                 <option value="all">Todos los movimientos</option>
-                <option value="exit">Salidas a Obra / Proyectos</option>
-                <option value="entry">Entradas de Compra / Proveedores</option>
-                <option value="return">Devoluciones a Bodega</option>
-                <option value="adjustment">Ajustes de Inventario</option>
-                <option value="transfer">Traslados de Ubicación</option>
+                <option value="exit">Salidas a obra / proyectos</option>
+                <option value="entry">Entradas de compra / proveedores</option>
+                <option value="return">Devoluciones a bodega</option>
+                <option value="adjustment">Ajustes de inventario</option>
+                <option value="transfer">Traslados de ubicación</option>
               </select>
             </label>
 
             <label>
-              Filtrar por obra / proyecto
+              Obra o proyecto
               <select onChange={(e) => { setMovementProjectFilter(e.target.value); setMovementPage(1); }} value={movementProjectFilter}>
-                <option value="all">Todas las obras / Almacén</option>
+                <option value="all">Todas las obras / almacén</option>
                 {[...projects].sort((a, b) => spanishCollator.compare(`${a.code} ${a.name}`, `${b.code} ${b.name}`)).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.code} - {p.name}
@@ -1160,34 +1228,27 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                 ))}
               </select>
             </label>
-
-            <div style={{ display: "flex", alignItems: "flex-end" }}>
-              <button className="inventory-action" onClick={() => openMovementModal()} type="button">
-                + Nuevo Movimiento
-              </button>
-            </div>
           </div>
 
-          {/* Tabla de Movimientos */}
+          <p className="inventory-table-scroll-hint">Desliza horizontalmente para consultar todas las columnas.</p>
           <div className="inventory-table-container">
-            <table className="inventory-data-table">
+            <table className="inventory-data-table inventory-kardex-table" aria-label="Kardex de movimientos">
               <thead>
                 <tr>
-                  <th>Fecha / Hora</th>
-                  <th>Tipo</th>
-                  <th>Documento / Vale</th>
-                  <th>Artículo Despachado</th>
-                  <th style={{ textAlign: "right" }}>Cantidad</th>
-                  <th style={{ textAlign: "right" }}>Costo Unitario</th>
-                  <th style={{ textAlign: "right" }}>Costo Total</th>
-                  <th>Obra / Destino</th>
-                  <th>Responsable</th>
+                  <th className="col-date">Fecha y hora</th>
+                  <th className="col-item">Artículo</th>
+                  <th className="col-type">Tipo</th>
+                  <th className="is-numeric">Cantidad</th>
+                  <th className="is-numeric">Existencia</th>
+                  <th className="col-destination">Obra o destino</th>
+                  <th className="col-responsible">Responsable</th>
+                  <th className="col-reference">Referencia y soporte</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredMovements.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} style={{ textAlign: "center", padding: "40px 0", color: "var(--muted)" }}>
+                  <tr className="inventory-empty-row">
+                    <td colSpan={8} className="inventory-empty-cell">
                       No hay movimientos registrados con los filtros seleccionados.
                     </td>
                   </tr>
@@ -1195,46 +1256,57 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                   paginatedMovements.map((m) => {
                     const isExit = m.type === "exit" || (m.type === "adjustment" && m.quantityBefore != null && m.quantityAfter != null && m.quantityAfter < m.quantityBefore);
                     const isTransfer = m.type === "transfer";
+                    const operationLabel = m.operationKind ? movementOperationLabels[m.operationKind] ?? m.operationKind : null;
                     return (
                       <tr key={m.id}>
-                        <td>
-                          <small>{m.occurredAt}</small>
+                        <td className="cell-date" data-label="Fecha y hora">
+                          <time className="mov-date">{m.occurredAt}</time>
                         </td>
-                        <td>
-                          <span className={`mov-badge ${m.type}`}>
-                            {m.type === "entry" ? "↓ Entrada" : m.type === "exit" ? "↑ Salida" : m.type === "return" ? "↩ Devolución" : m.type === "transfer" ? "↔ Traslado" : "⚖ Ajuste"}
-                          </span>
-                        </td>
-                        <td>
-                          <strong>{m.reference}</strong>
-                          {m.operationKind && <small className="mov-notes">Origen: {m.operationKind}</small>}
-                        </td>
-                        <td>
+                        <td className="cell-item" data-label="Artículo">
                           <b>{m.productName || "Artículo"}</b>
-                          {m.notes && <small className="mov-notes">{m.notes}</small>}
                         </td>
-                        <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                          <span className={`qty-indicator ${isExit ? "neg" : "pos"}`}>
-                            {isTransfer ? "—" : `${isExit ? "-" : "+"}${m.quantity}`} {isTransfer ? "" : m.unit}
+                        <td className="cell-type" data-label="Tipo">
+                          <span className={`mov-badge ${m.type}`}>
+                            {m.type === "entry" ? "Entrada" : m.type === "exit" ? "Salida" : m.type === "return" ? "Devolución" : m.type === "transfer" ? "Traslado" : "Ajuste"}
                           </span>
                         </td>
-                        <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                          {currencyFormatter.format(m.unitCost || 0)}
+                        <td className="cell-numeric cell-quantity" data-label="Cantidad">
+                          <span className="qty-indicator">
+                            {isTransfer ? `${m.quantity} ${m.unit}` : `${isExit ? "-" : "+"}${m.quantity} ${m.unit}`}
+                          </span>
                         </td>
-                        <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                          <strong className={isExit ? "cost-exit" : "cost-entry"}>
-                            {currencyFormatter.format(m.totalCost || 0)}
-                          </strong>
+                        <td className="cell-numeric cell-balance" data-label="Existencia (antes → después)">
+                          {m.quantityBefore != null && m.quantityAfter != null ? (
+                            <span
+                              className="balance-value"
+                              aria-label={`Existencia anterior ${m.quantityBefore}; existencia posterior ${m.quantityAfter}`}
+                            >
+                              {numberFormatter.format(m.quantityBefore)}
+                              <span aria-hidden="true"> → </span>
+                              {numberFormatter.format(m.quantityAfter)}
+                            </span>
+                          ) : (
+                            <span className="balance-empty">Sin saldo histórico</span>
+                          )}
                         </td>
-                        <td>
+                        <td className="cell-destination" data-label="Obra o destino">
                           {m.projectName ? (
                             <span className="dest-tag">{m.projectName}</span>
                           ) : (
-                            <span className="dest-tag almacén">Almacén Central</span>
+                            <span className="dest-tag is-warehouse">Almacén central</span>
                           )}
                         </td>
-                        <td>
-                          <small>{m.responsible || "Personal de Almacén"}</small>
+                        <td className="cell-responsible" data-label="Responsable">
+                          <span>{m.responsible || "Personal de almacén"}</span>
+                        </td>
+                        <td className="cell-reference" data-label="Referencia, soporte y costo">
+                          <strong>{m.reference}</strong>
+                          {operationLabel && <small className="mov-notes">Origen: {operationLabel}</small>}
+                          {m.notes && <small className="mov-notes mov-notes-long" title={m.notes}>{m.notes}</small>}
+                          <small className="mov-notes mov-cost">
+                            <span>Total {currencyFormatter.format(m.totalCost || 0)}</span>
+                            <span>Unit. {currencyFormatter.format(m.unitCost || 0)}</span>
+                          </small>
                         </td>
                       </tr>
                     );
@@ -1243,29 +1315,35 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
               </tbody>
             </table>
           </div>
-          {movementTotalPages > 1 && (
-            <div className="pagination-bar">
-              <button
-                className="btn-page"
-                disabled={movementPage === 1}
-                onClick={() => setMovementPage((page) => Math.max(1, page - 1))}
-                type="button"
-              >
-                ← Anterior
-              </button>
-              <span>
-                Página <b>{movementPage}</b> de <b>{movementTotalPages}</b> · {numberFormatter.format(filteredMovements.length)} movimientos
-              </span>
-              <button
-                className="btn-page"
-                disabled={movementPage === movementTotalPages}
-                onClick={() => setMovementPage((page) => Math.min(movementTotalPages, page + 1))}
-                type="button"
-              >
-                Siguiente →
-              </button>
-            </div>
-          )}
+
+          <div className="inventory-table-footer">
+            <span className="pagination-summary">
+              Mostrando <b>{paginatedMovements.length}</b> de <b>{numberFormatter.format(filteredMovements.length)}</b> movimientos
+            </span>
+            {movementTotalPages > 1 && (
+              <div className="pagination-bar">
+                <button
+                  className="btn-page"
+                  disabled={movementPage === 1}
+                  onClick={() => setMovementPage((page) => Math.max(1, page - 1))}
+                  type="button"
+                >
+                  ← Anterior
+                </button>
+                <span>
+                  Página <b>{movementPage}</b> de <b>{movementTotalPages}</b>
+                </span>
+                <button
+                  className="btn-page"
+                  disabled={movementPage === movementTotalPages}
+                  onClick={() => setMovementPage((page) => Math.min(movementTotalPages, page + 1))}
+                  type="button"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            )}
+          </div>
         </section>
       )}
 
@@ -1286,17 +1364,18 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
             configurado.
           </p>
 
+          <p className="inventory-table-scroll-hint">Desliza horizontalmente para consultar todas las columnas.</p>
           <div className="inventory-table-container">
-            <table className="inventory-data-table">
+            <table className="inventory-data-table inventory-lowstock-table">
               <thead>
                 <tr>
                   <th>Artículo</th>
                   <th>Ubicación</th>
                   <th>Grupo</th>
-                  <th style={{ textAlign: "right" }}>Existencia Actual</th>
-                  <th style={{ textAlign: "right" }}>Mínimo Configurado</th>
-                  <th style={{ textAlign: "right" }}>Déficit / Sugerencia Compra</th>
-                  <th style={{ textAlign: "right" }}>Acción</th>
+                  <th className="is-numeric">Existencia actual</th>
+                  <th className="is-numeric">Mínimo configurado</th>
+                  <th className="is-numeric">Déficit / sugerencia de compra</th>
+                  <th className="is-actions">Acción</th>
                 </tr>
               </thead>
               <tbody>
@@ -1306,31 +1385,30 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
                     const deficit = Math.max(0, (p.minimum || 0) - p.available);
                     return (
                       <tr key={p.id}>
-                        <td>
+                        <td className="cell-item" data-label="Artículo">
                           <strong>{p.name}</strong>
                           <small>{p.category}</small>
                         </td>
-                        <td>{p.location}</td>
-                        <td>{p.inventoryGroupName}</td>
-                        <td style={{ textAlign: "right" }}>
-                          <b style={{ color: p.available === 0 ? "#b9412d" : "#c49024" }}>
+                        <td className="cell-location" data-label="Ubicación">{p.location}</td>
+                        <td className="cell-group" data-label="Grupo">{p.inventoryGroupName}</td>
+                        <td className="cell-numeric cell-stock" data-label="Existencia actual">
+                          <b className={p.available === 0 ? "stock-critical" : "stock-low"}>
                             {p.available} {p.unit}
                           </b>
                         </td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="cell-numeric cell-minimum" data-label="Mínimo configurado">
                           {p.minimum} {p.unit}
                         </td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="cell-numeric cell-deficit" data-label="Déficit / sugerencia de compra">
                           <span className="deficit-badge">Pedir mín. +{deficit + 5} {p.unit}</span>
                         </td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="cell-actions" data-label="Acción">
                           <button
-                            className="inventory-action"
+                            className="btn-row-action"
                             onClick={() => openMovementModal(p, "entry")}
-                            style={{ padding: "6px 12px", fontSize: "11px" }}
                             type="button"
                           >
-                            📥 Registrar Compra
+                            Registrar compra
                           </button>
                         </td>
                       </tr>
@@ -1372,216 +1450,250 @@ export function InventoryWorkspace({ initialProducts, dataSource = "demo", loadE
       {/* MODAL 1: REGISTRAR MOVIMIENTO CON COSTEO */}
       {/* ========================================================================= */}
       {isMovementModalOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-card">
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="movement-modal-title">
+          <div className="modal-card inventory-movement-modal">
             <div className="modal-header">
               <div>
-                <p>Operación de Almacén</p>
-                <h3>Registrar Movimiento de Inventario</h3>
+                <p>Operación de almacén</p>
+                <h3 id="movement-modal-title">Registrar movimiento</h3>
               </div>
-              <button className="btn-close-modal" onClick={() => setIsMovementModalOpen(false)} type="button">
-                ✕
+              <button className="btn-close-modal" aria-label="Cerrar" onClick={() => setIsMovementModalOpen(false)} type="button">
+                <InventoryIcon name="close" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveMovement}>
-              {/* Selector Visual de Tipo */}
-              <div className="movement-type-selector">
-                <button
-                  type="button"
-                  className={`type-option exit ${movementType === "exit" ? "selected" : ""}`}
-                  onClick={() => setMovementType("exit")}
-                >
-                  <span className="type-icon">📤</span>
-                  <strong>Salida para Obra</strong>
-                  <small>Descuenta existencias y carga costo al proyecto</small>
-                </button>
-                <button
-                  type="button"
-                  className={`type-option entry ${movementType === "entry" ? "selected" : ""}`}
-                  onClick={() => setMovementType("entry")}
-                >
-                  <span className="type-icon">📥</span>
-                  <strong>Entrada / Compra</strong>
-                  <small>Aumenta existencias de bodega</small>
-                </button>
-                <button
-                  type="button"
-                  className={`type-option return ${movementType === "return" ? "selected" : ""}`}
-                  onClick={() => setMovementType("return")}
-                >
-                  <span className="type-icon">↩️</span>
-                  <strong>Devolución a Bodega</strong>
-                  <small>Reintegra sobrantes de obra sin perder su origen</small>
-                </button>
-                <button
-                  type="button"
-                  className={`type-option adjustment ${movementType === "adjustment" ? "selected" : ""}`}
-                  onClick={() => setMovementType("adjustment")}
-                >
-                  <span className="type-icon">⚖️</span>
-                  <strong>Ajuste Físico</strong>
-                  <small>Inventario o merma</small>
-                </button>
-              </div>
+            <form className="inventory-movement-form" onSubmit={handleSaveMovement}>
+              <div className="inventory-movement-body">
+                {/* Selector compacto de tipo */}
+                <div className="movement-type-selector" role="group" aria-label="Tipo de movimiento">
+                  <button
+                    type="button"
+                    className={`type-option exit ${movementType === "exit" ? "selected" : ""}`}
+                    onClick={() => setMovementType("exit")}
+                    aria-pressed={movementType === "exit"}
+                  >
+                    <span className="type-option-radio" aria-hidden="true" />
+                    <span className="type-option-copy">
+                      <strong>Salida</strong>
+                      <small>Descuenta stock y carga costo a la obra</small>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`type-option entry ${movementType === "entry" ? "selected" : ""}`}
+                    onClick={() => setMovementType("entry")}
+                    aria-pressed={movementType === "entry"}
+                  >
+                    <span className="type-option-radio" aria-hidden="true" />
+                    <span className="type-option-copy">
+                      <strong>Entrada</strong>
+                      <small>Aumenta las existencias de bodega</small>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`type-option return ${movementType === "return" ? "selected" : ""}`}
+                    onClick={() => setMovementType("return")}
+                    aria-pressed={movementType === "return"}
+                  >
+                    <span className="type-option-radio" aria-hidden="true" />
+                    <span className="type-option-copy">
+                      <strong>Devolución</strong>
+                      <small>Reintegra sobrantes de obra</small>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`type-option adjustment ${movementType === "adjustment" ? "selected" : ""}`}
+                    onClick={() => setMovementType("adjustment")}
+                    aria-pressed={movementType === "adjustment"}
+                  >
+                    <span className="type-option-radio" aria-hidden="true" />
+                    <span className="type-option-copy">
+                      <strong>Ajuste</strong>
+                      <small>Corrige inventario o registra merma</small>
+                    </span>
+                  </button>
+                </div>
 
-              {/* Buscador Rápido de Artículo */}
-              {movementType === "adjustment" && <div className="form-group"><label>Resultado del ajuste</label><select value={adjustmentDirection} onChange={(event) => setAdjustmentDirection(event.target.value as "increase" | "decrease")}><option value="increase">Aumento de existencia</option><option value="decrease">Disminución / merma</option></select></div>}
-              <div className="form-group" style={{ position: "relative" }}>
-                <label>
-                  {movementType === "entry" ? "Artículo a ingresar" : "Artículo a mover"} <span className="req">*</span>
-                </label>
-                <div style={{ position: "relative" }}>
-                  <input
-                    placeholder="Busca por nombre, SKU o código de barras…"
-                    value={modalSearch}
-                    onFocus={() => setShowAutocomplete(true)}
-                    onBlur={() => setShowAutocomplete(false)}
-                    onChange={(e) => {
-                      setModalSearch(e.target.value);
-                      setShowAutocomplete(true);
-                    }}
-                  />
-                  {/* Sugerencias de búsqueda solo si está buscando activamente */}
-                  {showAutocomplete && (
-                    <div className="autocomplete-results">
-                      {[...products]
-                        .filter((p) => matchesInventorySearch(p, modalSearch))
-                        .sort((a, b) => spanishCollator.compare(a.name, b.name))
-                        .slice(0, 8)
-                        .map((p) => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            className="autocomplete-item"
-                            onMouseDown={(event) => event.preventDefault()}
-                            onClick={() => handleSelectProductInModal(p)}
-                          >
-                            <div>
-                              <strong>{p.name}</strong>
-                              <small>
-                                {p.inventoryGroupName} · {p.location}
-                              </small>
-                            </div>
-                            <b>
-                              Disp: {p.available} {p.unit}
-                            </b>
-                          </button>
-                        ))}
+                {movementType === "adjustment" && (
+                  <div className="form-group">
+                    <label htmlFor="movement-adjustment-direction">Resultado del ajuste</label>
+                    <select
+                      id="movement-adjustment-direction"
+                      value={adjustmentDirection}
+                      onChange={(event) => setAdjustmentDirection(event.target.value as "increase" | "decrease")}
+                    >
+                      <option value="increase">Aumento de existencia</option>
+                      <option value="decrease">Disminución / merma</option>
+                    </select>
+                  </div>
+                )}
+
+                <div className="form-group inventory-product-search-group">
+                  <label htmlFor="movement-product-search">
+                    {movementType === "entry" ? "Artículo a ingresar" : "Artículo a mover"} <span className="req">*</span>
+                  </label>
+                  <div className="inventory-product-search">
+                    <input
+                      id="movement-product-search"
+                      placeholder="Busca por nombre, SKU o código de barras…"
+                      value={modalSearch}
+                      onFocus={() => setShowAutocomplete(true)}
+                      onBlur={() => setShowAutocomplete(false)}
+                      onChange={(e) => {
+                        setModalSearch(e.target.value);
+                        setShowAutocomplete(true);
+                      }}
+                    />
+                    {showAutocomplete && (
+                      <div className="autocomplete-results">
+                        {[...products]
+                          .filter((p) => matchesInventorySearch(p, modalSearch))
+                          .sort((a, b) => spanishCollator.compare(a.name, b.name))
+                          .slice(0, 8)
+                          .map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className="autocomplete-item"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => handleSelectProductInModal(p)}
+                            >
+                              <div>
+                                <strong>{p.name}</strong>
+                                <small>
+                                  {p.inventoryGroupName} · {p.location}
+                                </small>
+                              </div>
+                              <b>
+                                Disp: {p.available} {p.unit}
+                              </b>
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                  {selectedProduct && (
+                    <div className="selected-product-preview">
+                      <span>
+                        Artículo: <b>{selectedProduct.name}</b>
+                      </span>
+                      <span>
+                        Stock actual: <b>{selectedProduct.available} {selectedProduct.unit}</b>
+                      </span>
                     </div>
                   )}
                 </div>
-                {selectedProduct && (
-                  <div className="selected-product-preview">
-                    <span>
-                      Artículo seleccionado: <b>{selectedProduct.name}</b>
-                    </span>
-                    <span>
-                      Stock actual en almacén: <b>{selectedProduct.available} {selectedProduct.unit}</b>
-                    </span>
+
+                {(movementType === "exit" || movementType === "return") && (
+                  <div className="form-group">
+                    <label htmlFor="movement-project">
+                      {movementType === "return" ? "Obra de origen (opcional)" : "Obra / proyecto de destino"} {movementType === "exit" && <span className="req">*</span>}
+                    </label>
+                    <select
+                      id="movement-project"
+                      value={selectedProjectId}
+                      onChange={(e) => setSelectedProjectId(e.target.value)}
+                      required={movementType === "exit"}
+                    >
+                      <option value="">{movementType === "return" ? "Sin obra asociada" : "Selecciona una obra activa"}</option>
+                      {[...projects].sort((a, b) => spanishCollator.compare(`${a.code} ${a.name}`, `${b.code} ${b.name}`)).map((prj) => (
+                        <option key={prj.id} value={prj.id} disabled={prj.status !== "active"}>
+                          {prj.code} - {prj.name} ({prj.status === "active" ? "Activa" : prj.status === "completed" ? "Finalizada" : "No disponible"})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
-              </div>
 
-              {/* Si es salida, seleccionar Obra / Proyecto de destino */}
-              {(movementType === "exit" || movementType === "return") && (
-                <div className="form-group">
-                  <label>
-                    {movementType === "return" ? "Obra de origen (opcional)" : "Obra / Proyecto de Destino (Centro de Costos)"} {movementType === "exit" && <span className="req">*</span>}
-                  </label>
-                  <select
-                    value={selectedProjectId}
-                    onChange={(e) => setSelectedProjectId(e.target.value)}
-                    required={movementType === "exit"}
-                  >
-                    <option value="">{movementType === "return" ? "Sin obra asociada" : "Selecciona una obra activa"}</option>
-                    {[...projects].sort((a, b) => spanishCollator.compare(`${a.code} ${a.name}`, `${b.code} ${b.name}`)).map((prj) => (
-                      <option key={prj.id} value={prj.id} disabled={prj.status !== "active"}>
-                        {prj.code} - {prj.name} ({prj.status === "active" ? "Activa" : prj.status === "completed" ? "Finalizada" : "No disponible"})
-                      </option>
-                    ))}
-                  </select>
+                <div className="form-grid-2">
+                  <div className="form-group">
+                    <label htmlFor="movement-quantity">
+                      Cantidad ({selectedProduct?.unit || "unidad"}) <span className="req">*</span>
+                    </label>
+                    <input
+                      id="movement-quantity"
+                      type="number"
+                      min="1"
+                      step="any"
+                      value={quantityInput}
+                      onChange={(e) => setQuantityInput(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="movement-unit-cost">Costo unitario (COP)</label>
+                    <CurrencyInput
+                      id="movement-unit-cost"
+                      value={unitCostInput}
+                      onValueChange={setUnitCostInput}
+                      placeholder="Vacío si aún no se conoce"
+                    />
+                    <small>Si se deja vacío, la base conserva el costo actual o lo deja pendiente; no inventa un valor.</small>
+                  </div>
                 </div>
-              )}
 
-              {/* Cantidad y Costo Unitario */}
-              <div className="form-grid-2">
+                <div className="total-cost-banner">
+                  <span>{movementType === "exit" ? "Costo total del despacho" : "Valor total del movimiento"}</span>
+                  <strong>
+                    {currencyFormatter.format((Number(quantityInput) || 0) * (unitCostInput.trim() === "" ? (selectedProduct?.unitCost ?? 0) : (Number(unitCostInput) || 0)))}
+                  </strong>
+                </div>
+
+                <div className="form-grid-2">
+                  <div className="form-group">
+                    <label htmlFor="movement-reference">
+                      N.º vale / remisión / factura <span className="req">*</span>
+                    </label>
+                    <input
+                      id="movement-reference"
+                      placeholder="Ej. VALE-2026-04 o FACT-904"
+                      value={referenceInput}
+                      onChange={(e) => setReferenceInput(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="movement-responsible">Responsable / quien recibe</label>
+                    <input
+                      id="movement-responsible"
+                      placeholder="Ej. Carlos Restrepo (maestro)"
+                      value={responsibleInput}
+                      onChange={(e) => setResponsibleInput(e.target.value)}
+                    />
+                  </div>
+                </div>
+
                 <div className="form-group">
-                  <label>
-                    Cantidad ({selectedProduct?.unit || "unidad"}) <span className="req">*</span>
-                  </label>
+                  <label htmlFor="movement-notes">Notas u observaciones</label>
                   <input
-                    type="number"
-                    min="1"
-                    step="any"
-                    value={quantityInput}
-                    onChange={(e) => setQuantityInput(e.target.value)}
-                    required
+                    id="movement-notes"
+                    placeholder="Ej. Material para armado de zapatas bloque B"
+                    value={notesInput}
+                    onChange={(e) => setNotesInput(e.target.value)}
                   />
                 </div>
 
-                <div className="form-group">
-                  <label>
-                    Costo Unitario ($ COP)
-                  </label>
-                  <CurrencyInput
-                    value={unitCostInput}
-                    onValueChange={setUnitCostInput}
-                    placeholder="Vacío si aún no se conoce"
-                  />
-                  <small>Si se deja vacío, la base conserva el costo actual o lo deja pendiente; no inventa un valor.</small>
-                </div>
+                {formError && <p className="modal-form-error" role="alert">{formError}</p>}
               </div>
 
-              {/* Resumen del Costo Total Calculado */}
-              <div className="total-cost-banner">
-                <span>{movementType === "exit" ? "Costo total del despacho:" : "Valor total del movimiento:"}</span>
-                <strong>
-                  {currencyFormatter.format((Number(quantityInput) || 0) * (unitCostInput.trim() === "" ? (selectedProduct?.unitCost ?? 0) : (Number(unitCostInput) || 0)))} COP
-                </strong>
-              </div>
-
-              {/* Documento de Referencia y Responsable */}
-              <div className="form-grid-2">
-                <div className="form-group">
-                  <label>
-                    N° Vale / Remisión / Factura <span className="req">*</span>
-                  </label>
-                  <input
-                    placeholder="Ej. VALE-2026-04 o FACT-904"
-                    value={referenceInput}
-                    onChange={(e) => setReferenceInput(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Responsable / Quien recibe</label>
-                  <input
-                    placeholder="Ej. Carlos Restrepo (Maestro)"
-                    value={responsibleInput}
-                    onChange={(e) => setResponsibleInput(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Notas u observaciones adicionales</label>
-                <input
-                  placeholder="Ej. Material para armado de zapatas bloque B"
-                  value={notesInput}
-                  onChange={(e) => setNotesInput(e.target.value)}
-                />
-              </div>
-
-              {formError && <p className="modal-form-error">{formError}</p>}
-
-              <div className="modal-actions">
+              <div className="modal-actions inventory-movement-actions">
                 <button className="btn-cancel" onClick={() => setIsMovementModalOpen(false)} type="button" disabled={isSavingMovement}>
                   Cancelar
                 </button>
-                <button className="inventory-action" type="submit" disabled={isSavingMovement}>
-                  {isSavingMovement ? "Registrando…" : "Confirmar y Registrar Movimiento"}
+                <button className="inventory-action" type="submit" disabled={isSavingMovement} aria-busy={isSavingMovement}>
+                  {isSavingMovement
+                    ? "Registrando…"
+                    : movementType === "entry"
+                      ? "Registrar entrada"
+                      : movementType === "exit"
+                        ? "Registrar salida"
+                        : movementType === "return"
+                          ? "Registrar devolución"
+                          : "Registrar ajuste"}
                 </button>
               </div>
             </form>

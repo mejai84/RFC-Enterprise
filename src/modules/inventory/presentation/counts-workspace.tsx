@@ -561,6 +561,16 @@ export function CountsWorkspace() {
           ) : null}
           {session ? (
             <button
+              className="btn-cancel"
+              type="button"
+              onClick={() => void loadSession(session)}
+              disabled={isSaving}
+            >
+              Actualizar
+            </button>
+          ) : null}
+          {session ? (
+            <button
               className="inventory-action"
               type="button"
               disabled={isSaving || !hasLoaded || !!loadError || lines.length === 0 || pendingLines > 0 || !canApprove}

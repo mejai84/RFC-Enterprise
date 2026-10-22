@@ -135,6 +135,7 @@ export function CountsWorkspace() {
   const [totalLines, setTotalLines] = useState(0);
   const [canApprove, setCanApprove] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [openModal, setOpenModal] = useState(false);
   const [reason, setReason] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
@@ -272,6 +273,14 @@ export function CountsWorkspace() {
   useEffect(() => {
     void loadWorkspace();
   }, []);
+
+  useEffect(() => {
+    if (!autoRefresh || !session) return;
+    const timer = window.setInterval(() => {
+      void loadSession(session);
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, [autoRefresh, session]);
 
   useEffect(() => {
     const onEscape = (event: KeyboardEvent) => {
@@ -649,6 +658,16 @@ export function CountsWorkspace() {
               <small className="panel-intro">
                 Diferencias encontradas: {differences.length}
               </small>
+            ) : null}
+            {session ? (
+              <label className="panel-intro">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(event) => setAutoRefresh(event.target.checked)}
+                />{" "}
+                Actualización automática cada 30 s
+              </label>
             ) : null}
           </>
         ) : (

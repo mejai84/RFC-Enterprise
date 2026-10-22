@@ -17,6 +17,7 @@ import {
   useMemo,
   useCallback,
   useEffect,
+  useRef,
   type FormEvent,
 } from "react";
 import Link from "next/link";
@@ -355,11 +356,21 @@ export function QuotesWorkspace({ initialQuotes }: { initialQuotes: Quote[] }) {
     return () => { active = false; };
   }, []);
 
+  // Guardado dirigido: solo persiste las cotizaciones que cambiaron respecto al
+  // último estado confirmado, en lugar de reescribir la colección completa.
+  const lastSavedQuotesRef = useRef<Quote[]>([]);
   useEffect(() => {
     if (!companyId || !isRemoteReady) return;
-    void Promise.all(quotes.map((quote) => saveQuote(companyId, quote))).catch((error) => {
-      setActionNotice(error instanceof Error ? `No se guardaron los cambios: ${error.message}` : "No se guardaron los cambios en la base de datos.");
+    const changed = quotes.filter((quote) => {
+      const previous = lastSavedQuotesRef.current.find((q) => q.id === quote.id);
+      return !previous || JSON.stringify(previous) !== JSON.stringify(quote);
     });
+    if (changed.length === 0) return;
+    void Promise.all(changed.map((quote) => saveQuote(companyId, quote)))
+      .then(() => { lastSavedQuotesRef.current = quotes; })
+      .catch((error) => {
+        setActionNotice(error instanceof Error ? `No se guardaron los cambios: ${error.message}` : "No se guardaron los cambios en la base de datos.");
+      });
   }, [companyId, isRemoteReady, quotes]);
 
   /* ── Resumen ────────────────────────────────────────────── */

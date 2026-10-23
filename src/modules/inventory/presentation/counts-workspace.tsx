@@ -7,7 +7,6 @@ import {
   supabasePublishableKey,
   supabaseUrl,
 } from "@/lib/supabase/config";
-import { loadAllPages } from "@/shared/supabase/load-all";
 
 type Branch = { branch_id: string; branch_name: string; company_id: string };
 type CountSession = {
@@ -32,6 +31,7 @@ type CountLine = {
   counted_by: string | null;
   counted_by_name: string | null;
   counted_at: string | null;
+  item_data: ItemData | null;
   inventory_stock: {
     location: string | null;
     inventory_items: {
@@ -41,6 +41,29 @@ type CountLine = {
       unit: string | null;
     } | null;
   } | null;
+};
+type ItemData = {
+  sku: string;
+  name: string;
+  category: string;
+  brand: string;
+  unit: string;
+  technical_reference: string;
+  model: string;
+  serial_number: string;
+  asset_condition: string;
+  purchase_unit: string;
+  units_per_purchase: string;
+  purchase_unit_cost: string;
+  minimum_quantity: string;
+  reorder_quantity: string;
+};
+type CountLinePageRow = {
+  id: string; stock_id: string; system_quantity: number; counted_quantity: number | null;
+  counted_location: string | null; unit_cost: number | null; notes: string | null;
+  counted_by: string | null; counted_by_name: string | null; counted_at: string | null;
+  item_data: ItemData | null; location: string | null; sku: string | null; name: string;
+  category: string | null; unit: string | null; total_count: number;
 };
 type NewItem = {
   id: string;
@@ -62,6 +85,7 @@ type LineDraft = {
   location: string;
   cost: string;
   notes: string;
+  item: ItemData;
 };
 type NewItemDraft = {
   sku: string;
@@ -95,8 +119,26 @@ function numberOrNull(value: string) {
 }
 
 function csvCell(value: string | number | null | undefined) {
-  const text = value === null || value === undefined ? "" : String(value);
+  const raw = value === null || value === undefined ? "" : String(value);
+  const text = /^[=+\-@]/.test(raw) ? `'${raw}` : raw;
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function textValue(value: unknown) {
+  return value === null || value === undefined ? "" : String(value);
+}
+
+function itemDataFromLine(line: CountLine): ItemData {
+  const item = line.inventory_stock?.inventory_items;
+  const data = line.item_data ?? ({} as ItemData);
+  return {
+    sku: textValue(data.sku || item?.sku), name: textValue(data.name || item?.name),
+    category: textValue(data.category || item?.category), brand: textValue(data.brand),
+    unit: textValue(data.unit || item?.unit || "unidad"), technical_reference: textValue(data.technical_reference),
+    model: textValue(data.model), serial_number: textValue(data.serial_number), asset_condition: textValue(data.asset_condition),
+    purchase_unit: textValue(data.purchase_unit), units_per_purchase: textValue(data.units_per_purchase),
+    purchase_unit_cost: textValue(data.purchase_unit_cost), minimum_quantity: textValue(data.minimum_quantity), reorder_quantity: textValue(data.reorder_quantity),
+  };
 }
 
 function countMessage(message: string) {
@@ -195,7 +237,7 @@ export function CountsWorkspace() {
       setHasLoaded(false);
       return;
     }
-    const rows = (pageResult.data ?? []) as Array<any>;
+    const rows = (pageResult.data ?? []) as CountLinePageRow[];
     const normalizedLines = rows.map((row) => ({
       id: row.id,
       stock_id: row.stock_id,
@@ -207,6 +249,7 @@ export function CountsWorkspace() {
       counted_by: row.counted_by,
       counted_by_name: row.counted_by_name,
       counted_at: row.counted_at,
+      item_data: row.item_data ?? null,
       inventory_stock: {
         location: row.location,
         inventory_items: {
@@ -275,13 +318,17 @@ export function CountsWorkspace() {
     setIsLoading(false);
   }
 
+  // La carga se difiere para no disparar actualizaciones de estado durante el montaje.
   useEffect(() => {
-    void loadWorkspace();
-  }, []);
+    const timer = window.setTimeout(() => void loadWorkspace(), 0);
+    return () => window.clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (session) void loadSession(session);
-  }, [page, query]);
+    if (!session) return;
+    const timer = window.setTimeout(() => void loadSession(session), 0);
+    return () => window.clearTimeout(timer);
+  }, [page, query, session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!autoRefresh || !session) return;
@@ -289,7 +336,7 @@ export function CountsWorkspace() {
       void loadSession(session);
     }, 30000);
     return () => window.clearInterval(timer);
-  }, [autoRefresh, session]);
+  }, [autoRefresh, session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const supabase = client();
@@ -314,7 +361,7 @@ export function CountsWorkspace() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [session]);
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onEscape = (event: KeyboardEvent) => {
@@ -415,6 +462,7 @@ export function CountsWorkspace() {
       location: line.counted_location ?? line.inventory_stock?.location ?? "",
       cost: line.unit_cost?.toString() ?? "",
       notes: line.notes ?? "",
+    item: itemDataFromLine(line),
     });
   }
 
@@ -441,6 +489,7 @@ export function CountsWorkspace() {
       p_counted_location: lineDraft.location || null,
       p_unit_cost: cost,
       p_notes: lineDraft.notes || null,
+    p_item_data: lineDraft.item,
     });
     setIsSaving(false);
     if (error) {
@@ -532,7 +581,7 @@ export function CountsWorkspace() {
         p_page: currentPage,
         p_page_size: 1000,
       });
-      const rows = (data ?? []) as any[];
+      const rows = (data ?? []) as CountLinePageRow[];
       allLines.push(
         ...rows.map((row) => ({
           id: row.id,
@@ -545,7 +594,8 @@ export function CountsWorkspace() {
           counted_by: row.counted_by,
           counted_by_name: row.counted_by_name,
           counted_at: row.counted_at,
-          inventory_stock: {
+          item_data: row.item_data ?? null,
+      inventory_stock: {
             location: row.location,
             inventory_items: {
               sku: row.sku,
@@ -1068,7 +1118,7 @@ export function CountsWorkspace() {
           aria-modal="true"
           aria-labelledby="count-line-title"
         >
-          <div className="modal-card small">
+          <div className="modal-card article-detail-modal count-line-modal">
             <div className="modal-header">
               <div>
                 <p>Conteo físico</p>
@@ -1141,6 +1191,24 @@ export function CountsWorkspace() {
                 />
               </label>
             </div>
+            <section className="count-form-section" aria-labelledby="count-article-details">
+              <h4 id="count-article-details">Ficha del artículo</h4>
+              <p className="panel-intro">Puedes corregir estos datos durante el conteo. Se revisarán y aplicarán únicamente al conciliar la jornada.</p>
+              <div className="form-grid-2">
+                <label className="form-group" htmlFor="count-sku">SKU o código<input id="count-sku" value={lineDraft.item.sku} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, sku: event.target.value } })} /></label>
+                <label className="form-group" htmlFor="count-name">Nombre del artículo<input id="count-name" value={lineDraft.item.name} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, name: event.target.value } })} /></label>
+                <label className="form-group" htmlFor="count-category">Categoría<input id="count-category" value={lineDraft.item.category} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, category: event.target.value } })} /></label>
+                <label className="form-group" htmlFor="count-brand">Marca<input id="count-brand" value={lineDraft.item.brand} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, brand: event.target.value } })} /></label>
+                <label className="form-group" htmlFor="count-unit">Unidad<input id="count-unit" value={lineDraft.item.unit} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, unit: event.target.value } })} /></label>
+                <label className="form-group" htmlFor="count-condition">Estado del activo<input id="count-condition" value={lineDraft.item.asset_condition} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, asset_condition: event.target.value } })} placeholder="Ej.: bueno, para reparar" /></label>
+                <label className="form-group" htmlFor="count-reference">Referencia técnica<input id="count-reference" value={lineDraft.item.technical_reference} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, technical_reference: event.target.value } })} /></label>
+                <label className="form-group" htmlFor="count-model">Modelo<input id="count-model" value={lineDraft.item.model} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, model: event.target.value } })} /></label>
+                <label className="form-group" htmlFor="count-serial">Número de serie<input id="count-serial" value={lineDraft.item.serial_number} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, serial_number: event.target.value } })} /></label>
+                <label className="form-group" htmlFor="count-minimum">Stock mínimo<input id="count-minimum" type="number" min="0" value={lineDraft.item.minimum_quantity} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, minimum_quantity: event.target.value } })} /></label>
+                <label className="form-group" htmlFor="count-reorder">Punto de reposición<input id="count-reorder" type="number" min="0" value={lineDraft.item.reorder_quantity} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, reorder_quantity: event.target.value } })} /></label>
+                <label className="form-group" htmlFor="count-purchase-unit">Unidad de compra<input id="count-purchase-unit" value={lineDraft.item.purchase_unit} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, purchase_unit: event.target.value } })} /></label>
+              </div>
+            </section>
             <div className="modal-actions">
               <button
                 className="btn-cancel"

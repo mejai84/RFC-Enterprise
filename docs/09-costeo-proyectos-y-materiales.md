@@ -372,3 +372,4 @@ La reestructuración de Personal, Mi cuenta y Configuración no modifica fórmulas,
 - Los avatares laborales son elementos visuales de interfaz; no intervienen en costos, firmas ni cÃ¡lculos de proyecto.
 
 <!-- Registro 2026-10-23: la firma manuscrita personal del empleado es evidencia operativa para confirmaciones autorizadas; no participa en cÃ¡lculos de costo, precio, APU, presupuesto ni rentabilidad. -->
+- Inventario inicial: las existencias positivas requieren costo unitario real confirmado; costo cero no equivale a valoraciÃ³n confirmada.

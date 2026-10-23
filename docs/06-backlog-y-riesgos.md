@@ -260,3 +260,4 @@ Un empleado sin teléfono o que olvidó el suyo puede pedir a un compañero auto
 - **AVATAR-002:** aplicar la migración de colección visual antes de habilitar el selector en producción; la opción elegida se guarda como clave técnica, no como atributo de identidad.
 
 | SEC-018 | Firma manuscrita de empleado | Alto | Media | La firma personal se conserva para confirmaciones operativas autorizadas en un registro privado, mediante RPC del empleado autenticado, con validación de PNG y límite de 800 KB. Pendiente aplicar la migración y realizar una prueba controlada de RLS en Supabase; no debe usarse para inicio de sesión, identificación formal ni decisiones automatizadas. | Desarrollo / Operación |
+- Riesgo controlado: no aplicar la migración de conteos sobre la jornada abierta hasta validar SQL y permisos efectivos contra Supabase.

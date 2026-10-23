@@ -404,3 +404,4 @@ Cuando un empleado no tiene teléfono propio o lo olvidó, otro compañero autor
 ### Firma manuscrita personal en Mi cuenta (2026-10-23)
 
 El empleado autenticado puede registrar y reemplazar su firma manuscrita desde `/perfil`. Se utiliza únicamente en confirmaciones operativas autorizadas y no sustituye la autenticación, la identificación formal ni las firmas institucionales. La persistencia se limita a un registro privado vinculado al empleado activo de la sesión y valida PNG en formato data URL hasta 800 KB antes de guardar.
+- Conteos físicos: ficha de artículo propuesta durante el conteo, valoración inicial obligatoria para existencias positivas y lectura paginada segura; pendiente validación SQL controlada antes de aplicar en producción.

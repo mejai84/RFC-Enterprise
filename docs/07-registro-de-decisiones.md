@@ -1044,3 +1044,4 @@ Administración selecciona una de seis colecciones visuales al crear la ficha; j
 **Decisión.** La firma manuscrita se captura voluntariamente en `/perfil` y se almacena únicamente en un registro privado vinculado al empleado activo asociado a `auth.uid()`. La RPC `save_my_signature` valida una imagen PNG data URL de hasta 800 KB; solo permite registrar o reemplazar la propia firma. La firma se reutiliza únicamente como evidencia en confirmaciones operativas expresamente autorizadas.
 
 **Consecuencias.** No sirve para iniciar sesión, autorizar cambios de acceso ni reemplazar identificación formal. La migración debe aplicarse y verificarse bajo RLS antes de habilitarla en producción.
+- ADR: las correcciones de ficha hechas durante un conteo son propuestas auditables; no alteran inventario oficial antes de una conciliación autorizada.

@@ -1615,3 +1615,9 @@
     grid-column: 1 / -1;
   }
 }
+
+
+.count-line-modal { max-height: min(88vh, 860px); overflow-y: auto; }
+.count-line-modal .count-form-section { border-top: 1px solid var(--border, #dbe7df); margin-top: 1rem; padding-top: 1rem; }
+.count-line-modal .count-form-section h4 { margin: 0 0 .7rem; font-size: .86rem; letter-spacing: .04em; text-transform: uppercase; color: var(--forest, #174b32); }
+.count-line-modal textarea { min-height: 72px; resize: vertical; }

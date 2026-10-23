@@ -10,7 +10,6 @@ import {
   BRANDING_BUCKET,
   brandingPath,
   brandingUrl,
-  saveCompanyProfile,
   saveCompanySettings,
   useCompanyConfig,
   type CompanyBranding,
@@ -94,7 +93,7 @@ export function SettingsWorkspace() {
     setSaveError("");
     try {
       const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
-      const path = brandingPath(config.companyId, file.name);
+      const path = brandingPath(file.name);
       const { error: uploadError } = await supabase.storage
         .from(BRANDING_BUCKET)
         .upload(path, file, { contentType: file.type, upsert: true });
@@ -154,15 +153,17 @@ export function SettingsWorkspace() {
     setNotice("");
     setSaveError("");
     try {
-      await saveCompanyProfile(
-        config.companyId,
-        { name: company.legalName, taxId: company.taxId },
-        [
-          { key: "identity", value: { ...config.identity, address: company.address } },
-          { key: "payroll", value: { period: company.payrollPeriod, hours: company.standardHours } },
-          { key: "printing", value: { paper: company.paper, copies: company.copies } },
-        ],
-      );
+      const supabase = createBrowserClient(supabaseUrl!, supabasePublishableKey!);
+      await saveCompanySettings(config.companyId, [
+        { key: "identity", value: { ...config!.identity, address: company.address } },
+        { key: "payroll", value: { period: company.payrollPeriod, hours: company.standardHours } },
+        { key: "printing", value: { paper: company.paper, copies: company.copies } },
+      ]);
+      const { error: companyError } = await supabase
+        .from("companies")
+        .update({ name: company.legalName, tax_id: company.taxId || null })
+        .eq("id", config.companyId);
+      if (companyError) throw companyError;
       await refresh();
       setNotice("Datos de empresa, nómina y preferencias guardados exitosamente.");
     } catch (cause) {

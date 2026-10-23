@@ -258,6 +258,16 @@ export function WorkCheckInWorkspace() {
           {fieldErrors.activityDescription ? <span className="attendance-field-error">{fieldErrors.activityDescription}</span> : null}
         </label>
 
+        <button className="attendance-submit" disabled={disabled} type="submit">
+          {isSaving
+            ? "Guardando…"
+            : hasOpenWorkday
+              ? `Registrar ${segmentActionLabels[segmentType]}`
+              : hasClosedWorkday
+                ? "Jornada finalizada"
+                : "Registrar entrada"}
+        </button>
+
         <div className="attendance-location">
           <div className="attendance-location-head"><span className="attendance-location-title">Ubicación <span className="attendance-optional">Opcional</span></span>{location ? <button className="attendance-location-clear" onClick={() => setLocation(undefined)} type="button">Quitar</button> : null}</div>
           <p className="attendance-field-help">{locationMessage} No se activa en segundo plano.</p>
@@ -280,15 +290,6 @@ export function WorkCheckInWorkspace() {
           </div>
         </div>
 
-        <button className="attendance-submit" disabled={disabled} type="submit">
-          {isSaving
-            ? "Guardando…"
-            : hasOpenWorkday
-              ? `Registrar ${segmentActionLabels[segmentType]}`
-              : hasClosedWorkday
-                ? "Jornada finalizada"
-                : "Registrar entrada"}
-        </button>
         {hasOpenWorkday ? (
           <button className="attendance-finish" disabled={disabled} onClick={() => setShowCloseSummary(true)} type="button">
             Registrar salida y finalizar jornada

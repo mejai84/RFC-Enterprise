@@ -5,9 +5,19 @@ import { createBrowserClient } from "@supabase/ssr";
 import { corePermissions } from "@/core/permissions";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import { avatarStyleOptions, defaultAvatarStyle, type AvatarStyle } from "../avatar";
+import { EmployeeAvatar } from "./employee-avatar";
 
 type DatabaseRole = { id: string; code: string; name: string };
 type DatabasePermission = { id: string; code: string; description: string };
+function allowedRoleCodesForJobTitle(jobTitle: string): string[] {
+  const title = jobTitle.toLocaleLowerCase("es-CO");
+  if (/(soldador|pailero|tubero|electricista|instrumentista|mec[aá]nico|pintor|andamiero|alba[nñ]il|obrero|ayudante|operador|marinero|buzo)/.test(title)) return ["field_worker", "welder"];
+  if (/(almacen|bodeg)/.test(title)) return ["warehouse_operator", "warehouse_lead", "inventory_manager", "inventory_viewer"];
+  if (/(maestro|capataz)/.test(title)) return ["foreman"];
+  if (/(ingeniero|residente|supervisor)/.test(title)) return ["resident_engineer", "foreman"];
+  if (/(administrador|gerente|gerencial|contador|auditor|administrativ)/.test(title)) return ["administrator", "management", "administrative_assistant"];
+  return ["field_worker"];
+}
 type Employee = {
   id: string;
   name: string;
@@ -797,12 +807,15 @@ export function EmployeesWorkspace() {
             <section className="dashboard-panel employee-permissions" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {/* Encabezado del empleado seleccionado */}
               <div className="panel-title" style={{ borderBottom: "1px solid var(--color-border, #e2e8f0)", paddingBottom: "12px", alignItems: "center" }}>
-                <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <EmployeeAvatar name={selected.name} jobTitle={selected.title} path={selected.avatarPath} avatarStyle={selected.avatarStyle} size={56} />
+                  <div>
                   <p>Persona seleccionada</p>
                   <h2>{selected.name}</h2>
                   <small style={{ color: "var(--color-text-muted, #64748b)" }}>
                     {selected.title} · {selected.email}
                   </small>
+                  </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span
@@ -1085,7 +1098,7 @@ export function EmployeesWorkspace() {
                       onChange={(event) => void changeRole(event.target.value)}
                     >
                       {!selected.roleId && <option value="">— Selecciona un rol base —</option>}
-                      {roles.map((r) => (
+                      {roles.filter((role) => allowedRoleCodesForJobTitle(selected.title).includes(role.code)).map((r) => (
                         <option key={r.id} value={r.id}>
                           {r.name}
                         </option>
@@ -1308,12 +1321,7 @@ export function EmployeesWorkspace() {
                 required
               />
             </label>
-            <label className="emp-modal-label">
-              <span>Estilo del avatar</span>
-              <select className="emp-modal-input" value={editAvatarStyle} onChange={(e) => setEditAvatarStyle(e.target.value as AvatarStyle)}>
-                {avatarStyleOptions.map((style) => <option key={style.key} value={style.key}>{style.label}</option>)}
-              </select>
-            </label>            <div className="emp-modal-actions">
+                        <div className="emp-modal-actions">
               <button className="emp-btn emp-btn--outline" type="button" onClick={() => setShowEditModal(false)}>
                 Cancelar
               </button>
@@ -1365,12 +1373,7 @@ export function EmployeesWorkspace() {
                 placeholder="Repite la contraseña"
               />
             </label>
-            <label className="emp-modal-label">
-              <span>Estilo del avatar</span>
-              <select className="emp-modal-input" value={editAvatarStyle} onChange={(e) => setEditAvatarStyle(e.target.value as AvatarStyle)}>
-                {avatarStyleOptions.map((style) => <option key={style.key} value={style.key}>{style.label}</option>)}
-              </select>
-            </label>            <div className="emp-modal-actions">
+                        <div className="emp-modal-actions">
               <button className="emp-btn emp-btn--outline" type="button" onClick={() => setShowPasswordModal(false)}>
                 Cancelar
               </button>
@@ -1421,7 +1424,7 @@ export function EmployeesWorkspace() {
                 <input
                   className="emp-modal-input"
                   value={newEmpTitle}
-                  onChange={(e) => setNewEmpTitle(e.target.value)}
+                  onChange={(e) => { const title = e.target.value; setNewEmpTitle(title); const value = title.toLocaleLowerCase("es-CO"); const code = /soldador/.test(value) ? "welder" : /(almacen|bodeg)/.test(value) ? "warehouse_operator" : /(maestro|capataz)/.test(value) ? "foreman" : /(ingeniero|residente|supervisor)/.test(value) ? "resident_engineer" : "field_worker"; const allowed = allowedRoleCodesForJobTitle(title); const suggested = roles.find((role) => role.code === code && allowed.includes(role.code)) ?? roles.find((role) => allowed.includes(role.code)); if (suggested) setNewEmpRole(suggested.id); }}
                   required
                   minLength={2}
                   placeholder="Escribe o selecciona un cargo"
@@ -1429,18 +1432,7 @@ export function EmployeesWorkspace() {
                 />
                 <datalist id="labor-position-options">{laborPositions.map((position) => <option key={position} value={position} />)}</datalist>
               </label>
-              <label className="emp-modal-label">
-                <span>Estilo inicial del avatar</span>
-                <select
-                  className="emp-modal-input"
-                  value={newEmpAvatarStyle}
-                  onChange={(e) => setNewEmpAvatarStyle(e.target.value as AvatarStyle)}
-                >
-                  {avatarStyleOptions.map((style) => (
-                    <option key={style.key} value={style.key}>{style.label}</option>
-                  ))}
-                </select>
-              </label>              <label className="emp-modal-label">
+                            <label className="emp-modal-label">
                 <span>Rol base de sistema</span>
                 <select
                   className="emp-modal-input"
@@ -1449,7 +1441,7 @@ export function EmployeesWorkspace() {
                   required
                 >
                   <option value="">Selecciona un rol base</option>
-                  {roles.map((r) => (
+                  {roles.filter((role) => allowedRoleCodesForJobTitle(selected.title).includes(role.code)).map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name}
                     </option>
@@ -1457,12 +1449,7 @@ export function EmployeesWorkspace() {
                 </select>
               </label>
             </div>
-            <label className="emp-modal-label">
-              <span>Estilo del avatar</span>
-              <select className="emp-modal-input" value={editAvatarStyle} onChange={(e) => setEditAvatarStyle(e.target.value as AvatarStyle)}>
-                {avatarStyleOptions.map((style) => <option key={style.key} value={style.key}>{style.label}</option>)}
-              </select>
-            </label>            <div className="emp-modal-actions">
+                        <div className="emp-modal-actions">
               <button className="emp-btn emp-btn--outline" type="button" onClick={() => setShowNewEmployeeModal(false)}>
                 Cancelar
               </button>

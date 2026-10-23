@@ -20,6 +20,10 @@ export const corePermissions = [
   { code: "apu.view", description: "Consultar análisis de precios unitarios.", module: "apu" },
   { code: "apu.manage", description: "Crear y editar APUs y sus recursos.", module: "apu" },
 
+  // Asistencia / Jornada
+  { code: "attendance.self.record", description: "Registrar mi jornada, tramos y salida propios.", module: "attendance" },
+  { code: "attendance.team.view", description: "Consultar jornadas del equipo autorizado.", module: "attendance" },
+
   // Inventarios / Almacén
   { code: "inventory.catalog.view", description: "Consultar catálogo y niveles de stock.", module: "inventory" },
   { code: "inventory.stock.manage", description: "Ajustar existencias y stocks mínimos.", module: "inventory" },
@@ -27,6 +31,7 @@ export const corePermissions = [
   { code: "inventory.return.create", description: "Registrar devolución y reintegro de sobrantes de obra.", module: "inventory" },
   { code: "inventory.tools.manage", description: "Registrar préstamos y custodias de herramientas.", module: "inventory" },
   { code: "inventory.kardex.view", description: "Consultar historial completo del Kardex valorizado.", module: "inventory" },
+  { code: "inventory.count.approve", description: "Conciliar y cerrar la jornada de conteo físico.", module: "inventory" },
 ] as const satisfies readonly Permission[];
 
 export type PermissionCode = (typeof corePermissions)[number]["code"];

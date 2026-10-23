@@ -385,4 +385,22 @@ Acuerdo del 2026-10-22 (ADR-176). Extensión del Portal del Colaborador para dig
   - Una vez aprobada, la solicitud pasa a la bandeja de Bodega para emisión del vale de salida o generación de orden de compra si no hay stock disponible.
 - **Punto de acceso previsto:** Pestaña *«Mis solicitudes»* dentro de **Mi cuenta** (`/perfil`) y vista adaptada para dispositivos móviles.
 
+### Endurecimiento P0 de Personal, Mi cuenta y Configuración (2026-10-23)
 
+Se eliminaron los fallbacks directos del navegador en `employees-workspace.tsx`: crear empleado, cambiar rol y activar/desactivar ahora dependen exclusivamente de las RPC atómicas. Las excepciones individuales de permisos pasan por `admin_set_employee_permission_override`. La configuración empresarial usa `save_company_settings` y `save_company_profile` con autorización por empresa y auditoría. La ruta de `company-branding` incorpora el id de la empresa y las políticas de Storage se limitan a administradores de esa empresa. La migración `20261023010000_admin_fix_security.sql` queda pendiente de aplicar y validar en Supabase.
+
+### Fotografía o avatar por perfil (idea 2026-10-23)
+
+Cada empleado puede subir su propia fotografía; si no lo hace, el sistema muestra un avatar por defecto asociado a su cargo (por ejemplo, una figura de soldador para un soldador). La foto se guarda en un bucket privado por empresa y empleado, con URL firmada y consentimiento explícito. El avatar por defecto es solo una ilustración de interfaz: no reemplaza la identificación formal ni la firma digital.
+
+### Registro asistido por un compañero (idea 2026-10-23)
+
+Cuando un empleado no tiene teléfono propio o lo olvidó, otro compañero autorizado puede registrar su jornada, conteo o actividad en su nombre desde el mismo dispositivo. La operación debe quedar registrada con dos identidades: quién digitó (`performed_by`) y a nombre de quién se hizo (`on_behalf_of`). No se implementa todavía; queda como extensión del Portal del Colaborador y de los flujos operativos con trazabilidad y confirmación posterior del titular o del supervisor.
+
+
+
+- **Avatar laboral (2026-10-23):** al crear un empleado, Administración elige una colección visual inicial; el oficio se resuelve por job_title. Por ahora se muestra únicamente en Mi cuenta y en el reporte de actividades.
+
+### Firma manuscrita personal en Mi cuenta (2026-10-23)
+
+El empleado autenticado puede registrar y reemplazar su firma manuscrita desde `/perfil`. Se utiliza únicamente en confirmaciones operativas autorizadas y no sustituye la autenticación, la identificación formal ni las firmas institucionales. La persistencia se limita a un registro privado vinculado al empleado activo de la sesión y valida PNG en formato data URL hasta 800 KB antes de guardar.

@@ -150,3 +150,25 @@ audiencia: DirecciÃ³n, Desarrollo, Seguridad y OperaciÃ³n
 | **10** | Se consulta una tabla salarial histÃ³rica sin modificar cotizaciones anteriores. | Aislamiento de registros en `labor_rate_tables` por versiÃ³n y vigencia. | Aislado. Las cotizaciones cerradas conservan sus snapshots de costos inalterados. | âœ… Superada |
 | **11** | Se prueban los tres mÃ³dulos en mÃ³vil, tableta y escritorio. | Layouts fluidos con flex-wrap, grid auto-fit y sidebars colapsables. | Responsive. En pantallas angostas el directorio y las categorÃ­as se apilan sin desbordamiento horizontal. | âœ… Superada |
 | **12** | Se verifican estados de carga, error, vacÃ­o y permisos insuficientes. | Manejo explÃ­cito de `isLoading`, `isSaving`, `message`, `error` y banners amigables. | Robusto. Se eliminaron renders en cascada (`react-hooks/set-state-in-effect`) y estados ambiguos. | âœ… Superada |
+
+---
+
+## 7. Auditoría y endurecimiento P0 (2026-10-23)
+
+**Estado:** cambios en código listos; migración pendiente de aplicar en Supabase.
+
+### Confirmado en código
+- Se retiraron los fallbacks de `toggleActive()`, `changeRole()` y `submitNewEmployee()`; un error de RPC ya no escribe directamente en `employees` ni `employee_roles`.
+- Las excepciones de permisos usan `admin_set_employee_permission_override`.
+- La configuración empresarial usa `save_company_settings` y `save_company_profile`.
+- La ruta de `company-branding` incorpora el id de la empresa.
+- La migración nueva es `supabase/migrations/20261023010000_admin_fix_security.sql`.
+
+### Pendiente de verificar en base de datos
+- Aplicación real de `20261022230000_admin_restructure_core_security.sql` y `20261023010000_admin_fix_security.sql`.
+- Pruebas de autorización directa contra Supabase para `/employees`, `/settings` y Storage.
+- Confirmar que `company-branding` no permite leer archivos de otra empresa. El bucket sigue siendo público para no romper enlaces históricos; el aislamiento de escrituras ya está en las políticas nuevas, pero el acceso por URL pública requiere decisión adicional.
+- Prueba de fallo de RPC sin cambios parciales.
+- Pruebas responsive en 390 px, tableta y escritorio.
+
+No se marcan como superadas las pruebas de la sección 6 que no hayan sido ejecutadas contra el entorno correspondiente.

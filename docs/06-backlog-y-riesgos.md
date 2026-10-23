@@ -229,3 +229,34 @@ El encabezado ejecutivo no contiene acciones de bodega. Las operaciones de salid
 ## ATT-001 - Jornada cerrada en solo lectura y estados explicitos
 
 Resueltos los estados de jornada cerrada y needs_review, el selector mensual y el aviso de limite de 800 registros. Pendiente revisar metricas gerenciales si la consulta llega al limite.
+
+
+## PERFIL-001 - Fotografía y avatar por cargo (idea)
+
+**Prioridad:** Baja
+
+**Estado:** Idea, sin implementar.
+
+Permitir que cada empleado suba su fotografía y, si no tiene, mostrar un avatar por defecto según su cargo (soldador, técnico, administrador, etc.). Requiere bucket privado con ruta `{company_id}/{employee_id}/...`, RLS por empresa, URL firmada de corta duración, consentimiento del empleado y una imagen genérica de respaldo. No usar la foto como sustituto de la firma ni de la identificación formal.
+
+
+## ADMIN-P0-001 - Migración de endurecimiento pendiente de aplicar
+
+**Prioridad:** Alta
+
+**Estado:** Código listo; migración `20261023010000_admin_fix_security.sql` pendiente de aplicar y probar en Supabase.
+
+Incluye RPC auditadas para excepciones de permisos (`admin_set_employee_permission_override`), guardado atómico de configuración (`save_company_settings`, `save_company_profile`) y aislamiento de `company-branding` por id de empresa. Mientras no se aplique, las operaciones siguen protegidas por RLS existente, pero el aislamiento de Storage y la auditoría nueva no estarán activos.
+
+
+## OPER-001 - Registro asistido por un compañero (idea)
+
+**Prioridad:** Media
+
+**Estado:** Idea, sin implementar.
+
+Un empleado sin teléfono o que olvidó el suyo puede pedir a un compañero autorizado que registre su jornada, conteo o actividad. El sistema debe conservar `performed_by` (quien digita) y `on_behalf_of` (titular), notificar al titular y exigir confirmación posterior o aprobación del supervisor. Requiere permiso granular, alcance por sede y auditoría; no se debe permitir suplantación silenciosa.
+
+- **AVATAR-002:** aplicar la migración de colección visual antes de habilitar el selector en producción; la opción elegida se guarda como clave técnica, no como atributo de identidad.
+
+| SEC-018 | Firma manuscrita de empleado | Alto | Media | La firma personal se conserva para confirmaciones operativas autorizadas en un registro privado, mediante RPC del empleado autenticado, con validación de PNG y límite de 800 KB. Pendiente aplicar la migración y realizar una prueba controlada de RLS en Supabase; no debe usarse para inicio de sesión, identificación formal ni decisiones automatizadas. | Desarrollo / Operación |

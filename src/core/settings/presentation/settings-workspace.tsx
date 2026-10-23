@@ -93,7 +93,7 @@ export function SettingsWorkspace() {
     setSaveError("");
     try {
       const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
-      const path = brandingPath(file.name);
+      const path = brandingPath(config.companyId, file.name);
       const { error: uploadError } = await supabase.storage
         .from(BRANDING_BUCKET)
         .upload(path, file, { contentType: file.type, upsert: true });

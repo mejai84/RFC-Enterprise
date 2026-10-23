@@ -1,10 +1,14 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { PasswordChangeModal } from "./password-change-modal";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import { moduleAccess } from "@/core/permissions/module-access";
+import { avatarPath } from "@/core/users/avatar";
+import { saveMySignature } from "@/core/users/data/employee-portal-repository";
+import { EmployeeAvatar } from "@/core/users/presentation/employee-avatar";
+import { SignatureCapture } from "@/shared/components/signature-capture";
 
 /**
  * Ficha personal y de seguridad de quien está autenticado ("Mi cuenta").
@@ -26,6 +30,12 @@ export function ProfileWorkspace() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [employeeId, setEmployeeId] = useState("");
+  const [companyId, setCompanyId] = useState("");
+  const [avatarPathValue, setAvatarPathValue] = useState("");
+  const [isAvatarSaving, setIsAvatarSaving] = useState(false);
+  const [signatureDataUrl, setSignatureDataUrl] = useState("");
+  const [isSignatureSaving, setIsSignatureSaving] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -52,11 +62,13 @@ export function ProfileWorkspace() {
           { data: membership },
           { data: employeeData },
           { data: permissionsData },
+          { data: signatureData },
         ] = await Promise.all([
           supabase.from("profiles").select("display_name, email").eq("id", auth.user.id).maybeSingle(),
           supabase.from("user_roles").select("role_id, roles(name)").eq("user_id", auth.user.id).limit(1),
-          supabase.from("employees").select("job_title, companies(name), branches(name)").eq("profile_id", auth.user.id).maybeSingle(),
+          supabase.from("employees").select("id, company_id, job_title, avatar_path, companies(name), branches(name)").eq("profile_id", auth.user.id).maybeSingle(),
           supabase.rpc("my_effective_permissions"),
+          supabase.rpc("my_signature"),
         ]);
 
         setName(profile?.display_name ?? "");
@@ -66,6 +78,10 @@ export function ProfileWorkspace() {
         setRoleName(linkedRole?.name ?? "Sin rol asignado");
 
         if (employeeData) {
+          setEmployeeId(employeeData.id ?? "");
+          setCompanyId(employeeData.company_id ?? "");
+          setAvatarPathValue(employeeData.avatar_path ?? "");
+          setSignatureDataUrl((signatureData as string | null) ?? "");
           setJobTitle(employeeData.job_title ?? "");
           const comp = Array.isArray(employeeData.companies) ? employeeData.companies[0] : employeeData.companies;
           const branch = Array.isArray(employeeData.branches) ? employeeData.branches[0] : employeeData.branches;
@@ -86,6 +102,80 @@ export function ProfileWorkspace() {
       isMounted = false;
     };
   }, []);
+
+  const avatarInput = useRef<HTMLInputElement>(null);
+
+  async function uploadAvatar(file: File) {
+    if (!employeeId || !companyId || isAvatarSaving) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Selecciona una imagen válida para tu foto de perfil.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("La foto no puede superar 2 MB.");
+      return;
+    }
+    setError("");
+    setNotice("");
+    setIsAvatarSaving(true);
+    try {
+      const supabase = createBrowserClient(supabaseUrl!, supabasePublishableKey!);
+      const path = avatarPath(companyId, employeeId, file.name);
+      const { error: uploadError } = await supabase.storage
+        .from("employee-avatars")
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { error: saveError } = await supabase.rpc("set_my_avatar_path", { p_path: path });
+      if (saveError) throw saveError;
+
+      if (avatarPathValue) {
+        await supabase.storage.from("employee-avatars").remove([avatarPathValue]);
+      }
+      setAvatarPathValue(path);
+      setNotice("Foto de perfil actualizada.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No fue posible actualizar tu foto.");
+    } finally {
+      setIsAvatarSaving(false);
+      if (avatarInput.current) avatarInput.current.value = "";
+    }
+  }
+
+  async function removeAvatar() {
+    if (!avatarPathValue || isAvatarSaving) return;
+    setError("");
+    setNotice("");
+    setIsAvatarSaving(true);
+    try {
+      const supabase = createBrowserClient(supabaseUrl!, supabasePublishableKey!);
+      const { error: clearError } = await supabase.rpc("clear_my_avatar_path");
+      if (clearError) throw clearError;
+      await supabase.storage.from("employee-avatars").remove([avatarPathValue]);
+      setAvatarPathValue("");
+      setNotice("Foto de perfil eliminada.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No fue posible eliminar tu foto.");
+    } finally {
+      setIsAvatarSaving(false);
+    }
+  }
+
+  async function saveSignature(signature: string) {
+    if (!signature || isSignatureSaving) return;
+    setError("");
+    setNotice("");
+    setIsSignatureSaving(true);
+    try {
+      await saveMySignature(signature);
+      setSignatureDataUrl(signature);
+      setNotice("Tu firma personal fue actualizada. Solo se usará en confirmaciones autorizadas.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No fue posible guardar tu firma.");
+    } finally {
+      setIsSignatureSaving(false);
+    }
+  }
 
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -155,6 +245,46 @@ export function ProfileWorkspace() {
             <p className="panel-intro" style={{ margin: 0 }}>Datos identificativos visibles en tus operaciones y documentos.</p>
           </div>
 
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+            <EmployeeAvatar name={name || "Mi cuenta"} jobTitle={jobTitle} path={avatarPathValue} size={72} />
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <strong style={{ fontSize: "0.9375rem" }}>Foto de perfil</strong>
+              <small style={{ color: "var(--color-text-muted, #64748b)" }}>
+                JPG o PNG, máximo 2 MB. Si no subes una, se usa un avatar según tu cargo.
+              </small>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  className="btn-cancel"
+                  disabled={isLoading || isAvatarSaving}
+                  onClick={() => avatarInput.current?.click()}
+                  type="button"
+                >
+                  {isAvatarSaving ? "Guardando…" : avatarPathValue ? "Cambiar foto" : "Subir foto"}
+                </button>
+                {avatarPathValue ? (
+                  <button
+                    className="btn-cancel"
+                    disabled={isAvatarSaving}
+                    onClick={() => void removeAvatar()}
+                    type="button"
+                  >
+                    Quitar foto
+                  </button>
+                ) : null}
+              </div>
+              <input
+                ref={avatarInput}
+                accept="image/*"
+                hidden
+                type="file"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadAvatar(file);
+                }}
+              />
+            </div>
+          </div>
+
           <label>
             Nombre completo
             <input
@@ -206,6 +336,43 @@ export function ProfileWorkspace() {
             </button>
           </div>
         </form>
+
+        <section className="dashboard-panel settings-card" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div>
+            <h2>Mi firma</h2>
+            <p className="panel-intro" style={{ margin: 0 }}>
+              Registra tu firma manuscrita para confirmaciones operativas autorizadas. No reemplaza tu identificación ni el acceso con contraseña.
+            </p>
+          </div>
+
+          <div style={{ background: "var(--color-bg-subtle, #f8fafc)", border: "1px solid var(--color-border, #e2e8f0)", borderRadius: "8px", padding: "14px 16px" }}>
+            <strong style={{ display: "block", fontSize: "0.9375rem", marginBottom: "6px" }}>
+              {signatureDataUrl ? "Firma registrada" : "Firma pendiente"}
+            </strong>
+            <p style={{ margin: 0, fontSize: "0.8125rem", color: "var(--color-text-muted, #64748b)" }}>
+              {signatureDataUrl
+                ? "Puedes revisarla y reemplazarla si es necesario."
+                : "Dibuja tu firma con el dedo, lápiz o mouse."}
+            </p>
+          </div>
+
+          {signatureDataUrl ? (
+            <div style={{ border: "1px solid var(--color-border, #e2e8f0)", borderRadius: "8px", background: "#fff", minHeight: "120px", padding: "12px" }}>
+              {/* Data URL local: no aplica optimización de imágenes remotas. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={signatureDataUrl} alt="Firma manuscrita registrada" style={{ display: "block", width: "100%", height: "112px", objectFit: "contain" }} />
+            </div>
+          ) : null}
+
+          <SignatureCapture
+            eyebrow="Firma personal"
+            label="Registrar mi firma"
+            value={signatureDataUrl}
+            allowClear={false}
+            onChange={(value) => void saveSignature(value)}
+          />
+          {isSignatureSaving ? <small style={{ color: "var(--color-text-muted, #64748b)" }}>Guardando firma…</small> : null}
+        </section>
 
         {/* Panel 2: Seguridad y Credenciales */}
         <div className="dashboard-panel settings-card" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>

@@ -362,3 +362,13 @@ El valor aprobado de cotizaciones se etiqueta expresamente como no facturado. Pr
 ## Acceso a operaciones de materiales desde Dashboard
 
 El Dashboard conserva enlaces de consulta a inventario y costo, pero no muestra formularios de vale o requisicion en su encabezado. Las operaciones se realizan en Inventario para preservar su contexto de bodega y validaciones.
+
+---
+
+## Nota de alcance (2026-10-23)
+
+La reestructuración de Personal, Mi cuenta y Configuración no modifica fórmulas, tablas salariales ni snapshots de APU/cotizaciones. Se conserva la regla de usar la versión de tabla salarial aplicable al cliente y fecha del análisis, sin alterar documentos históricos.
+
+- Los avatares laborales son elementos visuales de interfaz; no intervienen en costos, firmas ni cÃ¡lculos de proyecto.
+
+<!-- Registro 2026-10-23: la firma manuscrita personal del empleado es evidencia operativa para confirmaciones autorizadas; no participa en cÃ¡lculos de costo, precio, APU, presupuesto ni rentabilidad. -->

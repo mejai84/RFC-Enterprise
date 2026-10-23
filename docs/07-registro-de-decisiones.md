@@ -977,3 +977,70 @@ Los 2.699 registros quedaron en cero. En cero significa "todavia no se ha defini
 **Consecuencias:** Se elimina la fricción operativa en frentes de obra; se erradican los pedidos informales por canales no auditables; se mantiene la confidencialidad de costos corporativos y se preserva el control presupuestal bajo el residente de obra.
 
 
+## ADR-177 · Registro asistido por un compañero
+
+**Fecha:** 2026-10-23
+
+**Estado:** Idea / pendiente de diseño
+
+**Contexto.** Parte del personal operativo no cuenta con teléfono propio o puede olvidarlo, lo que impide registrar su jornada, conteos o actividades desde el portal. Hoy la alternativa es un registro informal que pierde trazabilidad.
+
+**Decisión propuesta.**
+1. Permitir que un compañero autorizado registre una actividad **a nombre de** otro empleado de la misma sede.
+2. Guardar siempre dos identidades: `performed_by` (quien digita) y `on_behalf_of` (titular de la actividad).
+3. Exigir confirmación posterior del titular o aprobación del supervisor antes de dar el registro por válido.
+4. Aplicar permiso granular (`attendance.register.delegated` o equivalente), alcance por empresa/sede y auditoría completa.
+5. Notificar al titular y al supervisor; impedir suplantación silenciosa o registros retroactivos sin justificación.
+
+**Consecuencias.** Se conserva la operación cuando falta el dispositivo, sin perder responsabilidad ni auditabilidad. Queda como idea de roadmap; no se implementa en esta entrega.
+
+
+## ADR-178 · Operaciones administrativas sin fallbacks de navegador
+
+**Fecha:** 2026-10-23
+
+**Estado:** Aceptada
+
+**Contexto.** `employees-workspace.tsx` intentaba primero las RPC atómicas, pero al fallar ejecutaba escrituras directas sobre `employees` y `employee_roles`. Eso podía dejar registros parciales, saltarse la protección del último administrador y perder auditoría. La configuración empresarial guardaba `company_settings` y luego `companies` en dos llamadas separadas.
+
+**Decisión.**
+1. Crear, cambiar rol y activar/desactivar empleados usan exclusivamente `admin_create_employee`, `admin_assign_employee_role` y `admin_toggle_employee_active`. Un error se muestra al usuario y no se modifica nada.
+2. Las excepciones individuales de permisos usan `admin_set_employee_permission_override`, con validación de administrador de la empresa y `audit_logs`.
+3. La configuración usa `save_company_settings` y `save_company_profile`, transaccionales y limitadas por `private.settings_manager_for`.
+4. `company-branding` exige que la ruta inicie con el id de la empresa; las políticas de Storage validan administración de esa empresa.
+5. No se eliminan datos, tablas ni columnas; las rutas `/employees`, `/perfil` y `/settings` se conservan.
+
+**Consecuencias.** Un fallo de RPC ya no produce cambios parciales ni suplantación de permisos. Queda pendiente aplicar la migración y ejecutar las pruebas contra Supabase; no se declaran superadas hasta tener evidencia real del entorno.
+
+
+## ADR-179 · Fotografía y avatar por cargo
+
+**Fecha:** 2026-10-23
+
+**Estado:** Idea / pendiente de diseño
+
+**Contexto.** El directorio de personal y Mi cuenta muestran nombres y cargos, pero no una referencia visual. Una fotografía mejora la identificación en campo; en equipos grandes no todos tienen o quieren subir una.
+
+**Decisión propuesta.**
+1. Permitir que cada empleado suba o reemplace su fotografía desde Mi cuenta.
+2. Si no existe foto, mostrar un avatar predeterminado según el cargo (`job_title`), con una ilustración genérica de respaldo.
+3. Guardar las fotos en un bucket privado con ruta `{company_id}/{employee_id}/...`, RLS por empresa y URLs firmadas de corta duración.
+4. Exigir consentimiento explícito y permitir retirar la foto.
+5. No usar la foto como firma digital, documento de identidad ni criterio de autorización.
+
+**Consecuencias.** Mejora la identificación visual sin relajar seguridad ni depender de imágenes públicas. Queda como idea de roadmap; no se implementa en esta entrega.
+
+
+
+## ADR-180 · Avatar laboral elegido al crear el empleado
+
+Administración selecciona una de seis colecciones visuales al crear la ficha; job_title determina el oficio mostrado. El sistema guarda únicamente vatar_style (style-01 a style-06) y, en esta etapa, el avatar se limita a Mi cuenta y al reporte de actividades.
+
+## ADR-181 · Firma manuscrita personal para confirmaciones operativas
+
+**Fecha:** 2026-10-23
+**Estado:** Aceptada
+
+**Decisión.** La firma manuscrita se captura voluntariamente en `/perfil` y se almacena únicamente en un registro privado vinculado al empleado activo asociado a `auth.uid()`. La RPC `save_my_signature` valida una imagen PNG data URL de hasta 800 KB; solo permite registrar o reemplazar la propia firma. La firma se reutiliza únicamente como evidencia en confirmaciones operativas expresamente autorizadas.
+
+**Consecuencias.** No sirve para iniciar sesión, autorizar cambios de acceso ni reemplazar identificación formal. La migración debe aplicarse y verificarse bajo RLS antes de habilitarla en producción.

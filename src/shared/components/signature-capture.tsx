@@ -6,10 +6,15 @@ export function SignatureCapture({
   label,
   value,
   onChange,
+  allowClear = true,
+  eyebrow = "Confirmación de entrega",
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  /** Permite ocultar la eliminación cuando la firma se gestiona como identidad personal. */
+  allowClear?: boolean;
+  eyebrow?: string;
 }) {
   const [open, setOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -106,7 +111,7 @@ export function SignatureCapture({
           <div className="modal-card small">
             <div className="modal-header">
               <div>
-                <p>Confirmación de entrega</p>
+                <p>{eyebrow}</p>
                 <h3>Firma manuscrita</h3>
               </div>
               <button
@@ -120,7 +125,9 @@ export function SignatureCapture({
             </div>
             <p className="panel-intro">
               {value
-                ? "Esta es la firma guardada. Puedes dejarla como está, limpiarla para empezar de nuevo o firmar encima."
+                ? allowClear
+                  ? "Esta es la firma guardada. Puedes dejarla como está, limpiarla para empezar de nuevo o firmar encima."
+                  : "Esta es la firma registrada. Puedes dejarla como está o trazar una nueva para reemplazarla."
                 : "Firme con el dedo o con el mouse dentro del recuadro."}
             </p>
             <canvas
@@ -155,9 +162,11 @@ export function SignatureCapture({
                   Cancelar
                 </button>
               )}
-              <button type="button" className="btn-cancel" onClick={clear}>
-                {value ? "Quitar la firma" : "Limpiar"}
-              </button>
+              {allowClear ? (
+                <button type="button" className="btn-cancel" onClick={clear}>
+                  {value ? "Quitar la firma" : "Limpiar"}
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="inventory-action"

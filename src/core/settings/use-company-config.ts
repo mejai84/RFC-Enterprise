@@ -105,9 +105,9 @@ export function brandingUrl(path: string): string {
   return `${supabaseUrl}/storage/v1/object/public/${BRANDING_BUCKET}/${path}`;
 }
 
-/** Ruta de almacenamiento para un archivo subido. */
-export function brandingPath(fileName: string): string {
-  return `branding/${Date.now()}_${fileName.replace(/\s+/g, "_").replace(/[^\w.-]/g, "_")}`;
+/** Ruta de almacenamiento aislada por empresa. */
+export function brandingPath(companyId: string, fileName: string): string {
+  return `${companyId}/branding/${Date.now()}_${fileName.replace(/\s+/g, "_").replace(/[^\w.-]/g, "_")}`;
 }
 
 export function useCompanyConfig() {
@@ -180,17 +180,34 @@ export function useCompanyConfig() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    queueMicrotask(() => void refresh());
   }, [refresh]);
 
   return { config, isLoading, error, refresh };
 }
 
-/** Guarda un grupo de ajustes por clave. */
+/** Guarda un grupo de ajustes por clave mediante RPC atómica y auditada. */
 export async function saveCompanySettings(companyId: string, entries: Array<{ key: string; value: unknown }>) {
   const supabase = createBrowserClient(supabaseUrl!, supabasePublishableKey!);
-  const { error } = await supabase
-    .from("company_settings")
-    .upsert(entries.map((entry) => ({ company_id: companyId, key: entry.key, value: entry.value })));
+  const { error } = await supabase.rpc("save_company_settings", {
+    p_company_id: companyId,
+    p_entries: entries,
+  });
+  if (error) throw error;
+}
+
+/** Guarda empresa y ajustes relacionados en una sola transacción. */
+export async function saveCompanyProfile(
+  companyId: string,
+  profile: { name: string; taxId: string },
+  entries: Array<{ key: string; value: unknown }>,
+) {
+  const supabase = createBrowserClient(supabaseUrl!, supabasePublishableKey!);
+  const { error } = await supabase.rpc("save_company_profile", {
+    p_company_id: companyId,
+    p_name: profile.name,
+    p_tax_id: profile.taxId,
+    p_entries: entries,
+  });
   if (error) throw error;
 }

@@ -3,6 +3,9 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   changeWorkdaySegment,
+  createDelegatedActivityReport,
+  loadDelegatedActivityReports,
+  reviewDelegatedActivityReport,
   finishWorkday,
   loadCurrentWorkday,
   loadMyWorkdaySegments,
@@ -22,6 +25,7 @@ import {
   type WorkdaySegmentType,
   type WorkdaySegment,
 } from "../domain/work-check-in";
+import type { DelegatedActivityReport } from "../data/work-check-in-repository";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" });
 
@@ -55,21 +59,30 @@ export function WorkCheckInWorkspace() {
   const [isLocating, setIsLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState(LOCATION_CONSENT_TEXT);
   const [showCloseSummary, setShowCloseSummary] = useState(false);
+  const [delegatedReports, setDelegatedReports] = useState<DelegatedActivityReport[]>([]);
+  const [delegateEmployeeId, setDelegateEmployeeId] = useState("");
+  const [delegateProjectId, setDelegateProjectId] = useState("");
+  const [delegateSiteName, setDelegateSiteName] = useState("");
+  const [delegateActivity, setDelegateActivity] = useState("");
+  const [delegateReason, setDelegateReason] = useState("");
+  const [isDelegating, setIsDelegating] = useState(false);
   const successRef = useRef<HTMLParagraphElement>(null);
   const activityRef = useRef<HTMLTextAreaElement>(null);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [workspace, current, todaySegments] = await Promise.all([
+      const [workspace, current, todaySegments, reports] = await Promise.all([
         loadWorkCheckInWorkspaceData(),
         loadCurrentWorkday(),
         // La línea de tiempo es un extra: si falla, la jornada sigue registrable.
         loadMyWorkdaySegments().catch(() => [] as WorkdaySegment[]),
+        loadDelegatedActivityReports().catch(() => [] as DelegatedActivityReport[]),
       ]);
       setData(workspace);
       setWorkday(current);
       setSegments(todaySegments);
+      setDelegatedReports(reports);
       if (!workspace) setError("Inicia sesión para registrar tu jornada.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No fue posible cargar la jornada.");
@@ -146,6 +159,34 @@ export function WorkCheckInWorkspace() {
     } finally { setIsSaving(false); }
   }
 
+  async function submitDelegatedActivity(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isDelegating) return;
+    if (!delegateEmployeeId || delegateSiteName.trim().length < 3 || delegateActivity.trim().length < 3 || delegateReason.trim().length < 3) {
+      setError("Completa el compañero, el sitio, la actividad y el motivo del reporte.");
+      return;
+    }
+    setIsDelegating(true); setError(""); setMessage("");
+    try {
+      await createDelegatedActivityReport({ beneficiaryEmployeeId: delegateEmployeeId, projectId: delegateProjectId, siteName: delegateSiteName, activityDescription: delegateActivity, reason: delegateReason });
+      setDelegateEmployeeId(""); setDelegateProjectId(""); setDelegateSiteName(""); setDelegateActivity(""); setDelegateReason("");
+      setMessage("La actividad quedó pendiente de validación; no modifica la jornada definitiva del compañero.");
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No fue posible reportar la actividad del compañero.");
+    } finally { setIsDelegating(false); }
+  }
+
+  async function reviewDelegated(reportId: string, decision: "confirm" | "reject") {
+    setIsDelegating(true); setError("");
+    try {
+      await reviewDelegatedActivityReport(reportId, decision);
+      setMessage(decision === "confirm" ? "Actividad delegada validada." : "Actividad delegada rechazada.");
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No fue posible validar la actividad.");
+    } finally { setIsDelegating(false); }
+  }
   async function finish() {
     if (isSaving) return;
     setIsSaving(true); setError(""); setMessage("");
@@ -163,7 +204,8 @@ export function WorkCheckInWorkspace() {
   const isNeedsReview = workday?.status === "needs_review";
   const isClosedWorkday = workday?.status === "closed";
   const hasClosedWorkday = isClosedWorkday || isNeedsReview;
-  const disabled = isLoading || isSaving || !data?.employeeName || hasClosedWorkday;
+  // El servidor decide si la cuenta está vinculada; bloquear en el navegador ocultaba el motivo y dejaba el formulario inutilizable.
+  const disabled = isLoading || isSaving || hasClosedWorkday;
 
   return (
     <section className="attendance-layout" aria-busy={isLoading}>
@@ -177,6 +219,8 @@ export function WorkCheckInWorkspace() {
            {hasOpenWorkday ? "Abierta" : isNeedsReview ? "En revisión" : isClosedWorkday ? "Cerrada" : "Pendiente"}
          </span>
         </div>
+
+        {!data?.employeeName && !isLoading ? <p className="attendance-alert attendance-alert--error" role="alert">No pudimos identificar tu ficha laboral todavía. Puedes intentar registrar; si el servidor no reconoce el vínculo, mostrará el motivo para que administración lo corrija.</p> : null}
 
         {hasOpenWorkday && workday.currentSegment ? (
           <div className="attendance-current-segment">
@@ -336,6 +380,25 @@ export function WorkCheckInWorkspace() {
           </ol>
         )}
       </section>
+        {data?.canDelegate ? (
+          <section className="attendance-delegated" aria-labelledby="delegated-activity-title">
+            <div className="attendance-panel-heading"><div><p>Apoyo operativo</p><h2 id="delegated-activity-title">Reportar actividad de un compañero</h2></div></div>
+            <p className="attendance-helper">El reporte queda provisional. El trabajador o un responsable debe validarlo; nunca suplanta su jornada.</p>
+            <form className="attendance-delegated-form" onSubmit={submitDelegatedActivity}>
+              <label className="attendance-field">Compañero
+                <select value={delegateEmployeeId} onChange={(event) => setDelegateEmployeeId(event.target.value)} disabled={isDelegating} required><option value="">Selecciona a quien reportas</option>{data.employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}{employee.jobTitle ? ` · ${employee.jobTitle}` : ""}</option>)}</select>
+              </label>
+              <label className="attendance-field">Obra o proyecto <em>(opcional)</em>
+                <select value={delegateProjectId} onChange={(event) => setDelegateProjectId(event.target.value)} disabled={isDelegating}><option value="">Sin obra asociada</option>{data.projects.map((project) => <option key={project.id} value={project.id}>{project.label}</option>)}</select>
+              </label>
+              <label className="attendance-field">Sitio o frente <input value={delegateSiteName} maxLength={160} onChange={(event) => setDelegateSiteName(event.target.value)} disabled={isDelegating} required /></label>
+              <label className="attendance-field">Actividad <textarea value={delegateActivity} maxLength={500} onChange={(event) => setDelegateActivity(event.target.value)} disabled={isDelegating} rows={3} required /></label>
+              <label className="attendance-field">Motivo del reporte <textarea value={delegateReason} maxLength={500} onChange={(event) => setDelegateReason(event.target.value)} disabled={isDelegating} rows={2} required /></label>
+              <button className="attendance-submit" disabled={isDelegating} type="submit">{isDelegating ? "Guardando…" : "Enviar para validación"}</button>
+            </form>
+            {delegatedReports.length ? <ol className="attendance-delegated-list">{delegatedReports.map((report) => <li key={report.id}><div><strong>{report.beneficiaryName}</strong><span>{report.activityDescription}</span><small>{report.siteName} · Reportado por {report.reporterName ?? "un compañero"}</small></div><div className="attendance-delegated-status"><span className={`attendance-tag ${report.status === "pending_validation" ? "attendance-tag--review" : report.status === "rejected" ? "attendance-tag--closed" : "attendance-tag--ok"}`}>{report.status === "pending_validation" ? "Pendiente" : report.status === "rejected" ? "Rechazado" : "Validado"}</span>{report.status === "pending_validation" && (data.canReview || report.beneficiaryEmployeeId === data.employeeId) ? <div><button type="button" disabled={isDelegating} onClick={() => void reviewDelegated(report.id, "confirm")}>Validar</button><button type="button" disabled={isDelegating} onClick={() => void reviewDelegated(report.id, "reject")}>Rechazar</button></div> : null}</div></li>)}</ol> : null}
+          </section>
+        ) : null}
     </section>
   );
 }

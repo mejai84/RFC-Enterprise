@@ -15,7 +15,7 @@ export const moduleAccess: ModuleAccess[] = [
   { href: "/quotes", label: "Cotizaciones", permissions: ["quotes.view", "quotes.manage"] },
   { href: "/apu", label: "APU", permissions: ["apu.view", "apu.manage"] },
   { href: "/projects", label: "Proyectos & Obras", permissions: ["projects.view", "projects.manage", "projects.requisitions.create", "projects.requisitions.approve"] },
-  { href: "/attendance", label: "Registro de jornada", permissions: ["attendance.self.record", "attendance.team.view"] },
+  { href: "/attendance", label: "Registro de jornada", permissions: ["attendance.self.record", "attendance.team.view", "attendance.delegated.request", "attendance.team.review"] },
   { href: "/rentals", label: "Alquiler rápido", permissions: ["rentals.view", "rentals.manage"] },
   { href: "/purchases", label: "Compras", permissions: ["inventory.stock.manage", "inventory.dispatch.create"] },
   { href: "/inventory", label: "Inventarios", permissions: ["inventory.catalog.view", "inventory.items.read", "inventory.items.manage", "inventory.stock.read", "inventory.stock.manage", "inventory.movements.read", "inventory.movements.create", "inventory.dispatch.create", "inventory.return.create", "inventory.tools.manage", "inventory.kardex.view", "inventory.reports.read"] },

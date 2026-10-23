@@ -530,3 +530,41 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Actividades delegadas: siempre provisionales y visibles para su validación. */
+.attendance-delegated {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+  padding-top: 20px;
+}
+
+.attendance-delegated-form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.attendance-delegated-form .attendance-field:nth-child(4),
+.attendance-delegated-form .attendance-field:nth-child(5),
+.attendance-delegated-form .attendance-submit {
+  grid-column: 1 / -1;
+}
+
+.attendance-delegated-list { display: grid; gap: 8px; list-style: none; margin: 2px 0 0; padding: 0; }
+.attendance-delegated-list li { align-items: flex-start; border: 1px solid var(--line); border-radius: 8px; display: flex; gap: 12px; justify-content: space-between; padding: 12px; }
+.attendance-delegated-list li > div:first-child { display: grid; gap: 3px; min-width: 0; }
+.attendance-delegated-list strong { font-size: 13px; }
+.attendance-delegated-list span:not(.attendance-tag), .attendance-delegated-list small { color: var(--ink-secondary); font-size: 12px; overflow-wrap: anywhere; }
+.attendance-delegated-status { align-items: flex-end; display: grid; gap: 8px; justify-items: end; }
+.attendance-delegated-status > div { display: flex; gap: 6px; }
+.attendance-delegated-status button { background: #fff; border: 1px solid var(--line); border-radius: 6px; color: var(--brand-dark); font-size: 12px; font-weight: 700; min-height: 34px; padding: 6px 9px; }
+.attendance-delegated-status button:last-child { color: #8f2e25; }
+
+@media (max-width: 560px) {
+  .attendance-delegated-form { grid-template-columns: 1fr; }
+  .attendance-delegated-form .attendance-field:nth-child(4), .attendance-delegated-form .attendance-field:nth-child(5), .attendance-delegated-form .attendance-submit { grid-column: auto; }
+  .attendance-delegated-list li { flex-direction: column; }
+  .attendance-delegated-status { align-items: flex-start; justify-items: start; }
+}

@@ -36,8 +36,11 @@ export type AttendanceEmployee = {
 };
 
 export type WorkCheckInWorkspaceData = {
+  employeeId?: string;
   employeeName?: string;
   canReview: boolean;
+  /** Puede informar una actividad provisional de un compañero, sin suplantarlo. */
+  canDelegate: boolean;
   projects: AttendanceProject[];
   employees: AttendanceEmployee[];
   checkIns: WorkCheckIn[];

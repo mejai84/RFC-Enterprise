@@ -15,6 +15,22 @@ import { bogotaToday } from "../domain/attendance-period";
 
 /** Permiso que permite consultar las declaraciones del equipo, no solo las propias. */
 export const TEAM_VIEW_PERMISSION = "attendance.team.view";
+export const DELEGATED_ACTIVITY_PERMISSION = "attendance.delegated.request";
+
+export type DelegatedActivityReport = {
+  id: string;
+  beneficiaryEmployeeId: string;
+  beneficiaryName: string;
+  reporterName: string | null;
+  projectLabel: string | null;
+  siteName: string;
+  activityDescription: string;
+  reason: string;
+  status: "pending_validation" | "confirmed_by_worker" | "verified_by_supervisor" | "rejected";
+  createdAt: string;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+};
 
 function client() {
   if (!isSupabaseConfigured || !supabaseUrl || !supabasePublishableKey) return null;
@@ -61,6 +77,7 @@ async function resolveCompany(supabase: NonNullable<ReturnType<typeof client>>, 
   return {
     companyId: data.company_id as string,
     canReview: permissions.includes(TEAM_VIEW_PERMISSION),
+    canDelegate: permissions.includes(DELEGATED_ACTIVITY_PERMISSION),
   };
 }
 
@@ -102,7 +119,7 @@ export async function loadWorkCheckInWorkspaceData(): Promise<WorkCheckInWorkspa
   if (authError) throw authError;
   if (!auth.user) return null;
 
-  const { companyId, canReview } = await resolveCompany(supabase, auth.user.id);
+  const { companyId, canReview, canDelegate } = await resolveCompany(supabase, auth.user.id);
 
   const [ownEmployeeResult, projectsResult, employeesResult, checkInsResult] = await Promise.all([
     // El vínculo con el empleado sale de la sesión: nunca se elige a mano.
@@ -141,13 +158,15 @@ export async function loadWorkCheckInWorkspaceData(): Promise<WorkCheckInWorkspa
     : undefined;
 
   return {
+    employeeId: linkedEmployee?.id,
     employeeName: linkedEmployee?.fullName,
     canReview,
+    canDelegate,
     projects: ((projectsResult.data ?? []) as Array<{ id: string; code: string; name: string; location: string | null }>).map(
       (project) => ({ id: project.id, label: `${project.code} · ${project.name}`, location: project.location ?? "" }),
     ),
     // Un empleado sin vínculo no registra: se le informa sin exponer la lista del equipo.
-    employees: canReview
+    employees: canReview || canDelegate
       ? ((employeesResult.data ?? []) as Array<{ id: string; full_name: string; job_title: string | null; avatar_style: string | null }>).map(
           (row) => ({ id: row.id, fullName: row.full_name, jobTitle: row.job_title ?? undefined }),
         )
@@ -158,7 +177,45 @@ export async function loadWorkCheckInWorkspaceData(): Promise<WorkCheckInWorkspa
   };
 }
 
-/**
+
+function mapDelegatedActivity(row: Record<string, unknown>): DelegatedActivityReport {
+  return {
+    id: String(row.id),
+    beneficiaryEmployeeId: String(row.beneficiary_employee_id),
+    beneficiaryName: String(row.beneficiary_name),
+    reporterName: row.reporter_name ? String(row.reporter_name) : null,
+    projectLabel: row.project_label ? String(row.project_label) : null,
+    siteName: String(row.site_name),
+    activityDescription: String(row.activity_description),
+    reason: String(row.reason),
+    status: String(row.status) as DelegatedActivityReport["status"],
+    createdAt: String(row.created_at),
+    reviewedAt: row.reviewed_at ? String(row.reviewed_at) : null,
+    reviewNote: row.review_note ? String(row.review_note) : null,
+  };
+}
+
+export async function loadDelegatedActivityReports(): Promise<DelegatedActivityReport[]> {
+  const supabase = client();
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc("list_delegated_activity_reports", { p_limit: 30 });
+  if (error) throw new Error(describeWorkCheckInError(error));
+  return ((data ?? []) as Array<Record<string, unknown>>).map(mapDelegatedActivity);
+}
+
+export async function createDelegatedActivityReport(input: { beneficiaryEmployeeId: string; projectId: string; siteName: string; activityDescription: string; reason: string }) {
+  const supabase = client();
+  if (!supabase) throw new Error("Supabase no está configurado.");
+  const { error } = await supabase.rpc("create_delegated_activity_report", { p_beneficiary_employee_id: input.beneficiaryEmployeeId, p_project_id: input.projectId || null, p_site_name: input.siteName.trim(), p_activity_description: input.activityDescription.trim(), p_reason: input.reason.trim() });
+  if (error) throw new Error(describeWorkCheckInError(error));
+}
+
+export async function reviewDelegatedActivityReport(reportId: string, decision: "confirm" | "reject", reviewNote = "") {
+  const supabase = client();
+  if (!supabase) throw new Error("Supabase no está configurado.");
+  const { error } = await supabase.rpc("review_delegated_activity_report", { p_report_id: reportId, p_decision: decision, p_review_note: reviewNote.trim() || null });
+  if (error) throw new Error(describeWorkCheckInError(error));
+}/**
  * Carga las declaraciones del período. El filtro de período viaja al servidor para
  * que el día local se resuelva en Postgres y no dependa del huso del navegador.
  */

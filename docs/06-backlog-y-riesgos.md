@@ -279,3 +279,9 @@ Un empleado sin teléfono o que olvidó el suyo puede pedir a un compañero auto
 ## 2026-10-23 — Matriz dinámica de permisos de empleados
 
 La ficha de empleados ya no toma una lista estática del cliente para mostrar la matriz de permisos. Carga el catálogo real de `permissions`, lo agrupa por módulo y conserva el cálculo de permisos efectivos con rol base más excepciones auditadas. La escritura sigue pasando por `admin_set_employee_permission_override`; requiere aplicar previamente la migración `20261023010000_admin_fix_security.sql` en Supabase.
+## 2026-10-23 — Actividades delegadas trazables en asistencia
+
+- La asistencia incorpora un reporte provisional por compañero: identifica al autor, al trabajador beneficiario, el frente, la actividad y el motivo.
+- El reporte no crea ni altera una jornada definitiva. Solo el beneficiario o un responsable con capacidad de revisión puede validarlo o rechazarlo.
+- La pantalla ya no bloquea la llegada solo porque la lectura de la ficha falle; el servidor conserva la decisión y devuelve una causa accionable.
+- Requiere aplicar en Supabase la migración `20261023060000_delegated_activity_validation.sql` antes de activar esta interfaz en producción.

@@ -261,3 +261,10 @@ Un empleado sin teléfono o que olvidó el suyo puede pedir a un compañero auto
 
 | SEC-018 | Firma manuscrita de empleado | Alto | Media | La firma personal se conserva para confirmaciones operativas autorizadas en un registro privado, mediante RPC del empleado autenticado, con validación de PNG y límite de 800 KB. Pendiente aplicar la migración y realizar una prueba controlada de RLS en Supabase; no debe usarse para inicio de sesión, identificación formal ni decisiones automatizadas. | Desarrollo / Operación |
 - Riesgo controlado: no aplicar la migración de conteos sobre la jornada abierta hasta validar SQL y permisos efectivos contra Supabase.
+
+## Recuperación del repositorio local — 2026-10-23
+
+- Se detectó corrupción de objetos históricos en la carpeta de trabajo original (`git fsck --full` con objetos faltantes).
+- `origin/main` fue verificado como íntegro en el commit `29593c075406cf25fb1f65ca4c0298158e7605f4`.
+- Se creó una copia de trabajo limpia en `C:\representaciones-figueroa-recovered`; a partir de este punto es la copia autorizada para continuar el desarrollo.
+- La carpeta original se conserva como respaldo y no debe usarse para nuevos commits.

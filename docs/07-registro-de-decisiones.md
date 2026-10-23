@@ -1045,3 +1045,10 @@ Administración selecciona una de seis colecciones visuales al crear la ficha; j
 
 **Consecuencias.** No sirve para iniciar sesión, autorizar cambios de acceso ni reemplazar identificación formal. La migración debe aplicarse y verificarse bajo RLS antes de habilitarla en producción.
 - ADR: las correcciones de ficha hechas durante un conteo son propuestas auditables; no alteran inventario oficial antes de una conciliación autorizada.
+
+## Recuperación del repositorio local — 2026-10-23
+
+- Se detectó corrupción de objetos históricos en la carpeta de trabajo original (`git fsck --full` con objetos faltantes).
+- `origin/main` fue verificado como íntegro en el commit `29593c075406cf25fb1f65ca4c0298158e7605f4`.
+- Se creó una copia de trabajo limpia en `C:\representaciones-figueroa-recovered`; a partir de este punto es la copia autorizada para continuar el desarrollo.
+- La carpeta original se conserva como respaldo y no debe usarse para nuevos commits.

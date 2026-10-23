@@ -210,3 +210,31 @@ img, svg { display: block; max-width: 100%; }
 .labor-rate-view-button { align-items: center; background: var(--ink); border: 1px solid var(--ink); border-radius: 7px; color: #fff; cursor: pointer; display: inline-flex; font: inherit; font-size: 12px; font-weight: 700; justify-content: center; margin-top: 6px; min-height: 44px; padding: 8px 12px; width: fit-content; }
 .labor-rate-view-button:hover { background: var(--brand); border-color: var(--brand); }
 .labor-rate-view-button:focus-visible { outline: 3px solid var(--brand-glow); outline-offset: 2px; }
+
+/* Centro de configuración: el mismo sistema sobrio y corporativo del resto de RFC. */
+.settings-workspace-grid { align-items: start; display: grid; gap: 24px; grid-template-columns: minmax(232px, 264px) minmax(0, 1fr); }
+.settings-category-nav { display: grid; gap: 3px; padding: 10px; position: sticky; top: 20px; }
+.settings-category-nav-title { border-bottom: 1px solid var(--line); margin: 0 2px 5px; padding: 8px 10px 11px; }
+.settings-category-nav-title span { color: var(--muted); font-size: 12px; font-weight: 750; }
+.settings-category-button { background: transparent; border: 0; border-radius: 8px; color: var(--ink-secondary); cursor: pointer; display: block; min-height: 58px; padding: 10px 12px; text-align: left; transition: background-color .16s ease, color .16s ease; width: 100%; }
+.settings-category-button:hover { background: #f1f6f3; color: var(--ink); }
+.settings-category-button.is-selected { background: var(--brand-soft); color: var(--brand-dark); }
+.settings-category-label { font-size: 13px; font-weight: 750; line-height: 1.25; }
+.settings-category-description { color: var(--muted); font-size: 11px; line-height: 1.35; margin-top: 3px; }
+.settings-category-button.is-selected .settings-category-description { color: var(--brand-dark); opacity: .86; }
+.settings-content { display: grid; gap: 18px; min-width: 0; }
+.settings-card { gap: 18px; }
+.settings-card h2 { letter-spacing: -.02em; }
+.settings-card input, .settings-card select, .settings-card textarea { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font: inherit; min-height: 42px; outline: none; padding: 9px 10px; width: 100%; }
+.settings-card textarea { min-height: 82px; resize: vertical; }
+.settings-card input:focus-visible, .settings-card select:focus-visible, .settings-card textarea:focus-visible { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-glow); }
+.settings-card input[type='checkbox'], .settings-toggle input { accent-color: var(--brand); cursor: pointer; flex: 0 0 auto; height: 18px; min-height: 0; padding: 0; width: 18px; }
+.settings-labor-tabs { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+.settings-labor-tabs-label { color: var(--muted); font-size: 12px; font-weight: 750; margin-right: 4px; }
+.settings-labor-tab { background: transparent; border: 1px solid var(--line); border-radius: 7px; color: var(--ink-secondary); cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; min-height: 38px; padding: 8px 10px; transition: background-color .16s ease, border-color .16s ease, color .16s ease; }
+.settings-labor-tab:hover { border-color: #a9cdb8; color: var(--brand-dark); }
+.settings-labor-tab.is-selected { background: var(--brand); border-color: var(--brand); color: #fff; }
+.settings-page .settings-notice { border-radius: 8px; margin-bottom: 0; }
+.settings-page .settings-notice.is-error { background: #fff2ef; border-color: #efc9c1; color: #8f2e25; }
+@media (max-width: 900px) { .settings-workspace-grid { grid-template-columns: 1fr; } .settings-category-nav { position: static; } .settings-category-nav-title { border-bottom: 0; margin-bottom: 0; } .settings-category-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } .settings-category-nav-title { grid-column: 1 / -1; } }
+@media (max-width: 560px) { .settings-workspace-grid { gap: 16px; } .settings-category-nav { grid-template-columns: 1fr; padding: 8px; } .settings-category-nav-title { grid-column: auto; } .settings-category-button { min-height: 54px; } .settings-labor-tabs { align-items: stretch; } .settings-labor-tabs-label { width: 100%; } .settings-labor-tab { flex: 1 1 100%; text-align: left; } }

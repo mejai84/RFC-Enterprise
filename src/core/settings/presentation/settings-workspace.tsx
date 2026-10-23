@@ -10,6 +10,7 @@ import {
   BRANDING_BUCKET,
   brandingPath,
   brandingUrl,
+  saveCompanyProfile,
   saveCompanySettings,
   useCompanyConfig,
   type CompanyBranding,
@@ -19,12 +20,12 @@ import {
 type MainCategory = "company" | "branding" | "proposal" | "labor" | "security";
 type LaborSubTab = "labor_rates" | "labor_dotacion" | "labor_costs";
 
-const categories: Array<{ id: MainCategory; label: string; icon: string; description: string }> = [
-  { id: "company", label: "Empresa y sedes", icon: "🏢", description: "Razón social, NIT, dirección y parámetros de nómina/impresión." },
-  { id: "branding", label: "Identidad corporativa", icon: "✍️", description: "Firma autorizada, membretes y documentos institucionales." },
-  { id: "proposal", label: "Parámetros comerciales", icon: "💼", description: "Valores predeterminados para nuevas propuestas y cotizaciones." },
-  { id: "labor", label: "Costos laborales", icon: "👥", description: "Tablas salariales por cliente, dotación EPP y porcentajes de ley." },
-  { id: "security", label: "Seguridad y auditoría", icon: "🛡️", description: "Políticas de acceso, directivas de sesión y trazabilidad." },
+const categories: Array<{ id: MainCategory; label: string; description: string }> = [
+  { id: "company", label: "Empresa y sedes", description: "Razón social, NIT, dirección y parámetros de nómina/impresión." },
+  { id: "branding", label: "Identidad corporativa", description: "Firma autorizada, membretes y documentos institucionales." },
+  { id: "proposal", label: "Parámetros comerciales", description: "Valores predeterminados para nuevas propuestas y cotizaciones." },
+  { id: "labor", label: "Costos laborales", description: "Tablas salariales por cliente, dotación EPP y porcentajes de ley." },
+  { id: "security", label: "Seguridad y auditoría", description: "Políticas de acceso, directivas de sesión y trazabilidad." },
 ];
 
 const signatureToggles: Array<{ key: keyof CompanyBranding; label: string }> = [
@@ -93,7 +94,7 @@ export function SettingsWorkspace() {
     setSaveError("");
     try {
       const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
-      const path = brandingPath(file.name);
+      const path = brandingPath(config.companyId, file.name);
       const { error: uploadError } = await supabase.storage
         .from(BRANDING_BUCKET)
         .upload(path, file, { contentType: file.type, upsert: true });
@@ -153,17 +154,15 @@ export function SettingsWorkspace() {
     setNotice("");
     setSaveError("");
     try {
-      const supabase = createBrowserClient(supabaseUrl!, supabasePublishableKey!);
-      await saveCompanySettings(config.companyId, [
-        { key: "identity", value: { ...config!.identity, address: company.address } },
-        { key: "payroll", value: { period: company.payrollPeriod, hours: company.standardHours } },
-        { key: "printing", value: { paper: company.paper, copies: company.copies } },
-      ]);
-      const { error: companyError } = await supabase
-        .from("companies")
-        .update({ name: company.legalName, tax_id: company.taxId || null })
-        .eq("id", config.companyId);
-      if (companyError) throw companyError;
+      await saveCompanyProfile(
+        config.companyId,
+        { name: company.legalName, taxId: company.taxId },
+        [
+          { key: "identity", value: { ...config.identity, address: company.address } },
+          { key: "payroll", value: { period: company.payrollPeriod, hours: company.standardHours } },
+          { key: "printing", value: { paper: company.paper, copies: company.copies } },
+        ],
+      );
       await refresh();
       setNotice("Datos de empresa, nómina y preferencias guardados exitosamente.");
     } catch (cause) {
@@ -195,15 +194,14 @@ export function SettingsWorkspace() {
       {saveError ? <p className="settings-notice is-error" role="alert">{saveError}</p> : null}
       {notice ? <p className="settings-notice" role="status">{notice}</p> : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(240px, 280px) 1fr", gap: "24px", alignItems: "start" }}>
+      <div className="settings-workspace-grid">
         {/* Navegación lateral de categorías */}
         <aside
-          className="dashboard-panel"
-          style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "6px" }}
+          className="dashboard-panel settings-category-nav"
           aria-label="Categorías de configuración"
         >
-          <div style={{ padding: "8px 12px 12px 12px", borderBottom: "1px solid var(--color-border, #e2e8f0)", marginBottom: "4px" }}>
-            <span style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "var(--color-text-muted, #64748b)" }}>
+          <div className="settings-category-nav-title">
+            <span>
               Categorías
             </span>
           </div>
@@ -219,25 +217,11 @@ export function SettingsWorkspace() {
                   setNotice("");
                   setSaveError("");
                 }}
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "10px",
-                  padding: "10px 12px",
-                  borderRadius: "8px",
-                  border: "none",
-                  background: isSelected ? "var(--color-primary-subtle, #e0e7ff)" : "transparent",
-                  color: isSelected ? "var(--color-primary-dark, #312e81)" : "var(--color-text, #334155)",
-                  fontWeight: isSelected ? 700 : 500,
-                  textAlign: "left",
-                  cursor: "pointer",
-                  transition: "background-color 0.15s ease",
-                }}
+                className={`settings-category-button${isSelected ? " is-selected" : ""}`}
               >
-                <span style={{ fontSize: "1.125rem", lineHeight: 1 }} aria-hidden="true">{cat.icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "0.875rem" }}>{cat.label}</div>
-                  <div style={{ fontSize: "0.6875rem", color: isSelected ? "var(--color-primary-dark, #3730a3)" : "var(--color-text-muted, #64748b)", marginTop: "2px", lineHeight: "1.2" }}>
+                <div>
+                  <div className="settings-category-label">{cat.label}</div>
+                  <div className="settings-category-description">
                     {cat.description}
                   </div>
                 </div>
@@ -247,7 +231,7 @@ export function SettingsWorkspace() {
         </aside>
 
         {/* Panel principal de contenido según categoría */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div className="settings-content">
           {/* Categoría: Empresa y sedes */}
           {activeCategory === "company" && (
             <form className="dashboard-panel settings-card" onSubmit={saveCompany}>
@@ -523,45 +507,30 @@ export function SettingsWorkspace() {
           {/* Categoría: Costos laborales (con subpestañas organizadas) */}
           {activeCategory === "labor" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div className="dashboard-panel" style={{ padding: "8px 12px", display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-                <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--color-text-muted, #64748b)", marginRight: "8px" }}>
+              <div className="dashboard-panel settings-labor-tabs">
+                <span className="settings-labor-tabs-label">
                   Sección laboral:
                 </span>
                 <button
                   type="button"
                   onClick={() => setLaborSubTab("labor_rates")}
-                  className={`btn-cancel ${laborSubTab === "labor_rates" ? "is-selected" : ""}`}
-                  style={{
-                    background: laborSubTab === "labor_rates" ? "var(--color-primary, #0f172a)" : "transparent",
-                    color: laborSubTab === "labor_rates" ? "#ffffff" : "inherit",
-                    fontWeight: laborSubTab === "labor_rates" ? 700 : 500,
-                  }}
+                  className={`settings-labor-tab${laborSubTab === "labor_rates" ? " is-selected" : ""}`}
                 >
-                  📋 Tablas salariales por cliente
+                  Tablas salariales por cliente
                 </button>
                 <button
                   type="button"
                   onClick={() => setLaborSubTab("labor_dotacion")}
-                  className={`btn-cancel ${laborSubTab === "labor_dotacion" ? "is-selected" : ""}`}
-                  style={{
-                    background: laborSubTab === "labor_dotacion" ? "var(--color-primary, #0f172a)" : "transparent",
-                    color: laborSubTab === "labor_dotacion" ? "#ffffff" : "inherit",
-                    fontWeight: laborSubTab === "labor_dotacion" ? 700 : 500,
-                  }}
+                  className={`settings-labor-tab${laborSubTab === "labor_dotacion" ? " is-selected" : ""}`}
                 >
-                  🦺 Dotación y EPP por cargo
+                  Dotación y EPP por cargo
                 </button>
                 <button
                   type="button"
                   onClick={() => setLaborSubTab("labor_costs")}
-                  className={`btn-cancel ${laborSubTab === "labor_costs" ? "is-selected" : ""}`}
-                  style={{
-                    background: laborSubTab === "labor_costs" ? "var(--color-primary, #0f172a)" : "transparent",
-                    color: laborSubTab === "labor_costs" ? "#ffffff" : "inherit",
-                    fontWeight: laborSubTab === "labor_costs" ? 700 : 500,
-                  }}
+                  className={`settings-labor-tab${laborSubTab === "labor_costs" ? " is-selected" : ""}`}
                 >
-                  ⚖️ Parámetros legales nacionales
+                  Parámetros legales nacionales
                 </button>
               </div>
 

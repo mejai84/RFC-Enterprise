@@ -32,6 +32,7 @@ export type AttendanceEmployee = {
   id: string;
   fullName: string;
   jobTitle?: string;
+  avatarStyle?: string;
 };
 
 export type WorkCheckInWorkspaceData = {

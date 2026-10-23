@@ -18,6 +18,7 @@ import {
   type AttendancePeriodKind,
 } from "../domain/attendance-period";
 import type { AttendanceEmployee, AttendanceProject, WorkCheckIn } from "../domain/work-check-in";
+import { EmployeeAvatar } from "@/core/users";
 
 const dayFormatter = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "2-digit", month: "long", timeZone: "UTC" });
 const timeFormatter = new Intl.DateTimeFormat("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit", hour12: false });
@@ -90,6 +91,7 @@ export function AttendanceConsultation() {
     void load();
   }, [load]);
 
+  const employeeById = useMemo(() => new Map(employees.map((employee) => [employee.id, employee])), [employees]);
   const rollups = useMemo(() => buildAttendanceRollups(records, employees, range), [records, employees, range]);
   const summary = useMemo(() => summarizeAttendance(rollups, records), [rollups, records]);
   const daysInPeriod = countPeriodDays(range);
@@ -263,7 +265,7 @@ export function AttendanceConsultation() {
               <tbody>
                 {records.map((record) => (
                   <tr key={record.id}>
-                    <th scope="row">{record.employeeName}</th>
+                    <th scope="row"><span style={{ alignItems: "center", display: "inline-flex", gap: "8px" }}><EmployeeAvatar name={record.employeeName} jobTitle={employeeById.get(record.employeeId)?.jobTitle} avatarStyle={employeeById.get(record.employeeId)?.avatarStyle} size={28} />{record.employeeName}</span></th>
                     <td className="attendance-cell-time">
                       <time dateTime={record.checkedInAt}>
                         {timeFormatter.format(new Date(record.checkedInAt))}
@@ -293,6 +295,7 @@ export function AttendanceConsultation() {
                     type="button"
                   >
                     <span className="attendance-rollup-name">
+                      <EmployeeAvatar name={row.employeeName} jobTitle={row.jobTitle} avatarStyle={employees.find((employee) => employee.id === row.employeeId)?.avatarStyle} size={34} />
                       <strong>{row.employeeName}</strong>
                       {row.jobTitle ? <small>{row.jobTitle}</small> : null}
                     </span>

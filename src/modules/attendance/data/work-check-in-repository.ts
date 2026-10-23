@@ -108,7 +108,7 @@ export async function loadWorkCheckInWorkspaceData(): Promise<WorkCheckInWorkspa
     // El vínculo con el empleado sale de la sesión: nunca se elige a mano.
     supabase
       .from("employees")
-      .select("id, full_name, job_title")
+      .select("id, full_name, job_title, avatar_style")
       .eq("profile_id", auth.user.id)
       .eq("company_id", companyId)
       .eq("is_active", true)
@@ -121,7 +121,7 @@ export async function loadWorkCheckInWorkspaceData(): Promise<WorkCheckInWorkspa
       .order("name"),
     supabase
       .from("employees")
-      .select("id, full_name, job_title")
+      .select("id, full_name, job_title, avatar_style")
       .eq("company_id", companyId)
       .eq("is_active", true)
       .order("full_name"),
@@ -148,7 +148,7 @@ export async function loadWorkCheckInWorkspaceData(): Promise<WorkCheckInWorkspa
     ),
     // Un empleado sin vínculo no registra: se le informa sin exponer la lista del equipo.
     employees: canReview
-      ? ((employeesResult.data ?? []) as Array<{ id: string; full_name: string; job_title: string | null }>).map(
+      ? ((employeesResult.data ?? []) as Array<{ id: string; full_name: string; job_title: string | null; avatar_style: string | null }>).map(
           (row) => ({ id: row.id, fullName: row.full_name, jobTitle: row.job_title ?? undefined }),
         )
       : linkedEmployee
@@ -192,14 +192,15 @@ export async function loadAttendanceEmployees(): Promise<AttendanceEmployee[]> {
   const { companyId } = await resolveCompany(supabase, auth.user.id);
   const { data } = await supabase
     .from("employees")
-    .select("id, full_name, job_title")
+    .select("id, full_name, job_title, avatar_style")
     .eq("company_id", companyId)
     .eq("is_active", true)
     .order("full_name");
-  return ((data ?? []) as Array<{ id: string; full_name: string; job_title: string | null }>).map((row) => ({
+  return ((data ?? []) as Array<{ id: string; full_name: string; job_title: string | null; avatar_style: string | null }>).map((row) => ({
     id: row.id,
     fullName: row.full_name,
     jobTitle: row.job_title ?? undefined,
+    avatarStyle: row.avatar_style ?? undefined,
   }));
 }
 

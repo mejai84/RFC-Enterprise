@@ -11,3 +11,5 @@ export const initialAdministrator: PlatformUser = {
   roleCodes: ["administrator"],
   identityProvider: "chatgpt",
 };
+
+export { EmployeeAvatar } from "./presentation/employee-avatar";

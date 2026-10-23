@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { createBrowserClient } from "@supabase/ssr";
 import { corePermissions } from "@/core/permissions";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import { avatarStyleOptions, defaultAvatarStyle, type AvatarStyle } from "../avatar";
 
 type DatabaseRole = { id: string; code: string; name: string };
 type DatabasePermission = { id: string; code: string; description: string };
@@ -15,6 +16,8 @@ type Employee = {
   roleId: string;
   active: boolean;
   profileId: string | null;
+  avatarPath: string | null;
+  avatarStyle: AvatarStyle;
   permissions: string[];
 };
 type Override = { employee_id: string; permission_id: string; mode: "grant" | "revoke" };
@@ -108,6 +111,7 @@ export function EmployeesWorkspace() {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editTitle, setEditTitle] = useState("");
+  const [editAvatarStyle, setEditAvatarStyle] = useState<AvatarStyle>(defaultAvatarStyle);
   const [modalPassword, setModalPassword] = useState("");
   const [modalPasswordConfirm, setModalPasswordConfirm] = useState("");
   const [modalSaving, setModalSaving] = useState(false);
@@ -115,6 +119,8 @@ export function EmployeesWorkspace() {
   const [newEmpEmail, setNewEmpEmail] = useState("");
   const [newEmpTitle, setNewEmpTitle] = useState("");
   const [newEmpRole, setNewEmpRole] = useState("");
+  const [newEmpAvatarStyle, setNewEmpAvatarStyle] = useState<AvatarStyle>(defaultAvatarStyle);
+  const [laborPositions, setLaborPositions] = useState<string[]>([]);
 
   const groupedPermissions = useMemo(() => {
     return Object.entries(
@@ -164,18 +170,20 @@ export function EmployeesWorkspace() {
       { data: databasePermissions, error: permissionsError },
       { data: rolePermissionRows, error: rolePermissionsError },
       { data: employeeRows, error: employeesError },
+      { data: laborPositionRows, error: laborPositionsError },
     ] = await Promise.all([
       supabase.from("roles").select("id, code, name"),
       supabase.from("permissions").select("id, code, description"),
       supabase.from("role_permissions").select("role_id, permission_id"),
       supabase
         .from("employees")
-        .select("id, full_name, email, job_title, is_active, profile_id")
+        .select("id, full_name, email, job_title, is_active, profile_id, avatar_path, avatar_style")
         .eq("company_id", currentCompanyId)
         .order("full_name"),
+      supabase.from("apu_labor_positions").select("name").eq("company_id", currentCompanyId).eq("is_active", true).order("name"),
     ]);
 
-    const loadError = rolesError || permissionsError || rolePermissionsError || employeesError;
+    const loadError = rolesError || permissionsError || rolePermissionsError || employeesError || laborPositionsError;
     if (loadError) {
       setMessage(getErrorMessage(loadError, "No fue posible cargar el directorio de personal."));
       setIsLoading(false);
@@ -238,6 +246,8 @@ export function EmployeesWorkspace() {
         roleId,
         active: emp.is_active,
         profileId: emp.profile_id,
+        avatarPath: emp.avatar_path ?? null,
+        avatarStyle: avatarStyleOptions.some((style) => style.key === emp.avatar_style) ? emp.avatar_style as AvatarStyle : defaultAvatarStyle,
         permissions: [...effective],
       };
     });
@@ -250,6 +260,7 @@ export function EmployeesWorkspace() {
     setCanManage(memberships.some((m) => administratorRoleIds.has(m.role_id)));
     setRoles(roleRows);
     setBasePermissionsByRole(basePermissionsByRole);
+    setLaborPositions((laborPositionRows ?? []).map((position) => position.name).filter((name): name is string => Boolean(name)));
     setEmployees(directory);
     setSelectedId((current) => (directory.some((e) => e.id === current) ? current : directory[0]?.id ?? null));
     setMessage(directory.length ? "" : "Aún no hay personal registrado.");
@@ -372,18 +383,12 @@ export function EmployeesWorkspace() {
     });
 
     if (rpcResult.error) {
-      // Fallback si la RPC aún no fue migrada en el motor
-      const { error: fallbackError } = await supabase
-        .from("employees")
-        .update({ is_active: !selected.active })
-        .eq("id", selected.id);
-
-      if (fallbackError) {
-        setMessage(getErrorMessage(fallbackError, "No fue posible actualizar el estado."));
-      } else {
-        await loadEmployees();
-        setMessage(selected.active ? "Empleado desactivado." : "Empleado activado.");
-      }
+      const text = rpcResult.error.message ?? "";
+      setMessage(
+        /único administrador activo/i.test(text)
+          ? text
+          : getErrorMessage(rpcResult.error, "No fue posible actualizar el estado del empleado."),
+      );
     } else {
       await loadEmployees();
       setMessage(selected.active ? "Empleado desactivado y accesos revocados." : "Empleado activado exitosamente.");
@@ -403,26 +408,12 @@ export function EmployeesWorkspace() {
     });
 
     if (rpcResult.error) {
-      // Si la RPC rechaza por último admin o error de validación
-      if (rpcResult.error.message.includes("único administrador activo")) {
-        window.alert(rpcResult.error.message);
-        setIsSaving(false);
-        return;
-      }
-      // Fallback transaccional en cliente
-      if (selected.roleId) {
-        await supabase.from("employee_roles").delete().eq("employee_id", selected.id);
-      }
-      const { error: insertError } = await supabase
-        .from("employee_roles")
-        .insert({ employee_id: selected.id, role_id: roleId });
-
-      if (insertError) {
-        setMessage(getErrorMessage(insertError, "No fue posible asignar el rol."));
-      } else {
-        await loadEmployees();
-        setMessage("Rol actualizado.");
-      }
+      const text = rpcResult.error.message ?? "";
+      setMessage(
+        /único administrador activo/i.test(text)
+          ? text
+          : getErrorMessage(rpcResult.error, "No fue posible asignar el rol."),
+      );
     } else {
       await loadEmployees();
       setMessage("Rol base y membresía sincronizados atómicamente.");
@@ -440,19 +431,12 @@ export function EmployeesWorkspace() {
     const isBasePermission = basePermissionsByRole.get(selected.roleId)?.has(code) ?? false;
     const shouldHavePermission = !selected.permissions.includes(code);
     setIsSaving(true);
-    let error: { message?: string } | null;
-    if (shouldHavePermission === isBasePermission) {
-      ({ error } = await supabase
-        .from("employee_permission_overrides")
-        .delete()
-        .eq("employee_id", selected.id)
-        .eq("permission_id", permission.data.id));
-    } else {
-      ({ error } = await supabase.from("employee_permission_overrides").upsert(
-        { employee_id: selected.id, permission_id: permission.data.id, mode: shouldHavePermission ? "grant" : "revoke" },
-        { onConflict: "employee_id,permission_id" }
-      ));
-    }
+    const mode = shouldHavePermission === isBasePermission ? null : shouldHavePermission ? "grant" : "revoke";
+    const { error } = await supabase.rpc("admin_set_employee_permission_override", {
+      p_employee_id: selected.id,
+      p_permission_id: permission.data.id,
+      p_mode: mode,
+    });
     if (error) setMessage(getErrorMessage(error, "No fue posible guardar la excepción de permiso."));
     else {
       await loadEmployees();
@@ -530,6 +514,7 @@ export function EmployeesWorkspace() {
     setEditName(selected.name);
     setEditEmail(selected.email);
     setEditTitle(selected.title);
+    setEditAvatarStyle(selected.avatarStyle);
     setShowEditModal(true);
   }
 
@@ -541,6 +526,7 @@ export function EmployeesWorkspace() {
       .update({
         full_name: editName.trim(),
         job_title: editTitle.trim(),
+        avatar_style: editAvatarStyle,
         email: editEmail.trim().toLowerCase(),
       })
       .eq("id", selected.id);
@@ -615,47 +601,22 @@ export function EmployeesWorkspace() {
       p_email: newEmpEmail.trim().toLowerCase(),
       p_job_title: newEmpTitle.trim(),
       p_role_id: newEmpRole,
+      p_avatar_style: newEmpAvatarStyle,
     });
 
     if (rpcResult.error) {
-      // Fallback si RPC aún no está activa
-      const { data: created, error: createError } = await supabase
-        .from("employees")
-        .insert({
-          company_id: companyId,
-          branch_id: branchId,
-          full_name: newEmpName.trim(),
-          email: newEmpEmail.trim().toLowerCase(),
-          job_title: newEmpTitle.trim(),
-        })
-        .select("id")
-        .single();
-
-      if (createError || !created) {
-        setMessage(getErrorMessage(createError, "No fue posible crear la ficha del empleado."));
-        setModalSaving(false);
-        return;
-      }
-      const { error: roleError } = await supabase
-        .from("employee_roles")
-        .insert({ employee_id: created.id, role_id: newEmpRole });
-
-      if (roleError) {
-        await supabase.from("employees").delete().eq("id", created.id);
-        setMessage(getErrorMessage(roleError, "Error al asignar el rol inicial; el registro fue cancelado."));
-        setModalSaving(false);
-        return;
-      }
-      setSelectedId(created.id);
-    } else {
-      setSelectedId(rpcResult.data);
+      setMessage(getErrorMessage(rpcResult.error, "No fue posible crear la ficha del empleado."));
+      setModalSaving(false);
+      return;
     }
+    setSelectedId(rpcResult.data);
 
     setShowNewEmployeeModal(false);
     setNewEmpName("");
     setNewEmpEmail("");
     setNewEmpTitle("");
     setNewEmpRole("");
+    setNewEmpAvatarStyle(defaultAvatarStyle);
     await loadEmployees();
     setMessage("Empleado y rol base creados de manera atómica.");
     setModalSaving(false);
@@ -1313,10 +1274,17 @@ export function EmployeesWorkspace() {
                 className="emp-modal-input"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
+                list="labor-position-options-edit"
+                placeholder="Escribe o selecciona un cargo"
                 required
               />
             </label>
-            <div className="emp-modal-actions">
+            <label className="emp-modal-label">
+              <span>Estilo del avatar</span>
+              <select className="emp-modal-input" value={editAvatarStyle} onChange={(e) => setEditAvatarStyle(e.target.value as AvatarStyle)}>
+                {avatarStyleOptions.map((style) => <option key={style.key} value={style.key}>{style.label}</option>)}
+              </select>
+            </label>            <div className="emp-modal-actions">
               <button className="emp-btn emp-btn--outline" type="button" onClick={() => setShowEditModal(false)}>
                 Cancelar
               </button>
@@ -1368,7 +1336,12 @@ export function EmployeesWorkspace() {
                 placeholder="Repite la contraseña"
               />
             </label>
-            <div className="emp-modal-actions">
+            <label className="emp-modal-label">
+              <span>Estilo del avatar</span>
+              <select className="emp-modal-input" value={editAvatarStyle} onChange={(e) => setEditAvatarStyle(e.target.value as AvatarStyle)}>
+                {avatarStyleOptions.map((style) => <option key={style.key} value={style.key}>{style.label}</option>)}
+              </select>
+            </label>            <div className="emp-modal-actions">
               <button className="emp-btn emp-btn--outline" type="button" onClick={() => setShowPasswordModal(false)}>
                 Cancelar
               </button>
@@ -1422,10 +1395,23 @@ export function EmployeesWorkspace() {
                   onChange={(e) => setNewEmpTitle(e.target.value)}
                   required
                   minLength={2}
-                  placeholder="Supervisor de Obra"
+                  placeholder="Escribe o selecciona un cargo"
+                  list="labor-position-options"
                 />
+                <datalist id="labor-position-options">{laborPositions.map((position) => <option key={position} value={position} />)}</datalist>
               </label>
               <label className="emp-modal-label">
+                <span>Estilo inicial del avatar</span>
+                <select
+                  className="emp-modal-input"
+                  value={newEmpAvatarStyle}
+                  onChange={(e) => setNewEmpAvatarStyle(e.target.value as AvatarStyle)}
+                >
+                  {avatarStyleOptions.map((style) => (
+                    <option key={style.key} value={style.key}>{style.label}</option>
+                  ))}
+                </select>
+              </label>              <label className="emp-modal-label">
                 <span>Rol base de sistema</span>
                 <select
                   className="emp-modal-input"
@@ -1442,7 +1428,12 @@ export function EmployeesWorkspace() {
                 </select>
               </label>
             </div>
-            <div className="emp-modal-actions">
+            <label className="emp-modal-label">
+              <span>Estilo del avatar</span>
+              <select className="emp-modal-input" value={editAvatarStyle} onChange={(e) => setEditAvatarStyle(e.target.value as AvatarStyle)}>
+                {avatarStyleOptions.map((style) => <option key={style.key} value={style.key}>{style.label}</option>)}
+              </select>
+            </label>            <div className="emp-modal-actions">
               <button className="emp-btn emp-btn--outline" type="button" onClick={() => setShowNewEmployeeModal(false)}>
                 Cancelar
               </button>

@@ -15,12 +15,15 @@ export function isAvatarStyle(value: string | null | undefined): value is Avatar
 }
 
 export function specialtyAvatarPath(
-  style: AvatarStyle | string | null | undefined,
+  _style: AvatarStyle | string | null | undefined,
   category: AvatarCategory,
 ): string {
-  const selectedStyle = isAvatarStyle(style) ? style : defaultAvatarStyle;
-  const selectedCategory = category === "generic" ? "admin" : category;
-  return `/images/avatars/styles/${selectedStyle}/${selectedCategory}.png`;
+  const assets: Record<AvatarCategory, string> = {
+    welder: "welder", metal: "metal", electric: "electric", instrumentation: "electric",
+    mechanical: "mechanical", painting: "painting", hse: "hse", machinery: "machinery",
+    civil: "civil", services: "warehouse", maritime: "supervisor", admin: "admin", generic: "worker",
+  };
+  return `/images/avatars/specialties/${assets[category]}.png`;
 }
 export type AvatarCategory =
   | "welder"

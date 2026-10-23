@@ -54,6 +54,20 @@ function getErrorMessage(error: { message?: string } | null, fallback: string) {
   return error?.message || fallback;
 }
 
+function isAvatarSchemaMissing(error: { code?: string; message?: string } | null) {
+  return error?.code === "42703" && /employees\.avatar_(path|style)/i.test(error?.message ?? "");
+}
+
+type EmployeeRow = {
+  id: string;
+  full_name: string;
+  email: string;
+  job_title: string | null;
+  is_active: boolean;
+  profile_id: string | null;
+  avatar_path?: string | null;
+  avatar_style?: string | null;
+};
 function formatInvitationDate(value: string | null | undefined) {
   if (!value) return "—";
   const date = new Date(value);
@@ -88,6 +102,7 @@ export function EmployeesWorkspace() {
   const [message, setMessage] = useState("Cargando directorio de personal…");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [avatarFeaturesAvailable, setAvatarFeaturesAvailable] = useState(true);
 
   // Filtros y búsqueda del directorio
   const [searchQuery, setSearchQuery] = useState("");
@@ -183,7 +198,21 @@ export function EmployeesWorkspace() {
       supabase.from("apu_labor_positions").select("name").eq("company_id", currentCompanyId).eq("is_active", true).order("name"),
     ]);
 
-    const loadError = rolesError || permissionsError || rolePermissionsError || employeesError || laborPositionsError;
+    let resolvedEmployeeRows = employeeRows as EmployeeRow[] | null;
+    let resolvedEmployeesError = employeesError;
+    if (isAvatarSchemaMissing(employeesError)) {
+      const fallback = await supabase
+        .from("employees")
+        .select("id, full_name, email, job_title, is_active, profile_id")
+        .eq("company_id", currentCompanyId)
+        .order("full_name");
+      resolvedEmployeeRows = fallback.data as EmployeeRow[] | null;
+      resolvedEmployeesError = fallback.error;
+      setAvatarFeaturesAvailable(false);
+    } else {
+      setAvatarFeaturesAvailable(true);
+    }
+    const loadError = rolesError || permissionsError || rolePermissionsError || resolvedEmployeesError || laborPositionsError;
     if (loadError) {
       setMessage(getErrorMessage(loadError, "No fue posible cargar el directorio de personal."));
       setIsLoading(false);
@@ -192,7 +221,7 @@ export function EmployeesWorkspace() {
 
     const roleRows = (databaseRoles ?? []) as DatabaseRole[];
     const permissions = (databasePermissions ?? []) as DatabasePermission[];
-    const employeeIds = (employeeRows ?? []).map((emp) => emp.id);
+    const employeeIds = (resolvedEmployeeRows ?? []).map((emp) => emp.id);
 
     const [{ data: employeeRoleRows, error: employeeRolesError }, { data: overrideRows, error: overridesError }] =
       employeeIds.length
@@ -229,7 +258,7 @@ export function EmployeesWorkspace() {
       overridesByEmployee.set(item.employee_id, values);
     }
 
-    const directory: Employee[] = (employeeRows ?? []).map((emp) => {
+    const directory: Employee[] = (resolvedEmployeeRows ?? []).map((emp) => {
       const roleId = roleByEmployee.get(emp.id) ?? "";
       const effective = new Set(roleId ? (basePermissionsByRole.get(roleId) ?? []) : []);
       for (const override of overridesByEmployee.get(emp.id) ?? []) {
@@ -242,7 +271,7 @@ export function EmployeesWorkspace() {
         id: emp.id,
         name: emp.full_name,
         email: emp.email,
-        title: emp.job_title,
+        title: emp.job_title ?? "",
         roleId,
         active: emp.is_active,
         profileId: emp.profile_id,
@@ -526,7 +555,7 @@ export function EmployeesWorkspace() {
       .update({
         full_name: editName.trim(),
         job_title: editTitle.trim(),
-        avatar_style: editAvatarStyle,
+        ...(avatarFeaturesAvailable ? { avatar_style: editAvatarStyle } : {}),
         email: editEmail.trim().toLowerCase(),
       })
       .eq("id", selected.id);
@@ -601,7 +630,7 @@ export function EmployeesWorkspace() {
       p_email: newEmpEmail.trim().toLowerCase(),
       p_job_title: newEmpTitle.trim(),
       p_role_id: newEmpRole,
-      p_avatar_style: newEmpAvatarStyle,
+      ...(avatarFeaturesAvailable ? { p_avatar_style: newEmpAvatarStyle } : {}),
     });
 
     if (rpcResult.error) {

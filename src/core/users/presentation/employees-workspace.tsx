@@ -1432,7 +1432,12 @@ export function EmployeesWorkspace() {
                 />
                 <datalist id="labor-position-options">{laborPositions.map((position) => <option key={position} value={position} />)}</datalist>
               </label>
-                            <label className="emp-modal-label">
+              <div className="emp-modal-label" style={{ alignItems: "flex-start" }}>
+                <span>Avatar profesional asignado</span>
+                <EmployeeAvatar name={newEmpName || "Nuevo empleado"} jobTitle={newEmpTitle} size={84} />
+                <small>Se asigna por cargo. El empleado puede reemplazarlo con su foto desde Mi perfil.</small>
+              </div>
+              <label className="emp-modal-label">
                 <span>Rol base de sistema</span>
                 <select
                   className="emp-modal-input"
@@ -1441,7 +1446,7 @@ export function EmployeesWorkspace() {
                   required
                 >
                   <option value="">Selecciona un rol base</option>
-                  {roles.filter((role) => allowedRoleCodesForJobTitle(selected.title).includes(role.code)).map((r) => (
+                  {roles.filter((role) => allowedRoleCodesForJobTitle(newEmpTitle).includes(role.code)).map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name}
                     </option>

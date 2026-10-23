@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import { corePermissions } from "@/core/permissions";
 import { isSupabaseConfigured, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import { avatarStyleOptions, defaultAvatarStyle, type AvatarStyle } from "../avatar";
 import { EmployeeAvatar } from "./employee-avatar";
@@ -104,6 +103,7 @@ type FilterMode = "all" | "active" | "inactive" | "uninvited";
 export function EmployeesWorkspace() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [roles, setRoles] = useState<DatabaseRole[]>([]);
+  const [databasePermissions, setDatabasePermissions] = useState<DatabasePermission[]>([]);
   const [basePermissionsByRole, setBasePermissionsByRole] = useState<Map<string, Set<string>>>(new Map());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
@@ -148,14 +148,18 @@ export function EmployeesWorkspace() {
   const [laborPositions, setLaborPositions] = useState<string[]>([]);
 
   const groupedPermissions = useMemo(() => {
-    return Object.entries(
-      corePermissions.reduce<Record<string, (typeof corePermissions)[number][]>>((groups, permission) => {
-        (groups[permission.module] ??= []).push(permission);
-        return groups;
-      }, {})
-    );
-  }, []);
-
+    const labels: Record<string, string> = {
+      core: "Núcleo y administración", dashboard: "Dashboard", quotes: "Cotizaciones", apu: "APU",
+      projects: "Proyectos y obras", inventory: "Inventario", attendance: "Asistencia",
+      purchases: "Compras", rentals: "Alquileres", reports: "Informes", settings: "Configuración",
+    };
+    const groups = databasePermissions.reduce<Record<string, DatabasePermission[]>>((result, permission) => {
+      const key = permission.code.split(".")[0] || "other";
+      (result[labels[key] ?? key] ??= []).push(permission);
+      return result;
+    }, {});
+    return Object.entries(groups).sort(([left], [right]) => left.localeCompare(right, "es"));
+  }, [databasePermissions]);
   const selected = employees.find((emp) => emp.id === selectedId) ?? employees[0] ?? null;
 
   const supabase = useMemo(() => {
@@ -298,6 +302,7 @@ export function EmployeesWorkspace() {
     setBranchId(memberships[0].branch_id);
     setCanManage(memberships.some((m) => administratorRoleIds.has(m.role_id)));
     setRoles(roleRows);
+    setDatabasePermissions(permissions.sort((left, right) => left.code.localeCompare(right.code, "es")));
     setBasePermissionsByRole(basePermissionsByRole);
     setLaborPositions((laborPositionRows ?? []).map((position) => position.name).filter((name): name is string => Boolean(name)));
     setEmployees(directory);

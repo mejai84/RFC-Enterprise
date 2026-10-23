@@ -420,3 +420,6 @@ El empleado autenticado puede registrar y reemplazar su firma manuscrita desde `
 - El modal de conteo físico se reorganiza con encabezado y acciones fijos; solo el cuerpo se desplaza. En móvil ocupa el alto útil disponible.
 - El modal de firma manuscrita se amplía para ocupar prácticamente toda la pantalla móvil y mantiene controles táctiles de 48 px.
 - Configuración de empresa vuelve a usar `save_company_profile`, operación atómica para empresa y ajustes, en lugar de dos escrituras separadas que podían fallar parcialmente por RLS.
+## 2026-10-23 — Matriz dinámica de permisos de empleados
+
+La ficha de empleados ya no toma una lista estática del cliente para mostrar la matriz de permisos. Carga el catálogo real de `permissions`, lo agrupa por módulo y conserva el cálculo de permisos efectivos con rol base más excepciones auditadas. La escritura sigue pasando por `admin_set_employee_permission_override`; requiere aplicar previamente la migración `20261023010000_admin_fix_security.sql` en Supabase.

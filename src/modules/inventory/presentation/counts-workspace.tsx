@@ -1138,6 +1138,7 @@ export function CountsWorkspace() {
                 ×
               </button>
             </div>
+            <div className="count-line-modal-body">
             <p className="panel-intro">
               Saldo al abrir: <strong>{selectedLine.system_quantity}</strong>.
               Guarda 0 si el artículo no fue encontrado.
@@ -1190,8 +1191,8 @@ export function CountsWorkspace() {
                   }
                 />
               </label>
-            </div>
-            <section className="count-form-section" aria-labelledby="count-article-details">
+              </div>
+              <section className="count-form-section" aria-labelledby="count-article-details">
               <h4 id="count-article-details">Ficha del artículo</h4>
               <p className="panel-intro">Puedes corregir estos datos durante el conteo. Se revisarán y aplicarán únicamente al conciliar la jornada.</p>
               <div className="form-grid-2">
@@ -1208,7 +1209,8 @@ export function CountsWorkspace() {
                 <label className="form-group" htmlFor="count-reorder">Punto de reposición<input id="count-reorder" type="number" min="0" value={lineDraft.item.reorder_quantity} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, reorder_quantity: event.target.value } })} /></label>
                 <label className="form-group" htmlFor="count-purchase-unit">Unidad de compra<input id="count-purchase-unit" value={lineDraft.item.purchase_unit} onChange={(event) => setLineDraft({ ...lineDraft, item: { ...lineDraft.item, purchase_unit: event.target.value } })} /></label>
               </div>
-            </section>
+              </section>
+            </div>
             <div className="modal-actions">
               <button
                 className="btn-cancel"

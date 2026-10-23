@@ -1617,7 +1617,50 @@
 }
 
 
-.count-line-modal { max-height: min(88vh, 860px); overflow-y: auto; }
+.count-line-modal {
+  max-height: min(88dvh, 860px);
+  overflow: hidden;
+}
+.count-line-modal .modal-header,
+.count-line-modal .modal-actions { flex: 0 0 auto; }
+.count-line-modal .count-line-modal-body {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 32px 8px;
+}
+.count-line-modal .modal-actions {
+  background: #fff;
+  margin: 0;
+  padding: 16px 32px 20px;
+}
 .count-line-modal .count-form-section { border-top: 1px solid var(--border, #dbe7df); margin-top: 1rem; padding-top: 1rem; }
 .count-line-modal .count-form-section h4 { margin: 0 0 .7rem; font-size: .86rem; letter-spacing: .04em; text-transform: uppercase; color: var(--forest, #174b32); }
 .count-line-modal textarea { min-height: 72px; resize: vertical; }
+
+/* Firma: en teléfono utiliza casi todo el alto útil y conserva las acciones visibles. */
+.signature-capture-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 32px);
+  max-width: min(720px, calc(100vw - 32px));
+  overflow: hidden;
+  padding: 0;
+}
+.signature-capture-modal .modal-header { flex: 0 0 auto; margin: 0; padding: 24px 28px 18px; position: relative; top: auto; }
+.signature-capture-modal > .panel-intro { flex: 0 0 auto; margin: 0; padding: 16px 28px 12px; }
+.signature-capture-modal .signature-canvas { box-sizing: border-box; display: block; flex: 1 1 auto; height: min(42dvh, 360px); margin: 0 28px; max-width: calc(100% - 56px); touch-action: none; width: calc(100% - 56px); }
+.signature-capture-modal .modal-actions { background: #fff; flex: 0 0 auto; margin: 0; padding: 16px 28px 24px; }
+
+@media (max-width: 600px) {
+  .count-line-modal { border-radius: 14px; height: calc(100dvh - 16px); max-height: none; }
+  .count-line-modal .count-line-modal-body { padding: 0 18px 8px; }
+  .count-line-modal .modal-actions { padding: 14px 18px max(18px, env(safe-area-inset-bottom)); }
+  .signature-capture-modal { border-radius: 14px; height: calc(100dvh - 16px); max-height: none; max-width: calc(100vw - 16px); }
+  .signature-capture-modal .modal-header { padding: 18px 20px 14px; }
+  .signature-capture-modal > .panel-intro { padding: 14px 20px 10px; }
+  .signature-capture-modal .signature-canvas { height: min(48dvh, 420px); margin: 0 20px; max-width: calc(100% - 40px); width: calc(100% - 40px); }
+  .signature-capture-modal .modal-actions { align-items: stretch; flex-direction: column-reverse; gap: 10px; padding: 14px 20px max(18px, env(safe-area-inset-bottom)); }
+  .signature-capture-modal .modal-actions button { min-height: 48px; width: 100%; }
+}

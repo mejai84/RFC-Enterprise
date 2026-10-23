@@ -108,7 +108,7 @@ export function SignatureCapture({
           aria-modal="true"
           aria-label="Capturar firma"
         >
-          <div className="modal-card small">
+          <div className="modal-card signature-capture-modal">
             <div className="modal-header">
               <div>
                 <p>{eyebrow}</p>

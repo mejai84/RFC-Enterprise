@@ -308,9 +308,21 @@
 .kanban-column-header {
   align-items: center;
   border-bottom: 2px solid var(--col-color);
+  box-sizing: border-box;
   display: flex;
   gap: 8px;
-  padding: 12px 14px;
+  height: 52px;
+  padding: 8px 14px;
+}
+
+/* Todas las columnas comparten la misma línea de separación aunque el estado use dos renglones. */
+.kanban-col-label {
+  align-items: center;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.18;
+  overflow: hidden;
 }
 
 .kanban-col-icon { font-size: 16px; }

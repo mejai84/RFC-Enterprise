@@ -2966,3 +2966,4 @@ html, body { overflow-x: clip; max-width: 100vw; }
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
+.employee-avatar-preview{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;margin:14px 0 20px;padding:14px;border-radius:12px;background:var(--color-bg-subtle,#f8fafc);border:1px solid var(--color-border,#dbe7df);text-align:center}.employee-avatar-preview small{color:var(--color-text-muted,#64748b);max-width:320px}.employee-avatar-preview img{box-shadow:0 4px 14px rgba(15,65,45,.16)}

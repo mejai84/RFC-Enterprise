@@ -1396,7 +1396,11 @@ export function EmployeesWorkspace() {
           <form className="emp-modal emp-modal--wide" onClick={(e) => e.stopPropagation()} onSubmit={submitNewEmployee}>
             <h2>Nuevo empleado</h2>
             <p>Registra la ficha laboral y asigna el rol base de acceso de forma atómica.</p>
-            <div className="emp-modal-grid">
+            <div className="employee-avatar-preview">
+              <EmployeeAvatar name={newEmpName || "Nuevo empleado"} jobTitle={newEmpTitle} size={112} />
+              <strong>Avatar profesional asignado</strong>
+              <small>{newEmpTitle ? `Especialidad: ${newEmpTitle}` : "Selecciona un cargo para actualizar la vista previa."}</small>
+            </div>            <div className="emp-modal-grid">
               <label className="emp-modal-label">
                 <span>Nombre completo</span>
                 <input
@@ -1431,13 +1435,7 @@ export function EmployeesWorkspace() {
                   list="labor-position-options"
                 />
                 <datalist id="labor-position-options">{laborPositions.map((position) => <option key={position} value={position} />)}</datalist>
-              </label>
-              <div className="emp-modal-label" style={{ alignItems: "flex-start" }}>
-                <span>Avatar profesional asignado</span>
-                <EmployeeAvatar name={newEmpName || "Nuevo empleado"} jobTitle={newEmpTitle} size={84} />
-                <small>Se asigna por cargo. El empleado puede reemplazarlo con su foto desde Mi perfil.</small>
-              </div>
-              <label className="emp-modal-label">
+              </label><label className="emp-modal-label">
                 <span>Rol base de sistema</span>
                 <select
                   className="emp-modal-input"

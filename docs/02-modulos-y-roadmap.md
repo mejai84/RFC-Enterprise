@@ -412,3 +412,11 @@ El empleado autenticado puede registrar y reemplazar su firma manuscrita desde `
 - `origin/main` fue verificado como íntegro en el commit `29593c075406cf25fb1f65ca4c0298158e7605f4`.
 - Se creó una copia de trabajo limpia en `C:\representaciones-figueroa-recovered`; a partir de este punto es la copia autorizada para continuar el desarrollo.
 - La carpeta original se conserva como respaldo y no debe usarse para nuevos commits.
+## 2026-10-23 — Actividades delegadas, firma y ajustes operativos
+
+- Se aprobó el flujo de **actividad delegada**: quien registra queda identificado; la actividad queda en `pending_validation` y solo el trabajador beneficiario o un responsable con permiso puede confirmarla o rechazarla. No se crea ni altera una jornada definitiva por medio de un tercero.
+- Se incorpora el catálogo de capacidades `attendance.delegated.request` y `attendance.team.review`. Las revisiones de asistencia dejan de depender de una lista fija de roles y consultan permisos efectivos.
+- La migración `20261023060000_delegated_activity_validation.sql` crea la bitácora, índices, RLS y RPCs auditadas. Pendiente: aplicar y probar en Supabase antes de habilitar la interfaz productiva.
+- El modal de conteo físico se reorganiza con encabezado y acciones fijos; solo el cuerpo se desplaza. En móvil ocupa el alto útil disponible.
+- El modal de firma manuscrita se amplía para ocupar prácticamente toda la pantalla móvil y mantiene controles táctiles de 48 px.
+- Configuración de empresa vuelve a usar `save_company_profile`, operación atómica para empresa y ajustes, en lugar de dos escrituras separadas que podían fallar parcialmente por RLS.

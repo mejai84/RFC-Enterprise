@@ -367,9 +367,18 @@ El Dashboard conserva enlaces de consulta a inventario y costo, pero no muestra 
 
 ## Nota de alcance (2026-10-23)
 
-La reestructuraci�n de Personal, Mi cuenta y Configuraci�n no modifica f�rmulas, tablas salariales ni snapshots de APU/cotizaciones. Se conserva la regla de usar la versi�n de tabla salarial aplicable al cliente y fecha del an�lisis, sin alterar documentos hist�ricos.
+La reestructuraci�n de Personal, Mi cuenta y Configuraci�n no modifica f�rmulas, tablas salariales ni snapshots de APU/cotizaciones. Se conserva la regla de usar la versi�n de tabla salarial aplicable al cliente y fecha del an�lisis, sin alterar documentos hist�ricos.
 
 - Los avatares laborales son elementos visuales de interfaz; no intervienen en costos, firmas ni cálculos de proyecto.
 
 <!-- Registro 2026-10-23: la firma manuscrita personal del empleado es evidencia operativa para confirmaciones autorizadas; no participa en cálculos de costo, precio, APU, presupuesto ni rentabilidad. -->
 - Inventario inicial: las existencias positivas requieren costo unitario real confirmado; costo cero no equivale a valoración confirmada.
+
+## 2026-10-23 — Actividades delegadas, firma y ajustes operativos
+
+- Se aprobó el flujo de **actividad delegada**: quien registra queda identificado; la actividad queda en `pending_validation` y solo el trabajador beneficiario o un responsable con permiso puede confirmarla o rechazarla. No se crea ni altera una jornada definitiva por medio de un tercero.
+- Se incorpora el catálogo de capacidades `attendance.delegated.request` y `attendance.team.review`. Las revisiones de asistencia dejan de depender de una lista fija de roles y consultan permisos efectivos.
+- La migración `20261023060000_delegated_activity_validation.sql` crea la bitácora, índices, RLS y RPCs auditadas. Pendiente: aplicar y probar en Supabase antes de habilitar la interfaz productiva.
+- El modal de conteo físico se reorganiza con encabezado y acciones fijos; solo el cuerpo se desplaza. En móvil ocupa el alto útil disponible.
+- El modal de firma manuscrita se amplía para ocupar prácticamente toda la pantalla móvil y mantiene controles táctiles de 48 px.
+- Configuración de empresa vuelve a usar `save_company_profile`, operación atómica para empresa y ajustes, en lugar de dos escrituras separadas que podían fallar parcialmente por RLS.
